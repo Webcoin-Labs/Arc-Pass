@@ -43,7 +43,8 @@ export function OverviewPanel() {
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Builder Passes</h3>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <StatCard label="Issued" value={data.builderPassesIssued} />
-          <StatCard label="Remaining" value={data.builderPassesRemaining} />
+          <StatCard label={`Claimed · ${data.builderPhaseName}`} value={`${data.builderPassesClaimed.toLocaleString()} / ${data.builderPhaseClaimLimit.toLocaleString()}`} />
+          <StatCard label="Phase claims remaining" value={data.builderClaimsRemaining} />
           <StatCard label="Suspended" value={data.suspendedPasses} />
         </div>
         {Object.keys(data.builderTierDistribution).length > 0 && (

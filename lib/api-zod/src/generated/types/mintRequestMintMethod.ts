@@ -11,5 +11,4 @@ export type MintRequestMintMethod = typeof MintRequestMintMethod[keyof typeof Mi
 
 export const MintRequestMintMethod = {
   wallet_connect: 'wallet_connect',
-  manual_address: 'manual_address',
 } as const;

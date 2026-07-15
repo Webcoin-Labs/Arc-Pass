@@ -114,7 +114,7 @@ export default function ClaimBuilderPage() {
 
   const handleMint = (params: MintParams) => {
     mintPass.mutate(
-      { data: { mintMethod: params.mintMethod, walletAddress: params.walletAddress, network: params.network, confirmed: params.confirmed } },
+      { data: { mintMethod: params.mintMethod, walletAddress: params.walletAddress, network: params.network } },
       {
         onSuccess: () => {
           invalidateAll();

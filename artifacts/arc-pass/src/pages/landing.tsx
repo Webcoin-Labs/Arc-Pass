@@ -38,7 +38,7 @@ const verificationSteps = [
   },
 ];
 
-function HeroCredential({ issued, remaining }: { issued: number; remaining: number }) {
+function HeroCredential({ claimed, remaining, phaseName }: { claimed: number; remaining: number; phaseName: string }) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -50,11 +50,11 @@ function HeroCredential({ issued, remaining }: { issued: number; remaining: numb
     >
       <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/10 bg-black/55 px-4 py-2 text-xs font-semibold text-white/85 backdrop-blur-md">
         <BadgeCheck className="size-3.5 text-[#7895ff]" aria-hidden="true" />
-        {issued.toLocaleString()} issued
+        {claimed.toLocaleString()} claimed in {phaseName}
       </span>
       <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/10 bg-black/55 px-4 py-2 text-xs font-semibold text-white/85 backdrop-blur-md">
         <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-        {remaining.toLocaleString()} lifetime slots remain
+        {remaining.toLocaleString()} {phaseName} claims remain
       </span>
       <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/10 bg-black/55 px-4 py-2 text-xs font-semibold text-white/85 backdrop-blur-md">
         <LockKeyhole className="size-3.5 text-[#7895ff]" aria-hidden="true" />
@@ -87,9 +87,9 @@ export default function LandingPage() {
     );
   };
 
-  const issued = supply?.totalIssued ?? 0;
-  const maximum = supply?.maximumSupply ?? 1500;
-  const remaining = Math.max(maximum - issued, 0);
+  const claimed = supply?.totalClaimed ?? 0;
+  const phaseName = supply?.phaseName ?? "Phase 1";
+  const remaining = supply?.remainingClaims ?? 2000;
 
   return (
     <div className="flex flex-1 flex-col bg-[#02030a] text-white [color-scheme:dark]">
@@ -156,7 +156,7 @@ export default function LandingPage() {
             </AnimatePresence>
           </div>
 
-          {!result && <HeroCredential issued={issued} remaining={remaining} />}
+          {!result && <HeroCredential claimed={claimed} remaining={remaining} phaseName={phaseName} />}
         </motion.div>
       </section>
 
@@ -227,7 +227,7 @@ export default function LandingPage() {
               <p className="font-mono text-xs text-white/60">02 / ACTIVITY VERIFIED</p>
               <h3 className="mt-5 max-w-xs text-4xl font-semibold text-balance sm:text-5xl">Builder Pass</h3>
               <div className="absolute inset-x-6 bottom-7 sm:inset-x-9 sm:bottom-9">
-                <p className="max-w-md text-base leading-7 text-pretty text-white/70">A tiered credential based on signed-wallet activity and qualifying deployments, capped at 1,500 lifetime issuances.</p>
+                <p className="max-w-md text-base leading-7 text-pretty text-white/70">A tiered credential based on signed-wallet activity and qualifying deployments. The contract has no permanent supply cap; claims open in controlled release phases.</p>
                 <Link href="/docs" className="mt-6 inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-white hover:text-white/70">Builder tiers <ArrowRight className="ml-2 size-4" aria-hidden="true" /></Link>
               </div>
             </motion.article>

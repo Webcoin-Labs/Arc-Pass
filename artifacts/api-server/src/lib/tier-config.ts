@@ -52,6 +52,5 @@ export function isUpgrade(currentTier: BuilderTier | null, candidateTier: Builde
   return candidateTier.rank > currentTier.rank;
 }
 
-export const BUILDER_SUPPLY_CAP = 1500;
 export const REVERIFICATION_COOLDOWN_DAYS = 7;
 export const MINT_AUTHORIZATION_TTL_MINUTES = 15;

@@ -33,9 +33,10 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/auth";
 import { auditAdmin, type AdminRequest } from "../lib/admin-auth";
-import { serializeFounderPass, serializeFounderTier, serializeBuilderTier, buildBuilderPassDTO, lifetimeBuilderIssued } from "../lib/serializers";
+import { serializeFounderPass, serializeFounderTier, serializeBuilderTier, buildBuilderPassDTO, builderPassClaimed, builderPassMinted } from "../lib/serializers";
 import { imageUpload, publicUploadUrl } from "../lib/uploads";
-import { BUILDER_SUPPLY_CAP, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
+import { REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
+import { configuration } from "../lib/env";
 
 const router: IRouter = Router();
 router.use("/admin", requireAdmin);
@@ -68,7 +69,8 @@ router.get("/admin/overview", requireAdmin, async (_req, res): Promise<void> => 
     .from(founderPassesTable)
     .where(and(eq(founderPassesTable.claimStatus, "minted"), eq(founderPassesTable.variant, "premium_black")));
 
-  const [{ value: builderPassesIssued }] = await db.select({ value: count() }).from(builderPassesTable).where(lifetimeBuilderIssued());
+  const [{ value: builderPassesIssued }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassMinted());
+  const [{ value: builderPassesClaimed }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassClaimed());
 
   const distributionRows = await db
     .select({ name: builderTiersTable.name, value: count() })
@@ -105,7 +107,10 @@ router.get("/admin/overview", requireAdmin, async (_req, res): Promise<void> => 
     normalFounderPasses,
     premiumBlackFounderPasses,
     builderPassesIssued,
-    builderPassesRemaining: Math.max(BUILDER_SUPPLY_CAP - builderPassesIssued, 0),
+    builderPassesClaimed,
+    builderPhaseName: configuration.builderPhaseName,
+    builderPhaseClaimLimit: configuration.builderPhaseClaimLimit,
+    builderClaimsRemaining: Math.max(configuration.builderPhaseClaimLimit - builderPassesClaimed, 0),
     builderTierDistribution,
     pendingFounderReviews,
     pendingBuilderReviews,

@@ -268,10 +268,9 @@ export const ClaimFounderPassResponse = zod.object({
 export const mintFounderPassBodyNetworkDefault = `arc`;
 
 export const MintFounderPassBody = zod.object({
-  "mintMethod": zod.enum(['wallet_connect', 'manual_address']),
+  "mintMethod": zod.enum(['wallet_connect']),
   "walletAddress": zod.string().optional(),
-  "network": zod.enum(['arc', 'base']).default(mintFounderPassBodyNetworkDefault),
-  "confirmed": zod.boolean().optional().describe('Required true for manual_address — confirms the user reviewed the warning')
+  "network": zod.enum(['arc', 'base']).default(mintFounderPassBodyNetworkDefault)
 })
 
 export const MintFounderPassResponse = zod.object({
@@ -316,12 +315,14 @@ export const MintFounderPassResponse = zod.object({
  * @summary Get public Builder Pass supply information
  */
 export const GetBuilderSupplyResponse = zod.object({
-  "maximumSupply": zod.number(),
-  "totalIssued": zod.number(),
-  "lifetimeIssuedCount": zod.number(),
+  "phaseName": zod.string(),
+  "phaseClaimLimit": zod.number(),
+  "totalClaimed": zod.number(),
+  "totalMinted": zod.number(),
   "activeCount": zod.number(),
   "revokedCount": zod.number(),
-  "remaining": zod.number()
+  "remainingClaims": zod.number(),
+  "contractSupplyCapped": zod.boolean()
 })
 
 
@@ -616,10 +617,9 @@ export const ClaimBuilderPassResponse = zod.object({
 export const mintBuilderPassBodyNetworkDefault = `arc`;
 
 export const MintBuilderPassBody = zod.object({
-  "mintMethod": zod.enum(['wallet_connect', 'manual_address']),
+  "mintMethod": zod.enum(['wallet_connect']),
   "walletAddress": zod.string().optional(),
-  "network": zod.enum(['arc', 'base']).default(mintBuilderPassBodyNetworkDefault),
-  "confirmed": zod.boolean().optional().describe('Required true for manual_address — confirms the user reviewed the warning')
+  "network": zod.enum(['arc', 'base']).default(mintBuilderPassBodyNetworkDefault)
 })
 
 export const MintBuilderPassResponse = zod.object({
@@ -751,12 +751,14 @@ export const GetDashboardStatsResponse = zod.object({
 }))
 }),zod.null()]).optional(),
   "builderSupply": zod.object({
-  "maximumSupply": zod.number(),
-  "totalIssued": zod.number(),
-  "lifetimeIssuedCount": zod.number(),
+  "phaseName": zod.string(),
+  "phaseClaimLimit": zod.number(),
+  "totalClaimed": zod.number(),
+  "totalMinted": zod.number(),
   "activeCount": zod.number(),
   "revokedCount": zod.number(),
-  "remaining": zod.number()
+  "remainingClaims": zod.number(),
+  "contractSupplyCapped": zod.boolean()
 })
 })
 
@@ -892,7 +894,10 @@ export const AdminGetOverviewResponse = zod.object({
   "normalFounderPasses": zod.number(),
   "premiumBlackFounderPasses": zod.number(),
   "builderPassesIssued": zod.number(),
-  "builderPassesRemaining": zod.number(),
+  "builderPassesClaimed": zod.number(),
+  "builderPhaseName": zod.string(),
+  "builderPhaseClaimLimit": zod.number(),
+  "builderClaimsRemaining": zod.number(),
   "builderTierDistribution": zod.record(zod.string(), zod.number()),
   "pendingFounderReviews": zod.number(),
   "pendingBuilderReviews": zod.number(),
@@ -993,6 +998,8 @@ export const AdminListFounderPassesResponse = zod.object({
   "page": zod.number(),
   "limit": zod.number()
 })
+
+
 /**
  * @summary Admin - create a Founder invitation (pre or post signup)
  */
@@ -1302,6 +1309,7 @@ export const AdminListBuilderPassesResponse = zod.object({
   "page": zod.number(),
   "limit": zod.number()
 })
+
 
 /**
  * @summary Admin - get a Builder Pass with tier history and latest snapshot
@@ -1760,3 +1768,5 @@ export const AdminListMintRecordsResponse = zod.object({
   "page": zod.number(),
   "limit": zod.number()
 })
+
+

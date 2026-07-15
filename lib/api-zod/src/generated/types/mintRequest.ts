@@ -12,6 +12,4 @@ export interface MintRequest {
   mintMethod: MintRequestMintMethod;
   walletAddress?: string;
   network?: MintRequestNetwork;
-  /** Required true for manual_address — confirms the user reviewed the warning */
-  confirmed?: boolean;
 }

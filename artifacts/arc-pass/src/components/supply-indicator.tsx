@@ -1,23 +1,25 @@
 import { cn } from "@/lib/utils";
 
 export function SupplyIndicator({
-  totalIssued,
-  maximumSupply,
+  totalClaimed,
+  phaseClaimLimit,
+  phaseName,
   className,
 }: {
-  totalIssued: number;
-  maximumSupply: number;
+  totalClaimed: number;
+  phaseClaimLimit: number;
+  phaseName: string;
   className?: string;
 }) {
-  const pct = Math.min(100, Math.round((totalIssued / maximumSupply) * 100));
-  const remaining = Math.max(maximumSupply - totalIssued, 0);
+  const pct = Math.min(100, Math.round((totalClaimed / phaseClaimLimit) * 100));
+  const remaining = Math.max(phaseClaimLimit - totalClaimed, 0);
   const complete = remaining === 0;
 
   return (
     <div className={cn("w-full", className)}>
       <div className="flex items-baseline justify-between text-sm">
         <span className="font-medium text-foreground">
-          {totalIssued.toLocaleString()} of {maximumSupply.toLocaleString()} lifetime Onchain Builder Passes issued
+          {totalClaimed.toLocaleString()} of {phaseClaimLimit.toLocaleString()} {phaseName} Builder Passes claimed
         </span>
         <span className="text-muted-foreground tabular-nums">{complete ? "Allocation complete" : `${remaining.toLocaleString()} remaining`}</span>
       </div>

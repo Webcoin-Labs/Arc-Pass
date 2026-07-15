@@ -242,7 +242,7 @@ export default function DashboardPage() {
           </div>
           {stats?.builderSupply && (
             <div className="mt-4">
-              <SupplyIndicator totalIssued={stats.builderSupply.totalIssued} maximumSupply={stats.builderSupply.maximumSupply} />
+              <SupplyIndicator totalClaimed={stats.builderSupply.totalClaimed} phaseClaimLimit={stats.builderSupply.phaseClaimLimit} phaseName={stats.builderSupply.phaseName} />
             </div>
           )}
         </section>

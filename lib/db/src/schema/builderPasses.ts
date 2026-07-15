@@ -7,9 +7,8 @@ import { builderTiersTable } from "./builderTiers";
 // One row per Builder identity — created the first time verification
 // succeeds. Re-verification and tier upgrades update this same row (same
 // `id`, same `passNumber`, same `tokenId` where technically possible); they
-// never create a second row for the same `userId`. Total unique supply is
-// therefore just `count(*)` against this table, capped at 1,500 in the
-// route layer (see api-server/src/lib/tier-config.ts).
+// never create a second row for the same `userId`. The contract supply is
+// unlimited; the API reserves claims against the configured release phase.
 export const builderPassesTable = pgTable("builder_passes", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id).unique(),

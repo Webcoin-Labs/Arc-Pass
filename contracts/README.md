@@ -4,7 +4,7 @@ This directory holds the two on-chain credential contracts referenced by
 `artifacts/api-server/src/lib/chain-adapter.ts`:
 
 - `FounderPass.sol` — permanent, non-transferable Founder credential
-- `BuilderPass.sol` — non-transferable Builder credential capped at 1,500 unique holders, with in-place tier upgrades
+- `BuilderPass.sol` — non-transferable Builder credential with unlimited contract supply and in-place tier upgrades
 
 ## Status: not yet deployed
 
@@ -52,11 +52,9 @@ real EIP-191 authorizations with the relayer key before calling
   nonce-based authorization records (`mint_authorizations` table via
   `api-server/src/lib/signed-claims.ts`) before it ever asks the relayer to
   sign anything — so replay is rejected at both layers.
-- **Builder supply cap excludes revoked credentials.** `activeSupply` (not
-  `totalSupply`) is what's compared against `MAX_SUPPLY`, so a revoked
-  identity's slot becomes available to a new unique holder — matching
-  `getBuilderSupply()` / `mintedAndNotRevoked()` in the backend, which use
-  the same rule.
+- **No permanent Builder contract cap.** `totalSupply` records every original
+  mint and never decreases. The backend atomically limits original claims by
+  release phase before authorizing a mint; Phase 1 defaults to 2,000 claims.
 - **Tier only moves upward.** `authorizedUpgradeTier` reverts if
   `newTier <= currentTier`, enforced identically in the backend
   (`isUpgrade()` in `tier-config.ts`) before it ever requests a signature.

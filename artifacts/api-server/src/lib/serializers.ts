@@ -1,7 +1,7 @@
 import { db, builderTiersTable, builderVerificationSnapshotsTable, builderTierHistoryTable, walletsTable, usersTable } from "@workspace/db";
 import type { FounderPass, BuilderPass, FounderTier, BuilderTier } from "@workspace/db";
-import { eq, desc, asc, and, count, isNotNull } from "drizzle-orm";
-import { BUILDER_SUPPLY_CAP } from "./tier-config";
+import { eq, desc, asc, and, count, isNotNull, inArray } from "drizzle-orm";
+import { configuration } from "./env";
 import { builderPassesTable } from "@workspace/db";
 
 export function serializeFounderTier(tier: FounderTier | null | undefined) {
@@ -144,21 +144,27 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
   };
 }
 
-// Lifetime issuance is immutable. Revocation never restores capacity.
-export function lifetimeBuilderIssued() {
+export function builderPassMinted() {
   return eq(builderPassesTable.claimStatus, "minted");
 }
 
+export function builderPassClaimed() {
+  return inArray(builderPassesTable.claimStatus, ["claimed", "minted"]);
+}
+
 export async function getBuilderSupply() {
-  const [{ value: totalIssued }] = await db.select({ value: count() }).from(builderPassesTable).where(lifetimeBuilderIssued());
+  const [{ value: totalClaimed }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassClaimed());
+  const [{ value: totalMinted }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassMinted());
   const [{ value: activeCount }] = await db.select({ value: count() }).from(builderPassesTable)
     .where(and(eq(builderPassesTable.claimStatus, "minted"), eq(builderPassesTable.isRevoked, false)));
   return {
-    maximumSupply: BUILDER_SUPPLY_CAP,
-    totalIssued,
-    lifetimeIssuedCount: totalIssued,
+    phaseName: configuration.builderPhaseName,
+    phaseClaimLimit: configuration.builderPhaseClaimLimit,
+    totalClaimed,
+    totalMinted,
     activeCount,
-    revokedCount: totalIssued - activeCount,
-    remaining: Math.max(BUILDER_SUPPLY_CAP - totalIssued, 0),
+    revokedCount: totalMinted - activeCount,
+    remainingClaims: Math.max(configuration.builderPhaseClaimLimit - totalClaimed, 0),
+    contractSupplyCapped: false,
   };
 }

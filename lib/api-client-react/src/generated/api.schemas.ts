@@ -544,12 +544,14 @@ export interface BuilderVerificationResult {
 }
 
 export interface BuilderSupply {
-  maximumSupply: number;
-  totalIssued: number;
-  lifetimeIssuedCount: number;
+  phaseName: string;
+  phaseClaimLimit: number;
+  totalClaimed: number;
+  totalMinted: number;
   activeCount: number;
   revokedCount: number;
-  remaining: number;
+  remainingClaims: number;
+  contractSupplyCapped: boolean;
 }
 
 export type MintRequestMintMethod = typeof MintRequestMintMethod[keyof typeof MintRequestMintMethod];
@@ -557,7 +559,6 @@ export type MintRequestMintMethod = typeof MintRequestMintMethod[keyof typeof Mi
 
 export const MintRequestMintMethod = {
   wallet_connect: 'wallet_connect',
-  manual_address: 'manual_address',
 } as const;
 
 export type MintRequestNetwork = typeof MintRequestNetwork[keyof typeof MintRequestNetwork];
@@ -572,8 +573,6 @@ export interface MintRequest {
   mintMethod: MintRequestMintMethod;
   walletAddress?: string;
   network?: MintRequestNetwork;
-  /** Required true for manual_address — confirms the user reviewed the warning */
-  confirmed?: boolean;
 }
 
 export interface DownloadUrlResponse {
@@ -604,7 +603,10 @@ export interface AdminOverview {
   normalFounderPasses: number;
   premiumBlackFounderPasses: number;
   builderPassesIssued: number;
-  builderPassesRemaining: number;
+  builderPassesClaimed: number;
+  builderPhaseName: string;
+  builderPhaseClaimLimit: number;
+  builderClaimsRemaining: number;
   builderTierDistribution: AdminOverviewBuilderTierDistribution;
   pendingFounderReviews: number;
   pendingBuilderReviews: number;
@@ -713,3 +715,4 @@ export const AdminListMintRecordsType = {
   founder: 'founder',
   builder: 'builder',
 } as const;
+

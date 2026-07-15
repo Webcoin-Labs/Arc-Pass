@@ -12,7 +12,10 @@ export interface AdminOverview {
   normalFounderPasses: number;
   premiumBlackFounderPasses: number;
   builderPassesIssued: number;
-  builderPassesRemaining: number;
+  builderPassesClaimed: number;
+  builderPhaseName: string;
+  builderPhaseClaimLimit: number;
+  builderClaimsRemaining: number;
   builderTierDistribution: AdminOverviewBuilderTierDistribution;
   pendingFounderReviews: number;
   pendingBuilderReviews: number;

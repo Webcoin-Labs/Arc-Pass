@@ -95,7 +95,7 @@ export default function ClaimFounderPage() {
 
   const handleMint = (params: MintParams) => {
     mintPass.mutate(
-      { data: { mintMethod: params.mintMethod, walletAddress: params.walletAddress, network: params.network, confirmed: params.confirmed } },
+      { data: { mintMethod: params.mintMethod, walletAddress: params.walletAddress, network: params.network } },
       {
         onSuccess: () => {
           invalidate();

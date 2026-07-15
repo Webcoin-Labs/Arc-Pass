@@ -3,13 +3,12 @@ pragma solidity ^0.8.24;
 
 /// @title Arc Pass — Builder Pass
 /// @notice Non-transferable identity credential for verified Arc builders,
-/// capped at 1,500 unique lifetime issuances. One pass per identity.
+/// with no permanent onchain supply cap. One pass per verified identity.
 /// Tier is stored on-chain and can move upward only, via an authorized
 /// signature — upgrades update the existing token in place and never
-/// consume additional supply.
+/// consume additional supply. Release-phase claim limits are enforced by the
+/// Arc Pass backend before it signs a mint authorization.
 contract BuilderPass {
-    uint256 public constant MAX_SUPPLY = 1500;
-
     struct Pass {
         address owner;
         bytes32 identityHash;
@@ -25,8 +24,7 @@ contract BuilderPass {
     address public admin;
     address public authorizedSigner;
 
-    /// @dev Total identities ever minted, including revoked ones. This is the
-    /// lifetime scarcity counter and can never decrease.
+    /// @dev Total identities ever minted, including revoked ones.
     uint256 public totalSupply;
     /// @dev Minted and not revoked, exposed for operational reporting only.
     uint256 public activeSupply;
@@ -71,7 +69,6 @@ contract BuilderPass {
     ) external returns (uint256 tokenId) {
         require(to != address(0), "BuilderPass: mint to zero address");
         require(identityToTokenId[identityHash] == 0, "BuilderPass: identity already has a pass");
-        require(totalSupply < MAX_SUPPLY, "BuilderPass: lifetime allocation complete");
 
         bytes32 messageHash = keccak256(abi.encodePacked("BuilderPassMint", to, identityHash, tier, address(this)));
         require(!usedSignatures[messageHash], "BuilderPass: signature already used");
@@ -133,8 +130,7 @@ contract BuilderPass {
         emit PassUnsuspended(tokenId);
     }
 
-    /// @notice Revokes a Builder Pass without restoring lifetime supply.
-    /// The identity can never re-mint and the issued slot remains consumed.
+    /// @notice Revokes a Builder Pass without freeing the identity for re-minting.
     function revoke(uint256 tokenId, string calldata reason) external onlyAdmin {
         require(passes[tokenId].owner != address(0), "BuilderPass: no such pass");
         require(!passes[tokenId].revoked, "BuilderPass: already revoked");
@@ -157,10 +153,6 @@ contract BuilderPass {
 
     function ownerOf(uint256 tokenId) external view returns (address) {
         return passes[tokenId].owner;
-    }
-
-    function remainingSupply() external view returns (uint256) {
-        return MAX_SUPPLY - totalSupply;
     }
 
     // Intentionally non-transferable: no transfer/approve functions exist.

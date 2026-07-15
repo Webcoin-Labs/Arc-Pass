@@ -7,10 +7,12 @@
  */
 
 export interface BuilderSupply {
-  maximumSupply: number;
-  totalIssued: number;
-  lifetimeIssuedCount: number;
+  phaseName: string;
+  phaseClaimLimit: number;
+  totalClaimed: number;
+  totalMinted: number;
   activeCount: number;
   revokedCount: number;
-  remaining: number;
+  remainingClaims: number;
+  contractSupplyCapped: boolean;
 }

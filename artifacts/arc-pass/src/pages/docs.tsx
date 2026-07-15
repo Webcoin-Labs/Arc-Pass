@@ -26,8 +26,8 @@ export default function DocsPage() {
             <div className="rounded-xl border p-5">
               <h3 className="font-semibold">Onchain Builder Pass</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Activity-based and limited to 1,500 lifetime issuances. Tier is calculated from ownership-verified wallet activity
-                and can move upward through re-verification. Revocation never restores supply.
+                Activity-based with no permanent contract supply cap. Tier is calculated from ownership-verified wallet activity
+                and can move upward through re-verification. Claims open in controlled release phases; Phase 1 allows 2,000.
               </p>
             </div>
           </div>
@@ -72,9 +72,9 @@ export default function DocsPage() {
         <section>
           <h2 className="text-2xl font-bold">Smart contract enforcement</h2>
           <p className="mt-3 text-muted-foreground">
-            Supply caps, one-credential-per-identity enforcement, permanence, and tier-upgrade authorization are enforced at the
+            One-credential-per-identity enforcement, permanence, and tier-upgrade authorization are enforced at the
             contract level via signed, replay-protected authorizations issued by the backend after eligibility checks pass — the
-            frontend never controls minting decisions.
+            backend also enforces the configurable release-phase claim limit; the frontend never controls allocation or minting.
           </p>
         </section>
       </div>

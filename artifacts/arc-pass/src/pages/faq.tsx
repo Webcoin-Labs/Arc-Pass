@@ -23,7 +23,7 @@ const FAQS = [
   },
   {
     q: "Is there a limit on Onchain Builder Passes?",
-    a: "No more than 1,500 unique Onchain Builder Passes can ever be originally issued. Revocation does not restore lifetime supply. Re-verification and tier upgrades never consume additional supply.",
+    a: "The Builder Pass contract has no permanent supply cap. Claims open in controlled release phases; Phase 1 allows 2,000 original claims. Re-verification and tier upgrades update the existing pass and never consume another phase allocation.",
   },
   {
     q: "What's the difference between Normal and Premium Black Founder Pass?",

@@ -10,7 +10,7 @@ import {
   walletsTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, count, desc, isNotNull } from "drizzle-orm";
+import { eq, and, count, desc, isNotNull, sql } from "drizzle-orm";
 import {
   GetFounderPassParams,
   GetFounderPassDownloadUrlParams,
@@ -20,11 +20,21 @@ import {
   MintBuilderPassBody,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
-import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply, lifetimeBuilderIssued } from "../lib/serializers";
+import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply, builderPassClaimed, builderPassMinted } from "../lib/serializers";
 import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
-import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, BUILDER_SUPPLY_CAP, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
+import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
+import { configuration } from "../lib/env";
 
 const router: IRouter = Router();
+
+async function isOwnershipVerifiedWallet(userId: number, address: string): Promise<boolean> {
+  const verifiedWallets = await db
+    .select({ address: walletsTable.address })
+    .from(walletsTable)
+    .where(and(eq(walletsTable.userId, userId), isNotNull(walletsTable.ownershipVerifiedAt)));
+
+  return verifiedWallets.some((wallet) => wallet.address.toLowerCase() === address.toLowerCase());
+}
 
 // ---------------------------------------------------------------------------
 // My passes / dashboard
@@ -157,11 +167,7 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
     return;
   }
 
-  const { mintMethod, walletAddress, network = "arc", confirmed } = bodyParsed.data;
-  if (mintMethod === "manual_address" && !confirmed) {
-    res.status(400).json({ error: "You must confirm the destination address before minting to it" });
-    return;
-  }
+  const { walletAddress, network = "arc" } = bodyParsed.data;
   if (!walletAddress) {
     res.status(400).json({ error: "A destination wallet address is required" });
     return;
@@ -172,6 +178,10 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
     destinationWallet = checksumAddress(walletAddress);
   } catch {
     res.status(400).json({ error: "Invalid wallet address" });
+    return;
+  }
+  if (!(await isOwnershipVerifiedWallet(user.id, destinationWallet))) {
+    res.status(400).json({ error: "A non-transferable pass can only be minted to a wallet you have ownership-verified." });
     return;
   }
 
@@ -463,20 +473,40 @@ router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void
   }
 
   const now = new Date();
-  const [updated] = await db
-    .update(builderPassesTable)
-    .set({ claimStatus: "claimed", initiallyIssuedAt: now, nextVerificationAt: new Date(now.getTime() + REVERIFICATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000) })
-    .where(eq(builderPassesTable.id, pass.id))
-    .returning();
+  const updated = await db.transaction(async (tx) => {
+    // Serialize the short allocation section so simultaneous final-slot
+    // claims cannot push a release phase beyond its configured limit.
+    await tx.execute(sql`select pg_advisory_xact_lock(1095781715)`);
+    const [{ value: claimedCount }] = await tx.select({ value: count() }).from(builderPassesTable).where(builderPassClaimed());
+    if (claimedCount >= configuration.builderPhaseClaimLimit) return null;
 
-  await db.insert(builderTierHistoryTable).values({
-    builderPassId: pass.id,
-    previousTierId: null,
-    newTierId: pass.currentTierId!,
-    verificationSnapshotId: null,
-    transactionHash: null,
-    upgradedAt: now,
+    const [claimed] = await tx
+      .update(builderPassesTable)
+      .set({
+        claimStatus: "claimed",
+        passNumber: pass.passNumber ?? claimedCount + 1,
+        initiallyIssuedAt: now,
+        nextVerificationAt: new Date(now.getTime() + REVERIFICATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000),
+      })
+      .where(and(eq(builderPassesTable.id, pass.id), eq(builderPassesTable.claimStatus, "locked")))
+      .returning();
+    if (!claimed) return null;
+
+    await tx.insert(builderTierHistoryTable).values({
+      builderPassId: pass.id,
+      previousTierId: null,
+      newTierId: pass.currentTierId!,
+      verificationSnapshotId: null,
+      transactionHash: null,
+      upgradedAt: now,
+    });
+    return claimed;
   });
+
+  if (!updated) {
+    res.status(409).json({ error: `${configuration.builderPhaseName} Builder Pass claim allocation is complete` });
+    return;
+  }
 
   res.json(await buildBuilderPassDTO(updated, false));
 });
@@ -504,17 +534,9 @@ router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void>
   }
 
   if (!chainAdapter.mintingAvailable) { res.status(503).json({ error: "Onchain minting is temporarily unavailable.", code: "minting_unavailable" }); return; }
-  const [{ value: mintedCount }] = await db.select({ value: count() }).from(builderPassesTable).where(lifetimeBuilderIssued());
-  if (mintedCount >= BUILDER_SUPPLY_CAP) {
-    res.status(400).json({ error: "Builder Pass allocation complete" });
-    return;
-  }
+  const [{ value: mintedCount }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassMinted());
 
-  const { mintMethod, walletAddress, network = "arc", confirmed } = bodyParsed.data;
-  if (mintMethod === "manual_address" && !confirmed) {
-    res.status(400).json({ error: "You must confirm the destination address before minting to it" });
-    return;
-  }
+  const { walletAddress, network = "arc" } = bodyParsed.data;
   if (!walletAddress) {
     res.status(400).json({ error: "A destination wallet address is required" });
     return;
@@ -525,6 +547,10 @@ router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void>
     destinationWallet = checksumAddress(walletAddress);
   } catch {
     res.status(400).json({ error: "Invalid wallet address" });
+    return;
+  }
+  if (!(await isOwnershipVerifiedWallet(user.id, destinationWallet))) {
+    res.status(400).json({ error: "A non-transferable pass can only be minted to a wallet you have ownership-verified." });
     return;
   }
 

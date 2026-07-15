@@ -14,13 +14,18 @@ CREATE TABLE IF NOT EXISTS oauth_states (
 );
 
 CREATE TABLE IF NOT EXISTS builder_supply (
-  id serial PRIMARY KEY, maximum_lifetime_supply integer NOT NULL DEFAULT 1500,
-  lifetime_issued_count integer NOT NULL DEFAULT 0, active_count integer NOT NULL DEFAULT 0,
+  id serial PRIMARY KEY, phase_name text NOT NULL DEFAULT 'Phase 1',
+  phase_claim_limit integer NOT NULL DEFAULT 2000, total_claimed_count integer NOT NULL DEFAULT 0,
+  total_minted_count integer NOT NULL DEFAULT 0, active_count integer NOT NULL DEFAULT 0,
   revoked_count integer NOT NULL DEFAULT 0, updated_at timestamptz NOT NULL DEFAULT now()
 );
-INSERT INTO builder_supply (id, lifetime_issued_count, active_count, revoked_count)
-SELECT 1, count(*), count(*) FILTER (WHERE NOT is_revoked), count(*) FILTER (WHERE is_revoked)
-FROM builder_passes WHERE claim_status = 'minted'
+INSERT INTO builder_supply (id, total_claimed_count, total_minted_count, active_count, revoked_count)
+SELECT 1,
+  count(*) FILTER (WHERE claim_status IN ('claimed', 'minted')),
+  count(*) FILTER (WHERE claim_status = 'minted'),
+  count(*) FILTER (WHERE claim_status = 'minted' AND NOT is_revoked),
+  count(*) FILTER (WHERE claim_status = 'minted' AND is_revoked)
+FROM builder_passes
 ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS founder_applications (

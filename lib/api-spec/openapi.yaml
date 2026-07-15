@@ -1851,20 +1851,24 @@ components:
 
     BuilderSupply:
       type: object
-      required: [maximumSupply, totalIssued, lifetimeIssuedCount, activeCount, revokedCount, remaining]
+      required: [phaseName, phaseClaimLimit, totalClaimed, totalMinted, activeCount, revokedCount, remainingClaims, contractSupplyCapped]
       properties:
-        maximumSupply:
+        phaseName:
+          type: string
+        phaseClaimLimit:
           type: integer
-        totalIssued:
+        totalClaimed:
           type: integer
-        lifetimeIssuedCount:
+        totalMinted:
           type: integer
         activeCount:
           type: integer
         revokedCount:
           type: integer
-        remaining:
+        remainingClaims:
           type: integer
+        contractSupplyCapped:
+          type: boolean
 
     MintRequest:
       type: object
@@ -1872,16 +1876,13 @@ components:
       properties:
         mintMethod:
           type: string
-          enum: [wallet_connect, manual_address]
+          enum: [wallet_connect]
         walletAddress:
           type: string
         network:
           type: string
           enum: [arc, base]
           default: "arc"
-        confirmed:
-          type: boolean
-          description: Required true for manual_address — confirms the user reviewed the warning
 
     DownloadUrlResponse:
       type: object
@@ -1928,7 +1929,10 @@ components:
           normalFounderPasses,
           premiumBlackFounderPasses,
           builderPassesIssued,
-          builderPassesRemaining,
+          builderPassesClaimed,
+          builderPhaseName,
+          builderPhaseClaimLimit,
+          builderClaimsRemaining,
           builderTierDistribution,
           pendingFounderReviews,
           pendingBuilderReviews,
@@ -1946,7 +1950,13 @@ components:
           type: integer
         builderPassesIssued:
           type: integer
-        builderPassesRemaining:
+        builderPassesClaimed:
+          type: integer
+        builderPhaseName:
+          type: string
+        builderPhaseClaimLimit:
+          type: integer
+        builderClaimsRemaining:
           type: integer
         builderTierDistribution:
           type: object

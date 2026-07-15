@@ -25,6 +25,8 @@ function commaSeparatedValues(name: string): string[] {
 
 const devEligibleXHandles = commaSeparatedValues("DEV_ELIGIBLE_X_HANDLES");
 const devAdminBootstrapEmail = process.env.DEV_ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase() ?? "";
+const builderPhaseName = process.env.BUILDER_PHASE_NAME?.trim() || "Phase 1";
+const builderPhaseClaimLimit = Number(process.env.BUILDER_PHASE_CLAIM_LIMIT || "2000");
 
 export function assertMockPolicy(nodeEnv: string | undefined, enabled: boolean): void {
   if (nodeEnv === "production" && enabled) throw new Error("ENABLE_DEV_MOCKS=true is forbidden in production");
@@ -65,6 +67,9 @@ export function validateEnvironment(): void {
   if (enableDevAdminBootstrap && !devAdminBootstrapEmail) {
     throw new Error("ENABLE_DEV_ADMIN_BOOTSTRAP=true requires DEV_ADMIN_BOOTSTRAP_EMAIL");
   }
+  if (!Number.isSafeInteger(builderPhaseClaimLimit) || builderPhaseClaimLimit <= 0) {
+    throw new Error("BUILDER_PHASE_CLAIM_LIMIT must be a positive integer");
+  }
   assertCompleteGroup("X OAuth", ["X_CLIENT_ID", "X_CLIENT_SECRET", "X_REDIRECT_URI"]);
   assertCompleteGroup("Discord OAuth", ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI"]);
   assertCompleteGroup("chain minting", ["CHAIN_RPC_URL", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
@@ -84,6 +89,8 @@ export const configuration = {
   devEligibleXHandles: new Set(devEligibleXHandles),
   enableDevAdminBootstrap,
   devAdminBootstrapEmail,
+  builderPhaseName,
+  builderPhaseClaimLimit,
   appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:5173",
   mintingConfigured: ["CHAIN_RPC_URL", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"].every(configured),
   activityProviderConfigured: ["EXPLORER_API_URL", "EXPLORER_API_KEY"].every(configured),

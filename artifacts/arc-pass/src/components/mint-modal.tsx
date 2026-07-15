@@ -1,22 +1,17 @@
 import { useState } from "react";
-import { Wallet as WalletIcon, PenLine, AlertTriangle, Loader2, ArrowLeft } from "lucide-react";
+import { Wallet as WalletIcon, AlertTriangle, Loader2, ArrowLeft, LockKeyhole } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { connectInjectedWallet, validateWalletAddress } from "@/lib/wallet";
-import { abbreviateAddress } from "@/lib/format";
+import { connectInjectedWallet } from "@/lib/wallet";
 import type { MintRequestMintMethod, MintRequestNetwork } from "@workspace/api-client-react";
 
-type Screen = "choice" | "connect" | "manual";
+type Screen = "choice" | "connect";
 
 export interface MintParams {
   mintMethod: MintRequestMintMethod;
   walletAddress: string;
   network: MintRequestNetwork;
-  confirmed?: boolean;
 }
 
 export function MintModal({
@@ -36,15 +31,11 @@ export function MintModal({
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [manualAddress, setManualAddress] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
 
   const reset = () => {
     setScreen("choice");
     setConnectedAddress(null);
     setConnectError(null);
-    setManualAddress("");
-    setConfirmed(false);
   };
 
   const handleClose = (next: boolean) => {
@@ -66,8 +57,6 @@ export function MintModal({
     }
   };
 
-  const manualValidation = validateWalletAddress(manualAddress);
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -75,7 +64,7 @@ export function MintModal({
           <>
             <DialogHeader>
               <DialogTitle>Mint Onchain</DialogTitle>
-              <DialogDescription>Record your credential onchain by choosing a destination wallet.</DialogDescription>
+              <DialogDescription>Mint this soulbound credential to a wallet whose ownership you have already verified.</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 py-2">
               <button
@@ -86,20 +75,13 @@ export function MintModal({
                 <WalletIcon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
                 <span>
                   <span className="block text-sm font-medium">Connect Wallet</span>
-                  <span className="block text-xs text-muted-foreground">Connect a wallet and mint the credential directly to it.</span>
+                  <span className="block text-xs text-muted-foreground">The connected address must already appear as ownership verified in your Arc Pass profile.</span>
                 </span>
               </button>
-              <button
-                type="button"
-                onClick={() => setScreen("manual")}
-                className="flex items-start gap-3 rounded-xl border p-4 text-left transition-colors hover:border-primary hover:bg-accent/50"
-              >
-                <PenLine className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-                <span>
-                  <span className="block text-sm font-medium">Enter Wallet Address</span>
-                  <span className="block text-xs text-muted-foreground">Send the credential to an address without connecting that wallet.</span>
-                </span>
-              </button>
+              <div className="flex items-start gap-3 rounded-xl border border-amber-500/25 bg-amber-500/8 p-4 text-sm text-muted-foreground">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+                <p>Founder and Builder Passes cannot be transferred after minting. Verify the destination wallet carefully.</p>
+              </div>
             </div>
           </>
         )}
@@ -149,54 +131,6 @@ export function MintModal({
           </>
         )}
 
-        {screen === "manual" && (
-          <>
-            <DialogHeader>
-              <button type="button" onClick={() => setScreen("choice")} className="mb-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="h-3 w-3" /> Back
-              </button>
-              <DialogTitle>Enter Wallet Address</DialogTitle>
-              <DialogDescription>Send to a wallet address.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="manual-wallet">Destination address</Label>
-                <Input id="manual-wallet" placeholder="0x..." className="h-12 font-mono" value={manualAddress} onChange={(e) => setManualAddress(e.target.value)} />
-                {manualAddress.trim() && !manualValidation.valid && <p className="text-xs text-destructive">This doesn't look like a valid address.</p>}
-                {manualValidation.valid && manualValidation.checksummed && (
-                  <p className="font-mono text-xs text-muted-foreground">Preview: {abbreviateAddress(manualValidation.checksummed, 6)}</p>
-                )}
-              </div>
-
-              <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Warning</AlertTitle>
-                <AlertDescription>
-                  This credential will be delivered directly to the address entered. Verify the address carefully. Onchain transfers cannot be reversed.
-                </AlertDescription>
-              </Alert>
-
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
-                <Checkbox id="confirm-address" checked={confirmed} onCheckedChange={(c) => setConfirmed(c === true)} className="mt-0.5" />
-                <Label htmlFor="confirm-address" className="text-sm font-normal leading-snug">
-                  I confirm this address is correct and I intend to send this credential to it.
-                </Label>
-              </div>
-
-              <Button
-                className="w-full"
-                disabled={!manualValidation.valid || !confirmed || isPending}
-                onClick={() =>
-                  manualValidation.checksummed &&
-                  onMint({ mintMethod: "manual_address", walletAddress: manualValidation.checksummed, network, confirmed: true })
-                }
-              >
-                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Confirm &amp; Mint
-              </Button>
-            </div>
-          </>
-        )}
       </DialogContent>
     </Dialog>
   );
