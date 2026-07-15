@@ -1,0 +1,25 @@
+import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+
+export const founderApplicationsTable = pgTable("founder_applications", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull().default("manual"),
+  typeformResponseId: text("typeform_response_id").unique(),
+  fullName: text("full_name").notNull(),
+  workEmail: text("work_email"),
+  personalEmail: text("personal_email"),
+  xUsername: text("x_username"),
+  discordUsername: text("discord_username"),
+  companyName: text("company_name"),
+  companyWebsite: text("company_website"),
+  founderRole: text("founder_role"),
+  companyCategory: text("company_category"),
+  startupStage: text("startup_stage"),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  status: text("status").notNull().default("under_review"),
+  reviewerId: integer("reviewer_id"),
+  internalNotes: text("internal_notes"),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  rawExternalPayloadReference: jsonb("raw_external_payload_reference"),
+});

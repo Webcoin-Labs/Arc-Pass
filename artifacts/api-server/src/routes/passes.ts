@@ -1,0 +1,557 @@
+import { Router, type IRouter } from "express";
+import {
+  db,
+  founderPassesTable,
+  builderPassesTable,
+  founderTiersTable,
+  builderTiersTable,
+  builderVerificationSnapshotsTable,
+  builderTierHistoryTable,
+  walletsTable,
+  usersTable,
+} from "@workspace/db";
+import { eq, and, count, desc, isNotNull } from "drizzle-orm";
+import {
+  GetFounderPassParams,
+  GetFounderPassDownloadUrlParams,
+  MintFounderPassBody,
+  GetBuilderPassParams,
+  GetBuilderPassDownloadUrlParams,
+  MintBuilderPassBody,
+} from "@workspace/api-zod";
+import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply, lifetimeBuilderIssued } from "../lib/serializers";
+import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
+import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, BUILDER_SUPPLY_CAP, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
+
+const router: IRouter = Router();
+
+// ---------------------------------------------------------------------------
+// My passes / dashboard
+// ---------------------------------------------------------------------------
+
+router.get("/passes/me", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+
+  const [founderRow] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
+  const [builderRow] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+
+  const [founderTier] = founderRow?.founderTierId
+    ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, founderRow.founderTierId))
+    : [null];
+
+  res.json({
+    founder: founderRow ? serializeFounderPass(founderRow, founderTier ?? null, false) : null,
+    builder: builderRow ? await buildBuilderPassDTO(builderRow, false) : null,
+  });
+});
+
+router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+
+  const [founderRow] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
+  const [builderRow] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+  const [founderTier] = founderRow?.founderTierId
+    ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, founderRow.founderTierId))
+    : [null];
+
+  res.json({
+    founder: founderRow ? serializeFounderPass(founderRow, founderTier ?? null, false) : null,
+    builder: builderRow ? await buildBuilderPassDTO(builderRow, false) : null,
+    builderSupply: await getBuilderSupply(),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Founder Pass
+// ---------------------------------------------------------------------------
+
+router.get("/passes/founder/:id", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetFounderPassParams.safeParse({ id: parseInt(raw, 10) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid pass ID" });
+    return;
+  }
+
+  const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
+  if (!pass || pass.claimStatus !== "minted") {
+    res.status(404).json({ error: "Pass not found" });
+    return;
+  }
+
+  const [tier] = pass.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, pass.founderTierId)) : [null];
+  res.json(serializeFounderPass(pass, tier ?? null, false));
+});
+
+router.get("/passes/founder/:id/download-url", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetFounderPassDownloadUrlParams.safeParse({ id: parseInt(raw, 10) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid pass ID" });
+    return;
+  }
+
+  const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
+  if (!pass || pass.claimStatus !== "minted") {
+    res.status(404).json({ error: "Pass not found" });
+    return;
+  }
+
+  res.status(404).json({ error: "No server-rendered asset available yet — use Download Pass on the pass page to export an image client-side." });
+});
+
+router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+  const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
+
+  if (!pass) {
+    res.status(400).json({ error: "You don't have an eligible Founder Pass" });
+    return;
+  }
+  if (pass.eligibilityStatus !== "eligible") {
+    res.status(400).json({ error: "Your Founder Pass is not yet eligible to claim" });
+    return;
+  }
+  if (pass.claimStatus !== "locked") {
+    res.status(400).json({ error: "This Founder Pass has already been claimed" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(founderPassesTable)
+    .set({
+      claimStatus: "claimed",
+      claimedAt: new Date(),
+      displayName: pass.displayName ?? user.displayName,
+      username: pass.username ?? user.xUsername ?? user.discordUsername ?? user.username,
+      avatarUrl: pass.avatarUrl ?? user.avatarUrl,
+    })
+    .where(eq(founderPassesTable.id, pass.id))
+    .returning();
+
+  const [tier] = updated.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, updated.founderTierId)) : [null];
+  res.json(serializeFounderPass(updated, tier ?? null, false));
+});
+
+router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+  if (!chainAdapter.mintingAvailable) { res.status(503).json({ error: "Onchain minting is temporarily unavailable.", code: "minting_unavailable" }); return; }
+  const bodyParsed = MintFounderPassBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: bodyParsed.error.message });
+    return;
+  }
+
+  const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
+  if (!pass) {
+    res.status(400).json({ error: "You don't have an eligible Founder Pass" });
+    return;
+  }
+  if (pass.claimStatus === "minted") {
+    res.status(400).json({ error: "This Founder Pass has already been minted" });
+    return;
+  }
+  if (pass.claimStatus !== "claimed") {
+    res.status(400).json({ error: "Claim your Founder Pass before minting it" });
+    return;
+  }
+
+  const { mintMethod, walletAddress, network = "arc", confirmed } = bodyParsed.data;
+  if (mintMethod === "manual_address" && !confirmed) {
+    res.status(400).json({ error: "You must confirm the destination address before minting to it" });
+    return;
+  }
+  if (!walletAddress) {
+    res.status(400).json({ error: "A destination wallet address is required" });
+    return;
+  }
+
+  let destinationWallet: string;
+  try {
+    destinationWallet = checksumAddress(walletAddress);
+  } catch {
+    res.status(400).json({ error: "Invalid wallet address" });
+    return;
+  }
+
+  const identityHash = computeIdentityHash("founder", user.id);
+  const mintResult = await chainAdapter.mintFounderPass({ identityHash, destinationWallet, network: network as Network, variant: pass.variant });
+
+  const [{ value: mintedCount }] = await db
+    .select({ value: count() })
+    .from(founderPassesTable)
+    .where(eq(founderPassesTable.claimStatus, "minted"));
+
+  const now = new Date();
+  const [updated] = await db
+    .update(founderPassesTable)
+    .set({
+      claimStatus: "minted",
+      destinationWallet,
+      tokenId: mintResult.tokenId,
+      contractAddress: mintResult.contractAddress,
+      transactionHash: mintResult.transactionHash,
+      network: mintResult.network,
+      passNumber: pass.passNumber ?? mintedCount + 1,
+      issuedAt: pass.issuedAt ?? now,
+      permanentlyLockedAt: now,
+    })
+    .where(eq(founderPassesTable.id, pass.id))
+    .returning();
+
+  const [tier] = updated.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, updated.founderTierId)) : [null];
+  res.json(serializeFounderPass(updated, tier ?? null, false));
+});
+
+// ---------------------------------------------------------------------------
+// Builder Pass
+// ---------------------------------------------------------------------------
+
+router.get("/passes/builder/supply", async (_req, res): Promise<void> => {
+  res.json(await getBuilderSupply());
+});
+
+router.get("/passes/builder/:id", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetBuilderPassParams.safeParse({ id: parseInt(raw, 10) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid pass ID" });
+    return;
+  }
+
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, params.data.id));
+  if (!pass || pass.claimStatus !== "minted") {
+    res.status(404).json({ error: "Pass not found" });
+    return;
+  }
+
+  res.json(await buildBuilderPassDTO(pass, false));
+});
+
+router.get("/passes/builder/:id/download-url", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetBuilderPassDownloadUrlParams.safeParse({ id: parseInt(raw, 10) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid pass ID" });
+    return;
+  }
+
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, params.data.id));
+  if (!pass || pass.claimStatus !== "minted") {
+    res.status(404).json({ error: "Pass not found" });
+    return;
+  }
+
+  res.status(404).json({ error: "No server-rendered asset available yet — use Download Pass on the pass page to export an image client-side." });
+});
+
+async function runBuilderAnalysis(userId: number) {
+  const user = (await db.select().from(usersTable).where(eq(usersTable.id, userId)))[0];
+  const wallets = await db.select().from(walletsTable).where(and(eq(walletsTable.userId, userId), isNotNull(walletsTable.ownershipVerifiedAt)));
+  const walletAddresses = wallets.map((w) => w.address);
+
+  const activity = await chainAdapter.getBuilderOnchainActivity(walletAddresses);
+  const qualitative = {
+    githubSummary: null,
+    ecosystemSummary: `${activity.qualifyingTransactionCount} qualifying transactions and ${activity.validContractCount} valid contract deployments were verified.`,
+    riskFlags: [] as string[],
+  };
+
+  const tiers = await getActiveBuilderTiers();
+  const tier = calculateBuilderTier(tiers, activity);
+
+  return { activity, qualitative, tier, wallets };
+}
+
+router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+
+  if (!user.discordUserId && !user.xUserId) {
+    res.status(400).json({ error: "Verify X or Discord before running Onchain Builder verification" });
+    return;
+  }
+
+  const [existing] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+  if (existing && existing.claimStatus !== "locked") {
+    res.status(400).json({ error: "Your Builder Pass is already claimed — use re-verification instead" });
+    return;
+  }
+
+  const walletsForUser = await db.select().from(walletsTable).where(and(eq(walletsTable.userId, user.id), isNotNull(walletsTable.ownershipVerifiedAt)));
+  if (walletsForUser.length === 0) {
+    res.status(400).json({ error: "Connect and ownership-verify at least one wallet before running Onchain Builder verification" });
+    return;
+  }
+
+  let analysis: Awaited<ReturnType<typeof runBuilderAnalysis>>;
+  try { analysis = await runBuilderAnalysis(user.id); }
+  catch (error) {
+    if (error instanceof VerificationUnavailableError) { res.status(503).json({ error: error.message, code: "verification_unavailable" }); return; }
+    throw error;
+  }
+  const { activity, qualitative, tier, wallets } = analysis;
+  const eligibilityStatus = tier ? "eligible" : "ineligible";
+
+  let builderPassId: number;
+  if (existing) {
+    await db
+      .update(builderPassesTable)
+      .set({ currentTierId: tier?.id ?? null, eligibilityStatus, lastVerifiedAt: new Date(), builderRole: existing.builderRole })
+      .where(eq(builderPassesTable.id, existing.id));
+    builderPassId = existing.id;
+  } else {
+    const [created] = await db
+      .insert(builderPassesTable)
+      .values({
+        userId: user.id,
+        currentTierId: tier?.id ?? null,
+        eligibilityStatus,
+        claimStatus: "locked",
+        lastVerifiedAt: new Date(),
+      })
+      .returning();
+    builderPassId = created.id;
+  }
+
+  await db.insert(builderVerificationSnapshotsTable).values({
+    builderPassId,
+    githubSummary: qualitative.githubSummary,
+    walletSummary: wallets.map((w) => ({ address: w.address, chain: w.chain })),
+    ecosystemSummary: qualitative.ecosystemSummary,
+    qualifyingTransactionCount: activity.qualifyingTransactionCount,
+    validContractCount: activity.validContractCount,
+    calculatedTierId: tier?.id ?? null,
+    lastReviewedBlock: activity.lastReviewedBlock,
+    internalRiskFlags: qualitative.riskFlags,
+  });
+
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, builderPassId));
+  const summary = [
+    "Social identity verified",
+    `${wallets.length} wallet${wallets.length === 1 ? "" : "s"} ownership-verified`,
+    tier ? `Builder tier assigned: ${tier.name}` : "No qualifying contract deployment found yet",
+    qualitative.ecosystemSummary,
+  ];
+
+  res.json({ builderPass: await buildBuilderPassDTO(pass, false), proposedTier: null, summary });
+});
+
+router.post("/passes/builder/reverify", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+  const [existing] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+
+  if (!existing || existing.claimStatus === "locked") {
+    res.status(400).json({ error: "Claim your Builder Pass before re-verifying" });
+    return;
+  }
+  if (existing.nextVerificationAt && existing.nextVerificationAt > new Date()) {
+    res.status(429).json({ error: "Re-verification cooldown is still active", nextVerificationAt: existing.nextVerificationAt.toISOString() });
+    return;
+  }
+
+  let analysis: Awaited<ReturnType<typeof runBuilderAnalysis>>;
+  try { analysis = await runBuilderAnalysis(user.id); }
+  catch (error) {
+    if (error instanceof VerificationUnavailableError) { res.status(503).json({ error: error.message, code: "verification_unavailable" }); return; }
+    throw error;
+  }
+  const { activity, qualitative, tier: candidateTier, wallets } = analysis;
+  const [currentTier] = existing.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, existing.currentTierId)) : [null];
+
+  const [snapshot] = await db
+    .insert(builderVerificationSnapshotsTable)
+    .values({
+      builderPassId: existing.id,
+      githubSummary: qualitative.githubSummary,
+      walletSummary: wallets.map((w) => ({ address: w.address, chain: w.chain })),
+      ecosystemSummary: qualitative.ecosystemSummary,
+      qualifyingTransactionCount: activity.qualifyingTransactionCount,
+      validContractCount: activity.validContractCount,
+      calculatedTierId: candidateTier?.id ?? null,
+      lastReviewedBlock: activity.lastReviewedBlock,
+      internalRiskFlags: qualitative.riskFlags,
+    })
+    .returning();
+
+  const upgradeIsAvailable = isUpgrade(currentTier ?? null, candidateTier);
+  const nextVerificationAt = new Date(Date.now() + REVERIFICATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+
+  await db
+    .update(builderPassesTable)
+    .set({
+      lastVerifiedAt: new Date(),
+      nextVerificationAt,
+      proposedTierId: upgradeIsAvailable ? (candidateTier?.id ?? null) : null,
+      proposedTierSnapshotId: upgradeIsAvailable ? snapshot.id : null,
+    })
+    .where(eq(builderPassesTable.id, existing.id));
+
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, existing.id));
+  const summary = upgradeIsAvailable
+    ? [`Your verified activity now qualifies for ${candidateTier?.name}.`, qualitative.ecosystemSummary]
+    : ["Your current tier remains the highest verified tier.", qualitative.ecosystemSummary];
+
+  res.json({
+    builderPass: await buildBuilderPassDTO(pass, false),
+    proposedTier: upgradeIsAvailable ? serializeBuilderTier(candidateTier, false) : null,
+    summary,
+  });
+});
+
+router.post("/passes/builder/upgrade", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+  const [existing] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+
+  if (!existing || !existing.proposedTierId) {
+    res.status(400).json({ error: "No pending tier upgrade to confirm" });
+    return;
+  }
+
+  const [newTier] = await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, existing.proposedTierId));
+  if (!newTier) {
+    res.status(400).json({ error: "No pending tier upgrade to confirm" });
+    return;
+  }
+
+  let transactionHash: string | null = null;
+  if (existing.claimStatus === "minted" && existing.tokenId) {
+    if (!chainAdapter.mintingAvailable) { res.status(503).json({ error: "Onchain minting is temporarily unavailable.", code: "minting_unavailable" }); return; }
+    const result = await chainAdapter.upgradeBuilderTier({ tokenId: existing.tokenId, network: (existing.network as Network) ?? "arc", tierSlug: newTier.slug });
+    transactionHash = result.transactionHash;
+  }
+
+  await db.insert(builderTierHistoryTable).values({
+    builderPassId: existing.id,
+    previousTierId: existing.currentTierId,
+    newTierId: newTier.id,
+    verificationSnapshotId: existing.proposedTierSnapshotId,
+    transactionHash,
+    upgradedAt: new Date(),
+  });
+
+  await db
+    .update(builderPassesTable)
+    .set({
+      currentTierId: newTier.id,
+      proposedTierId: null,
+      proposedTierSnapshotId: null,
+      lastTierUpgradeAt: new Date(),
+      transactionHash: transactionHash ?? existing.transactionHash,
+    })
+    .where(eq(builderPassesTable.id, existing.id));
+
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, existing.id));
+  res.json(await buildBuilderPassDTO(pass, false));
+});
+
+router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+
+  if (!pass) {
+    res.status(400).json({ error: "Run Builder verification first" });
+    return;
+  }
+  if (pass.eligibilityStatus !== "eligible") {
+    res.status(400).json({ error: "Your Builder Pass is not yet eligible to claim" });
+    return;
+  }
+  if (pass.claimStatus !== "locked") {
+    res.status(400).json({ error: "This Builder Pass has already been claimed" });
+    return;
+  }
+
+  const now = new Date();
+  const [updated] = await db
+    .update(builderPassesTable)
+    .set({ claimStatus: "claimed", initiallyIssuedAt: now, nextVerificationAt: new Date(now.getTime() + REVERIFICATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000) })
+    .where(eq(builderPassesTable.id, pass.id))
+    .returning();
+
+  await db.insert(builderTierHistoryTable).values({
+    builderPassId: pass.id,
+    previousTierId: null,
+    newTierId: pass.currentTierId!,
+    verificationSnapshotId: null,
+    transactionHash: null,
+    upgradedAt: now,
+  });
+
+  res.json(await buildBuilderPassDTO(updated, false));
+});
+
+router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as AuthedRequest).user;
+  const bodyParsed = MintBuilderPassBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: bodyParsed.error.message });
+    return;
+  }
+
+  const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+  if (!pass) {
+    res.status(400).json({ error: "Run Builder verification first" });
+    return;
+  }
+  if (pass.claimStatus === "minted") {
+    res.status(400).json({ error: "This Builder Pass has already been minted" });
+    return;
+  }
+  if (pass.claimStatus !== "claimed") {
+    res.status(400).json({ error: "Claim your Builder Pass before minting it" });
+    return;
+  }
+
+  if (!chainAdapter.mintingAvailable) { res.status(503).json({ error: "Onchain minting is temporarily unavailable.", code: "minting_unavailable" }); return; }
+  const [{ value: mintedCount }] = await db.select({ value: count() }).from(builderPassesTable).where(lifetimeBuilderIssued());
+  if (mintedCount >= BUILDER_SUPPLY_CAP) {
+    res.status(400).json({ error: "Builder Pass allocation complete" });
+    return;
+  }
+
+  const { mintMethod, walletAddress, network = "arc", confirmed } = bodyParsed.data;
+  if (mintMethod === "manual_address" && !confirmed) {
+    res.status(400).json({ error: "You must confirm the destination address before minting to it" });
+    return;
+  }
+  if (!walletAddress) {
+    res.status(400).json({ error: "A destination wallet address is required" });
+    return;
+  }
+
+  let destinationWallet: string;
+  try {
+    destinationWallet = checksumAddress(walletAddress);
+  } catch {
+    res.status(400).json({ error: "Invalid wallet address" });
+    return;
+  }
+
+  const [currentTier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
+  if (!currentTier) {
+    res.status(400).json({ error: "No verified tier to mint" });
+    return;
+  }
+
+  const identityHash = computeIdentityHash("builder", user.id);
+  const mintResult = await chainAdapter.mintBuilderPass({ identityHash, destinationWallet, network: network as Network, tierSlug: currentTier.slug });
+
+  const [updated] = await db
+    .update(builderPassesTable)
+    .set({
+      claimStatus: "minted",
+      destinationWallet,
+      tokenId: mintResult.tokenId,
+      contractAddress: mintResult.contractAddress,
+      transactionHash: mintResult.transactionHash,
+      network: mintResult.network,
+      passNumber: pass.passNumber ?? mintedCount + 1,
+    })
+    .where(eq(builderPassesTable.id, pass.id))
+    .returning();
+
+  res.json(await buildBuilderPassDTO(updated, false));
+});
+
+export default router;

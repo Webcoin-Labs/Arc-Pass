@@ -2,21 +2,31 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: Arc Pass API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: eligibility
+    description: Public eligibility preview
+  - name: passes
+    description: Founder and Builder pass lifecycle
+  - name: users
+    description: User profile and wallet management
+  - name: admin
+    description: Admin operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +34,2010 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /eligibility/check:
+    post:
+      operationId: checkEligibility
+      tags: [eligibility]
+      summary: Check eligibility preview for Arc Pass
+      description: >
+        Public preview only. Does not authenticate the caller and does not
+        grant claim access — identity verification via OAuth is required
+        before anything can be claimed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EligibilityQuery"
+      responses:
+        "200":
+          description: Eligibility preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityResult"
+
+  /eligibility/preview:
+    post:
+      operationId: previewEligibility
+      tags: [eligibility]
+      summary: Get a privacy-safe public eligibility preview
+      description: A username is not ownership proof. The response contains status values only and can never establish new Onchain Builder eligibility.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EligibilityQuery"
+      responses:
+        "200":
+          description: Minimal eligibility preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityResult"
+
+  /passes/me:
+    get:
+      operationId: listMyPasses
+      tags: [passes]
+      summary: Get the current user's Founder and Builder passes
+      responses:
+        "200":
+          description: My passes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyPasses"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/founder/{id}:
+    get:
+      operationId: getFounderPass
+      tags: [passes]
+      summary: Get a public minted Founder Pass by ID
+      description: Returns 404 until the credential is minted and intentionally public.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Founder Pass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/founder/{id}/download-url:
+    get:
+      operationId: getFounderPassDownloadUrl
+      tags: [passes]
+      summary: Get a signed download URL for a claimed Founder Pass image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Download URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadUrlResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/founder/claim:
+    post:
+      operationId: claimFounderPass
+      tags: [passes]
+      summary: Claim the current user's eligible Founder Pass
+      responses:
+        "200":
+          description: Claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderPass"
+        "400":
+          description: Not eligible or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/founder/mint:
+    post:
+      operationId: mintFounderPass
+      tags: [passes]
+      summary: Mint the current user's claimed Founder Pass onchain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MintRequest"
+      responses:
+        "200":
+          description: Minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderPass"
+        "400":
+          description: Not claimable or already minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/builder/supply:
+    get:
+      operationId: getBuilderSupply
+      tags: [passes]
+      summary: Get public Builder Pass supply information
+      responses:
+        "200":
+          description: Supply info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderSupply"
+
+  /passes/builder/{id}:
+    get:
+      operationId: getBuilderPass
+      tags: [passes]
+      summary: Get a public minted Onchain Builder Pass by ID
+      description: Returns 404 until the credential is minted and intentionally public.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Builder Pass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/builder/{id}/download-url:
+    get:
+      operationId: getBuilderPassDownloadUrl
+      tags: [passes]
+      summary: Get a signed download URL for a claimed Builder Pass image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Download URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadUrlResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/builder/verify:
+    post:
+      operationId: verifyBuilder
+      tags: [passes]
+      summary: Run initial Builder verification using connected accounts and wallets
+      description: >
+        Requires Discord connected (required), GitHub connected (required),
+        and at least one wallet added. Analyzes deterministic onchain data
+        plus qualitative GitHub signal and assigns the highest qualifying
+        tier. Requires at least one valid deployed contract to qualify for
+        any tier.
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderVerificationResult"
+        "400":
+          description: Missing required connections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/builder/reverify:
+    post:
+      operationId: reverifyBuilder
+      tags: [passes]
+      summary: Re-run Builder verification to check for a tier upgrade
+      description: >
+        Enforces a 7-day cooldown since the last verification. Computes a
+        proposed tier but does not apply it — call POST
+        /passes/builder/upgrade to confirm and apply.
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderVerificationResult"
+        "400":
+          description: No claimed Builder Pass to re-verify
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Re-verification cooldown active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CooldownErrorResponse"
+
+  /passes/builder/upgrade:
+    post:
+      operationId: upgradeBuilderTier
+      tags: [passes]
+      summary: Confirm and apply the most recently proposed tier upgrade
+      responses:
+        "200":
+          description: Upgraded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderPass"
+        "400":
+          description: No pending upgrade available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/builder/claim:
+    post:
+      operationId: claimBuilderPass
+      tags: [passes]
+      summary: Claim the current user's verified Builder Pass
+      responses:
+        "200":
+          description: Claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderPass"
+        "400":
+          description: Not eligible or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /passes/builder/mint:
+    post:
+      operationId: mintBuilderPass
+      tags: [passes]
+      summary: Mint the current user's claimed Builder Pass onchain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MintRequest"
+      responses:
+        "200":
+          description: Minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderPass"
+        "400":
+          description: Not claimable, already minted, or supply exhausted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [passes]
+      summary: Get dashboard summary stats for the current user
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get the current user profile, including connected accounts
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/wallets:
+    get:
+      operationId: listUserWallets
+      tags: [users]
+      summary: List wallets linked to the current user
+      responses:
+        "200":
+          description: Wallet list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Wallet"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /wallets/challenge:
+    post:
+      operationId: createWalletChallenge
+      tags: [wallets]
+      summary: Create an expiring wallet ownership challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletChallengeInput"
+      responses:
+        "201":
+          description: Challenge created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletChallenge"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallets/verify:
+    post:
+      operationId: verifyWalletOwnership
+      tags: [wallets]
+      summary: Verify a wallet signature and save the ownership-verified wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletVerificationInput"
+      responses:
+        "201":
+          description: Wallet ownership verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /users/me/wallets/{walletId}:
+    delete:
+      operationId: removeUserWallet
+      tags: [users]
+      summary: Remove a wallet from the current user
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Wallet removed
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /share/{type}/{id}:
+    get:
+      operationId: getSharePage
+      tags: [sharing]
+      summary: Public share page with Open Graph metadata
+      parameters:
+        - { name: type, in: path, required: true, schema: { type: string, enum: [founder, builder] } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: HTML share page
+          content:
+            text/html:
+              schema: { type: string }
+
+  /share/{type}/{id}/image:
+    get:
+      operationId: getShareImage
+      tags: [sharing]
+      summary: Server-generated Open Graph image
+      parameters:
+        - { name: type, in: path, required: true, schema: { type: string, enum: [founder, builder] } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: SVG Open Graph image
+          content:
+            image/svg+xml:
+              schema: { type: string, format: binary }
+
+  /webhooks/typeform/founder-application:
+    post:
+      operationId: ingestFounderApplication
+      tags: [webhooks]
+      summary: Ingest a signature-verified Typeform founder application
+      responses:
+        "204": { description: Accepted or previously processed }
+        "401":
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /admin/overview:
+    get:
+      operationId: adminGetOverview
+      tags: [admin]
+      summary: Admin - dashboard overview counts
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/auth/login:
+    post:
+      operationId: adminLogin
+      tags: [admin-auth]
+      summary: Start a dedicated, HTTP-only administrator session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminCredentials" }
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSession" }
+        "401":
+          description: Invalid credentials or locked account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /admin/auth/session:
+    get:
+      operationId: getAdminSession
+      tags: [admin-auth]
+      responses:
+        "200":
+          description: Active administrator session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSession" }
+
+  /admin/auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin-auth]
+      responses:
+        "200":
+          description: Signed out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
+  /admin/founder-passes:
+    get:
+      operationId: adminListFounderPasses
+      tags: [admin]
+      summary: Admin - list / search Founder Passes
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [eligible, invite_required, under_review, ineligible]
+        - name: variant
+          in: query
+          schema:
+            type: string
+            enum: [normal, premium_black]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Founder Pass list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFounderPassList"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreateFounderInvite
+      tags: [admin]
+      summary: Admin - create a Founder invitation (pre or post signup)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFounderInviteInput"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFounderPass"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/founder-passes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: adminGetFounderPass
+      tags: [admin]
+      summary: Admin - get a Founder Pass
+      responses:
+        "200":
+          description: Founder Pass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFounderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: adminUpdateFounderPass
+      tags: [admin]
+      summary: Admin - update a Founder Pass (locked fields rejected after permanent lock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFounderPassUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFounderPass"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Pass is permanently locked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/founder-passes/{id}/revoke-invite:
+    post:
+      operationId: adminRevokeFounderInvite
+      tags: [admin]
+      summary: Admin - revoke a Founder invitation before mint
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFounderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-passes:
+    get:
+      operationId: adminListBuilderPasses
+      tags: [admin]
+      summary: Admin - list / search Builder Passes
+      parameters:
+        - name: tierSlug
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: suspended
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Builder Pass list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderPassList"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-passes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: adminGetBuilderPass
+      tags: [admin]
+      summary: Admin - get a Builder Pass with tier history and latest snapshot
+      responses:
+        "200":
+          description: Builder Pass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: adminUpdateBuilderPass
+      tags: [admin]
+      summary: Admin - update Builder Pass role/ecosystem/notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminBuilderPassUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-passes/{id}/suspend:
+    post:
+      operationId: adminSuspendBuilderPass
+      tags: [admin]
+      summary: Admin - suspend a Builder Pass
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonInput"
+      responses:
+        "200":
+          description: Suspended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-passes/{id}/unsuspend:
+    post:
+      operationId: adminUnsuspendBuilderPass
+      tags: [admin]
+      summary: Admin - lift a Builder Pass suspension
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unsuspended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-passes/{id}/revoke:
+    post:
+      operationId: adminRevokeBuilderPass
+      tags: [admin]
+      summary: Admin - revoke a Builder Pass
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonInput"
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderPass"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/founder-tiers:
+    get:
+      operationId: adminListFounderTiers
+      tags: [admin]
+      summary: Admin - list Founder tiers
+      responses:
+        "200":
+          description: Founder tiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FounderTier"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreateFounderTier
+      tags: [admin]
+      summary: Admin - create a Founder tier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FounderTierInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderTier"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/founder-tiers/{id}:
+    patch:
+      operationId: adminUpdateFounderTier
+      tags: [admin]
+      summary: Admin - update a Founder tier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FounderTierInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderTier"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-tiers:
+    get:
+      operationId: adminListBuilderTiers
+      tags: [admin]
+      summary: Admin - list Builder tiers with thresholds
+      responses:
+        "200":
+          description: Builder tiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminBuilderTier"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/builder-tiers/{id}:
+    patch:
+      operationId: adminUpdateBuilderTier
+      tags: [admin]
+      summary: Admin - update a Builder tier's name, emblem, thresholds, or active state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminBuilderTierInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBuilderTier"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/uploads/image:
+    post:
+      operationId: adminUploadImage
+      tags: [admin]
+      summary: Admin - upload a company logo or tier emblem image
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ImageUploadInput"
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageUploadResponse"
+        "400":
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/mint-records:
+    get:
+      operationId: adminListMintRecords
+      tags: [admin]
+      summary: Admin - list all minted passes across both credential types
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [founder, builder]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Mint records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMintRecordList"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    CooldownErrorResponse:
+      type: object
+      required: [error, nextVerificationAt]
+      properties:
+        error:
+          type: string
+        nextVerificationAt:
+          type: string
+          format: date-time
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    ReasonInput:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    ImageUploadInput:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+
+    User:
+      type: object
+      required: [id, username, displayName, avatarUrl, provider, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        provider:
+          type: string
+          enum: [x, discord]
+        providerId:
+          type: string
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserConnections:
+      type: object
+      required: [x, discord, github]
+      properties:
+        x:
+          type: object
+          required: [connected]
+          properties:
+            connected:
+              type: boolean
+            username:
+              type: ["string", "null"]
+        discord:
+          type: object
+          required: [connected]
+          properties:
+            connected:
+              type: boolean
+            username:
+              type: ["string", "null"]
+            avatarUrl:
+              type: ["string", "null"]
+        github:
+          type: object
+          required: [connected]
+          properties:
+            connected:
+              type: boolean
+            username:
+              type: ["string", "null"]
+
+    UserProfile:
+      type: object
+      required: [id, username, displayName, avatarUrl, provider, isAdmin, createdAt, connections]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        provider:
+          type: string
+          enum: [x, discord]
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        connections:
+          $ref: "#/components/schemas/UserConnections"
+
+    Wallet:
+      type: object
+      required: [id, address, isPrimary, label, chain, ownershipVerifiedAt, signatureMethod, createdAt]
+      properties:
+        id:
+          type: integer
+        address:
+          type: string
+        isPrimary:
+          type: boolean
+        label:
+          type: ["string", "null"]
+        chain:
+          type: string
+        ownershipVerifiedAt:
+          type: string
+          format: date-time
+        signatureMethod:
+          type: string
+        lastAnalysedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    WalletChallengeInput:
+      type: object
+      required: [address]
+      properties:
+        address:
+          type: string
+
+    WalletChallenge:
+      type: object
+      required: [challengeId, address, message, expiresAt]
+      properties:
+        challengeId:
+          type: integer
+        address:
+          type: string
+        message:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    WalletVerificationInput:
+      type: object
+      required: [challengeId, message, signature]
+      properties:
+        challengeId:
+          type: integer
+        message:
+          type: string
+        signature:
+          type: string
+        label:
+          type: string
+        isPrimary:
+          type: boolean
+
+    EligibilityQuery:
+      type: object
+      required: [identifier, platform]
+      properties:
+        identifier:
+          type: string
+          description: Username on the chosen platform (preview only, not an ownership proof)
+        platform:
+          type: string
+          enum: [x, discord]
+
+    EligibilityResult:
+      type: object
+      required: [founder, builder]
+      properties:
+        founder:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [eligible, ineligible, under_review, claimed, unknown]
+        builder:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [verification_required, claimed, unknown]
+
+    FounderTier:
+      type: object
+      required: [id, name, isActive, rank]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        emblemUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        rank:
+          type: integer
+        isActive:
+          type: boolean
+
+    FounderTierInput:
+      type: object
+      required: [name, rank]
+      properties:
+        name:
+          type: string
+        emblemUrl:
+          type: string
+        description:
+          type: string
+        accentColor:
+          type: string
+        rank:
+          type: integer
+        isActive:
+          type: boolean
+
+    BuilderTier:
+      type: object
+      required: [id, slug, name, isActive, rank]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+          enum: [bronze, silver, gold, platinum, diamond]
+        name:
+          type: string
+        emblemUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        rank:
+          type: integer
+        isActive:
+          type: boolean
+
+    AdminBuilderTier:
+      type: object
+      required: [id, slug, name, transactionThreshold, contractThreshold, isActive, rank]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        emblemUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        transactionThreshold:
+          type: integer
+        contractThreshold:
+          type: integer
+        rank:
+          type: integer
+        isActive:
+          type: boolean
+
+    AdminBuilderTierInput:
+      type: object
+      properties:
+        name:
+          type: string
+        emblemUrl:
+          type: string
+        description:
+          type: string
+        accentColor:
+          type: string
+        transactionThreshold:
+          type: integer
+        contractThreshold:
+          type: integer
+        isActive:
+          type: boolean
+
+    FounderPass:
+      type: object
+      required: [id, variant, eligibilityStatus, claimStatus, createdAt]
+      properties:
+        id:
+          type: integer
+        variant:
+          type: string
+          enum: [normal, premium_black]
+        founderTier:
+          oneOf:
+            - $ref: "#/components/schemas/FounderTier"
+            - type: "null"
+        displayName:
+          type: ["string", "null"]
+        username:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        founderTitle:
+          type: ["string", "null"]
+        companyName:
+          type: ["string", "null"]
+        companyIndustry:
+          type: ["string", "null"]
+        companyLogoUrl:
+          type: ["string", "null"]
+        companyWebsite:
+          type: ["string", "null"]
+        companyLocation:
+          type: ["string", "null"]
+        startupStage:
+          type: ["string", "null"]
+        founderStatement:
+          type: ["string", "null"]
+        companyDescription:
+          type: ["string", "null"]
+        eligibilityStatus:
+          type: string
+          enum: [eligible, invite_required, under_review, ineligible]
+        claimStatus:
+          type: string
+          enum: [locked, claimed, minted]
+        passNumber:
+          type: ["integer", "null"]
+        network:
+          type: ["string", "null"]
+          enum: [arc, base, null]
+        tokenId:
+          type: ["string", "null"]
+        contractAddress:
+          type: ["string", "null"]
+        destinationWallet:
+          type: ["string", "null"]
+        transactionHash:
+          type: ["string", "null"]
+        issuedAt:
+          type: ["string", "null"]
+          format: date-time
+        claimedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminFounderPass:
+      allOf:
+        - $ref: "#/components/schemas/FounderPass"
+        - type: object
+          required: [userId]
+          properties:
+            userId:
+              type: ["integer", "null"]
+            inviteHandle:
+              type: ["string", "null"]
+            invitePlatform:
+              type: ["string", "null"]
+              enum: [x, discord, null]
+            invitedAt:
+              type: ["string", "null"]
+              format: date-time
+            revokedAt:
+              type: ["string", "null"]
+              format: date-time
+            revokedReason:
+              type: ["string", "null"]
+            adminNotes:
+              type: ["string", "null"]
+
+    AdminFounderInviteInput:
+      type: object
+      required: [invitePlatform, inviteHandle, companyName]
+      properties:
+        invitePlatform:
+          type: string
+          enum: [x, discord]
+        inviteHandle:
+          type: string
+        variant:
+          type: string
+          enum: [normal, premium_black]
+        founderTierId:
+          type: integer
+        founderTitle:
+          type: string
+        companyName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        companyLogoUrl:
+          type: string
+        companyIndustry:
+          type: string
+        adminNotes:
+          type: string
+
+    AdminFounderPassUpdate:
+      type: object
+      properties:
+        eligibilityStatus:
+          type: string
+          enum: [eligible, invite_required, under_review, ineligible]
+        variant:
+          type: string
+          enum: [normal, premium_black]
+        founderTierId:
+          type: integer
+        founderTitle:
+          type: string
+        companyName:
+          type: string
+        companyIndustry:
+          type: string
+        companyLogoUrl:
+          type: string
+        companyWebsite:
+          type: string
+        companyLocation:
+          type: string
+        startupStage:
+          type: string
+        founderStatement:
+          type: string
+        companyDescription:
+          type: string
+        passNumber:
+          type: integer
+        adminNotes:
+          type: string
+
+    BuilderTierHistoryEntry:
+      type: object
+      required: [newTierName, upgradedAt]
+      properties:
+        previousTierName:
+          type: ["string", "null"]
+        newTierName:
+          type: string
+        upgradedAt:
+          type: string
+          format: date-time
+        transactionHash:
+          type: ["string", "null"]
+
+    BuilderPass:
+      type: object
+      required: [id, eligibilityStatus, claimStatus, createdAt, tierHistory]
+      properties:
+        id:
+          type: integer
+        currentTier:
+          oneOf:
+            - $ref: "#/components/schemas/BuilderTier"
+            - type: "null"
+        displayName:
+          type: ["string", "null"]
+        discordUsername:
+          type: ["string", "null"]
+        discordAvatarUrl:
+          type: ["string", "null"]
+        builderRole:
+          type: ["string", "null"]
+        primaryEcosystem:
+          type: ["string", "null"]
+        githubVerified:
+          type: boolean
+        verifiedWalletCount:
+          type: integer
+        qualifyingTransactionCount:
+          type: ["integer", "null"]
+        validContractCount:
+          type: ["integer", "null"]
+        eligibilityStatus:
+          type: string
+          enum: [eligible, ineligible, verification_required, analysis_in_progress]
+        claimStatus:
+          type: string
+          enum: [locked, claimed, minted]
+        upgradeAvailable:
+          type: boolean
+        passNumber:
+          type: ["integer", "null"]
+        network:
+          type: ["string", "null"]
+          enum: [arc, base, null]
+        tokenId:
+          type: ["string", "null"]
+        contractAddress:
+          type: ["string", "null"]
+        destinationWallet:
+          type: ["string", "null"]
+        transactionHash:
+          type: ["string", "null"]
+        initiallyIssuedAt:
+          type: ["string", "null"]
+          format: date-time
+        lastVerifiedAt:
+          type: ["string", "null"]
+          format: date-time
+        nextVerificationAt:
+          type: ["string", "null"]
+          format: date-time
+        isSuspended:
+          type: boolean
+        isRevoked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        tierHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/BuilderTierHistoryEntry"
+
+    AdminBuilderPass:
+      allOf:
+        - $ref: "#/components/schemas/BuilderPass"
+        - type: object
+          required: [userId]
+          properties:
+            userId:
+              type: integer
+            suspendedReason:
+              type: ["string", "null"]
+            revokedReason:
+              type: ["string", "null"]
+            githubUsername:
+              type: ["string", "null"]
+            walletAddresses:
+              type: array
+              items:
+                type: string
+
+    AdminBuilderPassUpdate:
+      type: object
+      properties:
+        builderRole:
+          type: string
+        primaryEcosystem:
+          type: string
+
+    MyPasses:
+      type: object
+      properties:
+        founder:
+          oneOf:
+            - $ref: "#/components/schemas/FounderPass"
+            - type: "null"
+        builder:
+          oneOf:
+            - $ref: "#/components/schemas/BuilderPass"
+            - type: "null"
+
+    BuilderVerificationResult:
+      type: object
+      required: [builderPass, summary]
+      properties:
+        builderPass:
+          $ref: "#/components/schemas/BuilderPass"
+        proposedTier:
+          oneOf:
+            - $ref: "#/components/schemas/BuilderTier"
+            - type: "null"
+        summary:
+          type: array
+          items:
+            type: string
+
+    BuilderSupply:
+      type: object
+      required: [maximumSupply, totalIssued, lifetimeIssuedCount, activeCount, revokedCount, remaining]
+      properties:
+        maximumSupply:
+          type: integer
+        totalIssued:
+          type: integer
+        lifetimeIssuedCount:
+          type: integer
+        activeCount:
+          type: integer
+        revokedCount:
+          type: integer
+        remaining:
+          type: integer
+
+    MintRequest:
+      type: object
+      required: [mintMethod]
+      properties:
+        mintMethod:
+          type: string
+          enum: [wallet_connect, manual_address]
+        walletAddress:
+          type: string
+        network:
+          type: string
+          enum: [arc, base]
+          default: "arc"
+        confirmed:
+          type: boolean
+          description: Required true for manual_address — confirms the user reviewed the warning
+
+    DownloadUrlResponse:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    DashboardStats:
+      type: object
+      required: [builderSupply]
+      properties:
+        founder:
+          oneOf:
+            - $ref: "#/components/schemas/FounderPass"
+            - type: "null"
+        builder:
+          oneOf:
+            - $ref: "#/components/schemas/BuilderPass"
+            - type: "null"
+        builderSupply:
+          $ref: "#/components/schemas/BuilderSupply"
+
+    AdminCredentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string, format: password }
+
+    AdminSession:
+      type: object
+      required: [id, email, role]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        role: { type: string }
+
+    AdminOverview:
+      type: object
+      required:
+        [
+          founderPassesIssued,
+          normalFounderPasses,
+          premiumBlackFounderPasses,
+          builderPassesIssued,
+          builderPassesRemaining,
+          builderTierDistribution,
+          pendingFounderReviews,
+          pendingBuilderReviews,
+          pendingReverifications,
+          pendingUpgrades,
+          suspendedPasses,
+          revokedPasses,
+        ]
+      properties:
+        founderPassesIssued:
+          type: integer
+        normalFounderPasses:
+          type: integer
+        premiumBlackFounderPasses:
+          type: integer
+        builderPassesIssued:
+          type: integer
+        builderPassesRemaining:
+          type: integer
+        builderTierDistribution:
+          type: object
+          additionalProperties:
+            type: integer
+        pendingFounderReviews:
+          type: integer
+        pendingBuilderReviews:
+          type: integer
+        pendingReverifications:
+          type: integer
+        pendingUpgrades:
+          type: integer
+        suspendedPasses:
+          type: integer
+        revokedPasses:
+          type: integer
+
+    AdminFounderPassList:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFounderPass"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    AdminBuilderPassList:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminBuilderPass"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    ImageUploadResponse:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    AdminMintRecord:
+      type: object
+      required: [id, type, passNumber, network, issuedAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [founder, builder]
+        displayName:
+          type: ["string", "null"]
+        passNumber:
+          type: ["integer", "null"]
+        tokenId:
+          type: ["string", "null"]
+        network:
+          type: ["string", "null"]
+        destinationWallet:
+          type: ["string", "null"]
+        transactionHash:
+          type: ["string", "null"]
+        issuedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    AdminMintRecordList:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminMintRecord"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer

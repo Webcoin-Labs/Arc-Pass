@@ -1,0 +1,579 @@
+Build a world-class full-stack web application for "Arc Pass" under the domain arc.webcoinlabs.com.
+
+This should feel like a premium YC-style startup product: clean, sharp, modern, trustworthy, fast, minimal, and highly polished. The design language should be inspired by the Webcoin Labs website shown in the references: premium dark/light theme, subtle gradients, elegant typography, crisp card UI, soft glows, and refined animations. Avoid noisy crypto aesthetics. Make it feel professional, investor-ready, and high-conviction.
+
+PRODUCT OVERVIEW
+Arc Pass is a credential + claim platform where users can check eligibility and claim one of two passes:
+1. Founder Pass
+2. Builder Pass
+
+Founder Pass is invite-only.
+Builder Pass is claimable through verified builder proof, with tiers assigned based on contribution.
+
+The app must support:
+- public eligibility checking
+- account login
+- pass preview
+- pass download
+- onchain minting as NFT
+- manual wallet-address delivery option
+- light and dark theme
+- responsive design
+- strong UX
+
+BRAND / TONE
+Use product copy that sounds like a top YC startup:
+- confident
+- concise
+- premium
+- not cringe
+- not overhyped
+- web3-native but accessible
+- highly polished
+
+Avoid generic crypto wording like “revolutionary”, “to the moon”, etc.
+
+BRANDING
+Top-left header:
+- Arc Pass
+- small subtext: Powered by Webcoin Labs
+
+Top-right nav:
+- FAQ
+- Read Docs
+- Join Webcoin Labs Waitlist
+- Login
+
+If logged in:
+replace Login with user avatar + username + dropdown.
+
+DROPDOWN ITEMS
+- My Passes
+- Profile
+- Logout
+
+DESIGN SYSTEM
+Create a 10/10 UI and UX.
+Use a premium design system with:
+- elegant spacing
+- soft borders
+- subtle card glows
+- minimal but rich gradients
+- rounded corners
+- refined shadows
+- strong typography hierarchy
+- excellent mobile responsiveness
+
+THEME
+Use both dark and light mode.
+It should visually align with the Webcoin Labs website aesthetic:
+- dark navy / black surfaces
+- soft purple-blue gradients
+- muted gray panels
+- crisp white text
+- subtle neon accents only where needed
+- in light mode, use very light gray/white backgrounds with faint violet-blue tint
+
+Suggested palette direction:
+- deep navy / near-black
+- electric blue
+- violet
+- soft lilac
+- muted cyan
+- white / warm gray text
+Do not overdo glow effects.
+
+TYPOGRAPHY
+Use a professional startup font pairing such as:
+- Inter / Geist / Satoshi
+Use large confident headlines and clean UI body text.
+
+CORE APP FLOW
+
+====================================
+1. LANDING / ELIGIBILITY PAGE
+====================================
+
+Build the main page as the primary entry point.
+
+Hero section:
+Headline:
+“Claim your Arc Pass.”
+Subheadline:
+“Verify your founder or builder profile, preview your pass, and mint your credential onchain.”
+
+A second supporting line can mention:
+“Founder Pass is invite-only. Builder Pass is tiered based on verified proof, GitHub activity, contracts interacted, launch quality, and ecosystem contribution.”
+
+Add two input options at the center:
+- X / Twitter username
+- Discord username
+
+Use a clean tab / segmented selector:
+[ X Username ] [ Discord Username ]
+
+Below it:
+- input field
+- button: Check Eligibility
+
+Important:
+This username entry is only for eligibility preview.
+It should not be treated as final proof of identity.
+
+SCANNING EXPERIENCE
+After clicking “Check Eligibility”, show a premium scanning state inspired by CRED:
+- card-shaped scan area
+- animated line scanning top to bottom
+- loading glow
+- elegant status text cycling through
+
+Status messages:
+- Checking public profile…
+- Verifying community access…
+- Reviewing founder eligibility…
+- Reviewing builder signals…
+- Calculating pass tier…
+- Preparing pass preview…
+
+Make the animation feel premium, quick, and intentional.
+
+RESULTS UI
+After scanning, show two cards side by side:
+
+A) Founder Pass
+B) Builder Pass
+
+FOUNDER PASS LOGIC
+- If not eligible: show locked card state
+- If eligible: show active Founder Pass state
+- If under review: show under review state
+- If invite required: show invite-only locked state
+
+BUILDER PASS LOGIC
+Builder Pass should always be visible.
+Recommended logic:
+- all users can check Builder Pass
+- base access is available
+- tier depends on verified proof
+
+Each card should show:
+- pass name
+- status
+- short explanation
+- network
+- eligibility state
+- CTA button
+
+CTA examples:
+Founder Pass:
+- Claim Founder Pass
+- Request Access
+- Under Review
+- Invite Required
+
+Builder Pass:
+- Claim Builder Pass
+- Complete Verification
+- View Tier Details
+
+TIER SYSTEM FOR BUILDER PASS
+Use 5 tiers visually matching the reference style:
+- Bronze
+- Silver
+- Gold
+- Emerald
+- Diamond
+
+Show this line above tiers:
+“Tier depends on verified builder proof, contracts interacted, launch quality, GitHub activity, and ecosystem contribution.”
+
+Create a premium tier selector / icon row matching this style.
+
+Add ecosystem support section:
+Available now:
+- Arc
+- Base
+
+Coming soon:
+- Solana
+- Zama
+
+====================================
+2. LOGIN FLOW
+====================================
+
+Top-right Login button opens a modal or dedicated auth sheet with:
+- Continue with X
+- Continue with Discord
+
+After login:
+- show avatar
+- show username
+- show dropdown menu
+
+If the user has already claimed any pass, the dashboard should show that state immediately.
+
+====================================
+3. DASHBOARD / MY PASSES
+====================================
+
+When logged in, show a clean dashboard page or section with:
+
+Headline:
+“Here are your passes.”
+
+Show two cards clearly:
+- Founder Pass
+- Builder Pass
+
+Each card should show:
+- pass visual
+- current status
+- claimed / unclaimed
+- tier
+- network
+- token status
+- wallet address
+- CTA buttons
+
+Buttons:
+- Download Your Pass
+- Claim Your Pass
+- View Onchain
+- View Details
+
+If claimed:
+- show token ID
+- show mint date
+- show network
+- show wallet address
+- show “Pass Claimed”
+
+If unclaimed:
+- show “Claim Your Pass”
+
+====================================
+4. CLAIM FLOW
+====================================
+
+When the user clicks “Claim Your Pass”, open a premium claim flow page or modal.
+
+Step 1: Pass Preview
+Show a large card in the center with copy:
+“Here’s your pass.”
+
+Below it show 2 options:
+- Download Your Pass
+- Claim Your Pass
+
+Step 2: Claim action
+When the user clicks “Claim Your Pass”:
+animate the pass into the center of the screen with a rich transition.
+
+Show:
+- pass card front and center
+- button: Mint Onchain
+
+Step 3: Mint options
+When the user clicks “Mint Onchain”, show two options:
+
+Option A:
+Connect Wallet
+
+Option B:
+Enter Wallet Address Safely
+
+Use very polished UI and clear microcopy.
+
+For manual wallet entry, show a clear warning:
+“This NFT will be sent directly to the address you enter. Please double-check it carefully. NFTs sent to the wrong address cannot be recovered.”
+
+Add checkbox confirmation before proceeding with manual address mint.
+
+MINT FLOW RULES
+Founder Pass:
+- can only be claimed once
+- founder eligibility must already be verified
+- pass image should automatically include the user’s X profile picture if X is used
+- if Discord is used, use Discord avatar fallback when X is unavailable
+
+Builder Pass:
+- can only be claimed once
+- should include the Discord profile picture automatically
+- X remains optional
+- tier should reflect verified proof
+
+====================================
+5. BUILDER PASS VERIFICATION FLOW
+====================================
+
+Builder claim flow should include:
+
+Required:
+- Connect Discord
+- Connect GitHub
+- Add wallet(s)
+
+Twitter / X should be optional for builders.
+
+WALLET SUPPORT
+Allow the builder to:
+- connect one primary wallet
+- add up to 2 additional wallets
+Total: up to 3 wallets
+
+The UI should clearly label:
+- Primary wallet
+- Additional wallet 2
+- Additional wallet 3
+
+Allow either:
+- connect wallet
+or
+- paste address manually
+
+BUILDER ANALYSIS
+Assume Gemini API is used on the backend to evaluate:
+- GitHub contribution
+- repos
+- activity
+- deployment-related signals
+- contract interactions / deployments
+- ecosystem participation
+
+The UI should present this cleanly, without exposing too much technical clutter.
+
+Possible loading steps:
+- Reviewing GitHub profile
+- Checking deployed contracts
+- Checking wallet interactions
+- Scoring ecosystem contribution
+- Assigning Builder tier
+
+Show a final verification summary such as:
+- GitHub Verified
+- 3 wallets reviewed
+- Contract activity found
+- Arc interactions detected
+- Base interactions detected
+- Builder tier assigned: Gold
+
+====================================
+6. FOUNDER PASS FLOW
+====================================
+
+Founder Pass should feel more exclusive.
+
+Founder eligibility can be checked using:
+- X / Twitter
+- Discord
+
+But actual claim must require verified identity.
+
+Use states:
+- Eligible
+- Invite Required
+- Under Review
+- Locked
+
+Founder Pass visuals should include:
+- user profile photo
+- founder name / handle
+- founder badge
+- pass number
+- network
+- “Invite-only Founder Pass”
+
+Copy examples:
+- “Reserved for selected founders building high-conviction startups.”
+- “Founder Pass unlocks founder tooling, distribution, and premium access.”
+
+====================================
+7. PASS CARD DESIGN
+====================================
+
+Design both pass cards beautifully.
+
+GENERAL PASS STYLE
+- premium collectible look
+- sleek glass / matte finish
+- elegant gradients
+- embossed or layered feel
+- crisp typography
+- subtle arc / webcoin labs branding
+- professional, not childish
+
+FOUNDER PASS VISUAL FIELDS
+- profile photo
+- full name or handle
+- Founder Pass
+- status
+- pass number
+- network
+- invite-only tag
+- minted / unminted badge
+
+BUILDER PASS VISUAL FIELDS
+- Discord avatar
+- display name
+- Builder Pass
+- builder tier
+- supported network(s)
+- verification status
+- pass number
+- minted / unminted badge
+
+Allow pass download as high-quality shareable image.
+
+====================================
+8. SEARCH CONSISTENCY / REPEAT LOOKUPS
+====================================
+
+If someone searches again later, the same identity should show consistent state:
+- eligible / not eligible
+- claimed / unclaimed
+- pass tier
+- founder status
+- minted state
+
+Do not rely on username strings alone.
+Internally design for stable platform IDs:
+- x_user_id
+- discord_user_id
+- github_user_id
+
+====================================
+9. SMART CONTRACT / ONCHAIN LOGIC
+====================================
+
+Architect the flow so minting is secure.
+
+Requirements:
+- each pass claimable only once
+- founder pass unique per verified founder identity
+- builder pass unique per verified builder identity
+- mint authorized by backend signed message
+- used claim authorizations cannot be reused
+- store token ID and transaction hash after mint
+- support mint to connected wallet or manual wallet address
+
+Show on UI:
+- Minting…
+- Confirm transaction…
+- Pass claimed successfully
+- View transaction
+- View NFT
+
+====================================
+10. INFORMATION ARCHITECTURE / PAGES
+====================================
+
+Build the app with clean routes/components such as:
+- /
+- /login
+- /dashboard
+- /claim/founder
+- /claim/builder
+- /pass/[id]
+- /faq
+- /docs
+
+Optional admin route:
+- /admin
+for internal review of founder eligibility and pass approvals
+
+====================================
+11. COMPONENTS TO BUILD
+====================================
+
+Build reusable components:
+- Header
+- Theme toggle
+- Eligibility input switcher
+- Eligibility scanner
+- Founder Pass card
+- Builder Pass card
+- Tier selector
+- Ecosystem availability cards
+- Login modal
+- Claim modal
+- Wallet selection modal
+- Manual wallet entry form
+- Dashboard pass cards
+- Status badges
+- Loading states / skeletons
+- Empty states
+- Toast notifications
+
+====================================
+12. COPY / MICROCOPY
+====================================
+
+Use strong YC-style product copy across the app.
+
+Examples:
+- “Claim your Arc Pass.”
+- “Your onchain credential for founder and builder identity.”
+- “Founder Pass is invite-only.”
+- “Builder tier is assigned using verified proof.”
+- “Here’s your pass.”
+- “Download your pass.”
+- “Mint onchain.”
+- “Connect wallet.”
+- “Send to wallet address.”
+- “Pass claimed successfully.”
+- “Reviewing your builder proof.”
+- “Reserved for founders building ambitious companies.”
+
+====================================
+13. TECH STACK
+====================================
+
+Use a production-grade modern stack:
+- Next.js
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Framer Motion
+- Lucide icons
+- Zustand or React context where needed
+- PostgreSQL / Supabase for persistence
+- OAuth integrations for X, Discord, GitHub
+- wallet integration for EVM-compatible chains
+- robust API structure
+
+Focus heavily on code quality, component structure, responsive UX, and maintainability.
+
+====================================
+14. UX QUALITY BAR
+====================================
+
+This must feel like a premium startup product.
+Think:
+- elegant
+- fast
+- minimal
+- thoughtful
+- expensive-looking
+- investor-grade
+- launch-ready
+
+Do not make it feel like a generic template.
+
+====================================
+15. OUTPUT EXPECTATION
+====================================
+
+Please generate:
+1. the full UI/UX structure
+2. component architecture
+3. page layout
+4. polished product copy
+5. the actual implementation structure
+6. clean responsive code
+7. rich loading and empty states
+8. dark and light theme support
+
+Where product logic is not yet connected, create realistic mock data and placeholder backend functions with clean interfaces so the app is easy to extend later.
+
+Deliver the result in a way that I can continue building on top of it later.

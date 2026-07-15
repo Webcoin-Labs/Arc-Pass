@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Arc Pass"
+version = "1.0.0"
+id = "artifacts/arc-pass"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24851
+
+[services.development]
+run = "pnpm --filter @workspace/arc-pass run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/arc-pass", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/arc-pass/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24851"
+BASE_PATH = "/"

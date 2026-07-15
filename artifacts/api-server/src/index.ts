@@ -1,3 +1,7 @@
+import { validateEnvironment } from "./lib/env";
+import { seedDevelopmentTestIdentityInvites } from "./lib/dev-test-identities";
+validateEnvironment();
+
 import app from "./app";
 import { logger } from "./lib/logger";
 
@@ -14,6 +18,8 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+await seedDevelopmentTestIdentityInvites();
 
 app.listen(port, (err) => {
   if (err) {

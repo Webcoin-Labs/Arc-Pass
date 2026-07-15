@@ -1,0 +1,331 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-surface-2: hsl(var(--surface-2));
+  --color-surface-2-foreground: hsl(var(--surface-2-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary-border: var(--sidebar-primary-border);
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent-border: var(--sidebar-accent-border);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/*
+  LIGHT THEME
+  Warm off-white page background, cool-gray borders, a faint violet-blue
+  tint reserved for elevated surfaces (cards lift off the page instead of
+  sitting flush with it).
+*/
+:root {
+  --button-outline: rgba(0, 0, 0, 0.08);
+  --badge-outline: rgba(0, 0, 0, 0.06);
+
+  --opaque-button-border-intensity: -8;
+
+  --elevate-1: rgba(20, 20, 30, 0.03);
+  --elevate-2: rgba(20, 20, 30, 0.07);
+
+  --background: 30 18% 97.5%;
+  --foreground: 227 24% 14%;
+
+  --card: 226 28% 99%;
+  --card-foreground: 227 24% 14%;
+  --card-border: 227 14% 89%;
+
+  --surface-2: 0 0% 100%;
+  --surface-2-foreground: 227 24% 14%;
+
+  --border: 227 14% 89%;
+  --input: 227 14% 89%;
+
+  --primary: 226 62% 47%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 226 20% 94.5%;
+  --secondary-foreground: 227 20% 22%;
+
+  --muted: 226 18% 95%;
+  --muted-foreground: 227 10% 46%;
+
+  --accent: 262 48% 47%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 4 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 152 45% 32%;
+  --success-foreground: 0 0% 100%;
+  --warning: 32 80% 42%;
+  --warning-foreground: 0 0% 100%;
+  --info: 199 65% 42%;
+  --info-foreground: 0 0% 100%;
+
+  --ring: 226 62% 47%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 227 24% 14%;
+  --popover-border: 227 14% 89%;
+
+  --sidebar: 226 22% 96%;
+  --sidebar-foreground: 227 24% 14%;
+  --sidebar-border: 227 14% 89%;
+  --sidebar-primary: 226 62% 47%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 226 20% 92%;
+  --sidebar-accent-foreground: 227 20% 22%;
+  --sidebar-ring: 226 62% 47%;
+
+  --chart-1: 226 62% 47%;
+  --chart-2: 262 48% 47%;
+  --chart-3: 199 65% 42%;
+  --chart-4: 152 40% 40%;
+  --chart-5: 32 70% 48%;
+
+  /* Founder Pass — Normal variant material */
+  --material-founder-normal-from: 227 32% 15%;
+  --material-founder-normal-to: 227 28% 9%;
+  --material-founder-normal-border: 226 40% 40%;
+  --material-founder-normal-accent: 226 70% 62%;
+  --material-founder-normal-text: 0 0% 98%;
+
+  /* Founder Pass — Premium Black variant material */
+  --material-founder-black-from: 240 12% 8%;
+  --material-founder-black-to: 240 20% 2%;
+  --material-founder-black-border: 240 8% 30%;
+  --material-founder-black-accent: 262 30% 62%;
+  --material-founder-black-text: 220 15% 92%;
+
+  /* Builder Pass base material (tier accent layers on top) */
+  --material-builder-from: 226 26% 16%;
+  --material-builder-to: 226 30% 9%;
+  --material-builder-border: 226 20% 32%;
+  --material-builder-text: 0 0% 98%;
+
+  --app-font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 0.625rem;
+
+  --shadow-2xs: 0px 1px 2px 0px rgba(30,30,45,0.04);
+  --shadow-xs: 0px 1px 3px 0px rgba(30,30,45,0.05);
+  --shadow-sm: 0px 2px 4px 0px rgba(30,30,45,0.06);
+  --shadow: 0px 4px 10px -2px rgba(30,30,45,0.08), 0px 2px 4px -2px rgba(30,30,45,0.05);
+  --shadow-md: 0px 8px 16px -4px rgba(30,30,45,0.10), 0px 4px 6px -4px rgba(30,30,45,0.06);
+  --shadow-lg: 0px 16px 32px -8px rgba(30,30,45,0.12), 0px 8px 10px -6px rgba(30,30,45,0.06);
+  --shadow-xl: 0px 24px 48px -12px rgba(30,30,45,0.16);
+  --shadow-2xl: 0px 32px 64px -16px rgba(30,30,45,0.2);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/*
+  DARK THEME
+  Deep graphite-navy, never pure black. Elevated surfaces step up in
+  lightness rather than relying on borders alone. Accents stay restrained —
+  one primary blue, violet and cyan reserved for tier/status signal only.
+*/
+.dark {
+  --button-outline: rgba(255, 255, 255, 0.09);
+  --badge-outline: rgba(255, 255, 255, 0.05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255, 255, 255, 0.035);
+  --elevate-2: rgba(255, 255, 255, 0.08);
+
+  --background: 226 24% 6.5%;
+  --foreground: 220 20% 95%;
+
+  --card: 226 22% 9.5%;
+  --card-foreground: 220 20% 95%;
+  --card-border: 226 16% 17%;
+
+  --surface-2: 226 20% 12.5%;
+  --surface-2-foreground: 220 20% 95%;
+
+  --border: 226 16% 17%;
+  --input: 226 16% 17%;
+
+  --primary: 220 78% 63%;
+  --primary-foreground: 226 30% 8%;
+
+  --secondary: 226 16% 15%;
+  --secondary-foreground: 220 14% 82%;
+
+  --muted: 226 16% 14%;
+  --muted-foreground: 220 9% 58%;
+
+  --accent: 262 52% 66%;
+  --accent-foreground: 226 30% 8%;
+
+  --destructive: 4 68% 56%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 152 42% 48%;
+  --success-foreground: 226 30% 8%;
+  --warning: 36 82% 58%;
+  --warning-foreground: 226 30% 8%;
+  --info: 199 75% 58%;
+  --info-foreground: 226 30% 8%;
+
+  --ring: 220 78% 63%;
+
+  --popover: 226 22% 10%;
+  --popover-foreground: 220 20% 95%;
+  --popover-border: 226 16% 18%;
+
+  --sidebar: 226 24% 8%;
+  --sidebar-foreground: 220 20% 95%;
+  --sidebar-border: 226 16% 17%;
+  --sidebar-primary: 220 78% 63%;
+  --sidebar-primary-foreground: 226 30% 8%;
+  --sidebar-accent: 226 16% 15%;
+  --sidebar-accent-foreground: 220 14% 82%;
+  --sidebar-ring: 220 78% 63%;
+
+  --chart-1: 220 78% 63%;
+  --chart-2: 262 52% 66%;
+  --chart-3: 199 75% 58%;
+  --chart-4: 152 42% 48%;
+  --chart-5: 36 82% 58%;
+
+  --material-founder-normal-from: 226 30% 13%;
+  --material-founder-normal-to: 226 32% 6%;
+  --material-founder-normal-border: 226 45% 34%;
+  --material-founder-normal-accent: 220 78% 66%;
+  --material-founder-normal-text: 0 0% 98%;
+
+  --material-founder-black-from: 240 14% 6%;
+  --material-founder-black-to: 240 30% 1.5%;
+  --material-founder-black-border: 240 10% 24%;
+  --material-founder-black-accent: 262 35% 68%;
+  --material-founder-black-text: 220 15% 94%;
+
+  --material-builder-from: 226 22% 13%;
+  --material-builder-to: 226 26% 7%;
+  --material-builder-border: 226 18% 24%;
+  --material-builder-text: 0 0% 98%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  input[type='search']::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  /* Respect reduced-motion system preference across the app */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Pass credential materials — one definition, reused by every card render
+     (public page, dashboard, admin live preview, client-side PNG export) so
+     the visual never drifts between contexts. */
+  .pass-material-founder-normal {
+    background-image: linear-gradient(160deg, hsl(var(--material-founder-normal-from)), hsl(var(--material-founder-normal-to)));
+    border-color: hsl(var(--material-founder-normal-border) / 0.5);
+    color: hsl(var(--material-founder-normal-text));
+  }
+  .pass-material-founder-black {
+    background-image: linear-gradient(160deg, hsl(var(--material-founder-black-from)), hsl(var(--material-founder-black-to)));
+    border-color: hsl(var(--material-founder-black-border) / 0.6);
+    color: hsl(var(--material-founder-black-text));
+  }
+  .pass-material-builder {
+    background-image: linear-gradient(160deg, hsl(var(--material-builder-from)), hsl(var(--material-builder-to)));
+    border-color: hsl(var(--material-builder-border) / 0.5);
+    color: hsl(var(--material-builder-text));
+  }
+}

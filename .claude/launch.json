@@ -1,0 +1,28 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "arc-pass-frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@workspace/arc-pass", "run", "dev"],
+      "port": 5173,
+      "env": {
+        "PORT": "5173",
+        "BASE_PATH": "/",
+        "API_PROXY_TARGET": "http://localhost:8080"
+      }
+    },
+    {
+      "name": "arc-pass-api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@workspace/api-server", "run", "dev"],
+      "port": 8080,
+      "env": {
+        "PORT": "8080",
+        "NODE_ENV": "development",
+        "DATABASE_URL": "postgres://arcpass:arcpass@localhost:55432/arcpass",
+        "FRONTEND_URL": "http://localhost:5173"
+      }
+    }
+  ]
+}
