@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginModal } from "@/components/login-modal";
 import { AccountDropdown } from "@/components/account-dropdown";
 import { MobileNavigation } from "@/components/mobile-navigation";
+import { ArcMascot } from "@/components/arc-mascot";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -59,6 +60,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {isLanding && <ArcMascot compact className="!h-12 md:!h-16" />}
           {!isLanding && <div className="hidden sm:block"><ThemeToggle /></div>}
 
           {isLoading ? (

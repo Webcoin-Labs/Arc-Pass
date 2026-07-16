@@ -16,6 +16,7 @@ import {
 import { EligibilityChecker } from "@/components/eligibility-checker";
 import { EligibilityScanner } from "@/components/eligibility-scanner";
 import { EligibilityResults } from "@/components/eligibility-results";
+import { MobileCredentialRain } from "@/components/mobile-credential-rain";
 
 const verificationSteps = [
   {
@@ -105,6 +106,7 @@ export default function LandingPage() {
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px)", backgroundSize: "72px 72px", maskImage: "linear-gradient(to bottom, black, transparent 78%)" }}
           aria-hidden="true"
         />
+        <MobileCredentialRain />
         <motion.img
           src="/hero/identity-silhouettes.svg"
           alt=""
