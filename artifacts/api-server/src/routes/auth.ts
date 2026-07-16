@@ -274,8 +274,9 @@ router.get("/auth/github", async (req, res): Promise<void> => {
     }
     if (!isGithubOAuthConfigured()) { res.redirect(frontendUrl("/?authError=github_unavailable")); return; }
 
-    const state = await signOAuthState({ intent: "link", linkUserId: currentUser.id, returnTo: "/" });
-    res.redirect(buildGithubAuthorizeUrl(state));
+    const { verifier, challenge } = createPkcePair();
+    const state = await signOAuthState({ intent: "link", linkUserId: currentUser.id, returnTo: safeReturnTo(req), codeVerifier: verifier });
+    res.redirect(buildGithubAuthorizeUrl(state, challenge));
   } catch (err) {
     req.log.error({ err }, "GitHub OAuth redirect error");
     res.redirect(frontendUrl("/?authError=github"));
@@ -289,7 +290,7 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
     if (!code || !stateParam) throw new Error("Missing code or state");
 
     const oauthState = await verifyOAuthState(stateParam);
-    const profile = await exchangeGithubCode(code);
+    const profile = await exchangeGithubCode(code, oauthState.codeVerifier ?? "");
     const currentUser = await getUserFromSession(req);
 
     const result = await completeOAuth({

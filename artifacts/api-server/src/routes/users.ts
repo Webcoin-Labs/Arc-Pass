@@ -55,7 +55,7 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
     connections: {
       x: { connected: !!user.xUserId, username: user.xUsername },
       discord: { connected: !!user.discordUserId, username: user.discordUsername, avatarUrl: user.discordAvatarUrl },
-      github: { connected: false, username: null, comingSoon: true },
+      github: { connected: !!user.githubUserId, username: user.githubUsername },
     },
   });
 });

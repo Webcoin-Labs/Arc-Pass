@@ -27,7 +27,7 @@ export default function DocsPage() {
               <h3 className="font-semibold">Onchain Builder Pass</h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 Activity-based with no permanent contract supply cap. Tier is calculated from ownership-verified wallet activity
-                and can move upward through re-verification. Claims open in controlled release phases; Phase 1 allows 2,000.
+                and can move upward through re-verification. Claims open in controlled release waves; Wave 1 allows 2,499.
               </p>
             </div>
           </div>

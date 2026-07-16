@@ -13,7 +13,9 @@ export function buildDiscordAuthorizeUrl(state: string): string {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.redirectUri);
-  url.searchParams.set("scope", "identify guilds.members.read");
+  // Basic identity proof only. Additional guild access is not required to
+  // sign in and should not be requested unless it becomes an actual gate.
+  url.searchParams.set("scope", "identify");
   url.searchParams.set("state", state);
 
   return url.toString();

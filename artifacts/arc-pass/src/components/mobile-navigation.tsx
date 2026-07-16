@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import type { User } from "@workspace/api-client-react";
+import { ArcPassBrand } from "@/components/arc-pass-brand";
 
 export function MobileNavigation({
   user,
@@ -37,9 +38,10 @@ export function MobileNavigation({
       )}>
         <div className="flex min-h-dvh flex-col px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5">
           <SheetHeader className={cn("border-b pb-5", isLanding ? "border-white/10" : "border-black")}>
-            <SheetTitle className={cn("flex items-center gap-3 text-left", isLanding ? "text-white" : "text-black")}>
-              <img src="/favicon.svg" alt="" className="size-8" width={32} height={32} />
-              <span>Arc Pass</span>
+            <SheetTitle className={cn("flex items-center text-left", isLanding ? "text-white" : "text-black")}>
+              <span className={cn(!isLanding && "rounded-lg bg-[#080a12] px-3 py-2")}>
+                <ArcPassBrand />
+              </span>
             </SheetTitle>
           </SheetHeader>
 

@@ -23,7 +23,7 @@ const FAQS = [
   },
   {
     q: "Is there a limit on Onchain Builder Passes?",
-    a: "The Builder Pass contract has no permanent supply cap. Claims open in controlled release phases; Phase 1 allows 2,000 original claims. Re-verification and tier upgrades update the existing pass and never consume another phase allocation.",
+    a: "The Builder Pass contract has no permanent supply cap. Claims open in controlled release waves; Wave 1 allows 2,499 original claims. Re-verification and tier upgrades update the existing pass and never consume another wave's allocation.",
   },
   {
     q: "What's the difference between Normal and Premium Black Founder Pass?",

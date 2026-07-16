@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shell } from '@/components/shell';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { WalletProvider } from '@/lib/wallet-provider';
+import { toast } from 'sonner';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // Route-level code splitting — the landing page (first paint for most
@@ -27,6 +28,30 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const authErrorMessages: Record<string, string> = {
+  x: 'X sign-in could not be completed. Check the X developer app access and try again.',
+  x_unavailable: 'X sign-in is temporarily unavailable.',
+  discord: 'Discord sign-in could not be completed. Check the Discord OAuth redirect and try again.',
+  discord_unavailable: 'Discord sign-in is temporarily unavailable.',
+  github: 'GitHub verification could not be completed. Please try again.',
+  github_unavailable: 'GitHub verification is not configured yet.',
+  github_already_linked: 'That GitHub account is already connected to another Arc Pass identity.',
+  login_required_before_github: 'Sign in with X or Discord before connecting GitHub.',
+  session_mismatch: 'Your session changed during verification. Sign in and try again.',
+};
+
+function OAuthErrorNotice() {
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const authError = url.searchParams.get('authError');
+    if (!authError) return;
+    toast.error(authErrorMessages[authError] ?? 'Authentication could not be completed. Please try again.');
+    url.searchParams.delete('authError');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+  return null;
+}
 
 function Router() {
   return (
@@ -54,6 +79,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <WalletProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <OAuthErrorNotice />
             <Router />
           </WouterRouter>
         </WalletProvider>

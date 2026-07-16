@@ -271,7 +271,13 @@ export default function DashboardPage() {
             username={profile?.connections.discord.username}
             href="/api/auth/discord"
           />
-          <ConnectionRow icon={<Github className="h-4 w-4" />} label="GitHub verification — Coming soon" connected={false} username="Additional contribution verification will be introduced in a future release." />
+          <ConnectionRow
+            icon={<Github className="h-4 w-4" />}
+            label="GitHub"
+            connected={!!profile?.connections.github.connected}
+            username={profile?.connections.github.username}
+            href="/api/auth/github"
+          />
         </div>
       </section>
     </div>

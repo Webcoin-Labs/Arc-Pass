@@ -4,8 +4,8 @@ import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
 // claim allocation is enforced atomically from builder_passes by the API.
 export const builderSupplyTable = pgTable("builder_supply", {
   id: serial("id").primaryKey(),
-  phaseName: text("phase_name").notNull().default("Phase 1"),
-  phaseClaimLimit: integer("phase_claim_limit").notNull().default(2000),
+  phaseName: text("phase_name").notNull().default("Wave 1"),
+  phaseClaimLimit: integer("phase_claim_limit").notNull().default(2499),
   totalClaimedCount: integer("total_claimed_count").notNull().default(0),
   totalMintedCount: integer("total_minted_count").notNull().default(0),
   activeCount: integer("active_count").notNull().default(0),

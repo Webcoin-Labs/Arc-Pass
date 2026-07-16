@@ -27,18 +27,19 @@ function ObscuredCredential({ kind, eligible = false }: { kind: "founder" | "bui
 
 const founderCopy: Record<string, { label: string; body: string }> = {
   eligible: { label: "Eligible", body: "This username has an active Founder Pass invitation. Log in with this account to prove ownership and claim it." },
-  ineligible: { label: "Not currently eligible", body: "Apply for Founder Pass review by Webcoin Labs." },
+  ineligible: { label: "Ineligible", body: "You are ineligible to claim a Founder Pass." },
   under_review: { label: "Under review", body: "A Founder Pass application is currently under review." },
   claimed: { label: "Pass already claimed", body: "Sign in to view your passes." },
-  unknown: { label: "No invitation found", body: "Founder Pass is invite-only. You can apply for review." },
+  unknown: { label: "Ineligible", body: "You are ineligible to claim a Founder Pass." },
 };
 
 export function EligibilityResults({ result, className, variant = "default" }: { result: EligibilityResult; className?: string; variant?: "default" | "immersive" }) {
   const [, setLocation] = useLocation();
   const founder = founderCopy[result.founder.status];
   const founderEligible = result.founder.status === "eligible";
+  const founderCanApply = result.founder.status === "ineligible" || result.founder.status === "unknown";
   const builderClaimed = result.builder.status === "claimed";
-  const formUrl = import.meta.env.VITE_FOUNDER_APPLICATION_FORM_URL as string | undefined;
+  const formUrl = (import.meta.env.VITE_FOUNDER_APPLICATION_FORM_URL as string | undefined)?.trim();
   const immersive = variant === "immersive";
   const cardClass = cn(
     "flex flex-col p-5 sm:p-7",
@@ -53,11 +54,21 @@ export function EligibilityResults({ result, className, variant = "default" }: {
           <ObscuredCredential kind="founder" eligible={founderEligible} />
           {founderEligible && <p className="mt-5 text-lg font-semibold text-balance text-emerald-300">You’re eligible for the Founder Pass.</p>}
           <p className={cn(founderEligible ? "mt-2" : "mt-5", "min-h-10 text-sm leading-6 text-pretty", immersive ? "text-white/60" : "text-slate-600")}>{founder.body}</p>
+          {founderCanApply && (
+            <p className={cn("mt-2 text-sm leading-6", immersive ? "text-white/60" : "text-slate-600")}>
+              You may still apply for a Founder Pass.{' '}
+              {formUrl ? (
+                <a className={cn("font-semibold underline underline-offset-4 transition-colors", immersive ? "text-white hover:text-[#8ea0ff]" : "text-[#3448e5] hover:text-[#2638bd]")} href={formUrl} target="_blank" rel="noreferrer">
+                  Click here
+                </a>
+              ) : (
+                <span className={immersive ? "text-white/40" : "text-slate-400"}>Application link coming soon.</span>
+              )}
+            </p>
+          )}
           {result.founder.status === "eligible" || result.founder.status === "claimed" ? (
             <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]", founderEligible && "bg-emerald-400 text-emerald-950 hover:bg-emerald-300")} onClick={() => setLocation(result.founder.status === "claimed" ? "/dashboard" : "/claim/founder")}>{founderEligible ? "Log in to verify and claim" : "Log in to your dashboard"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Button>
-          ) : formUrl ? (
-            <Button variant="outline" className={cn("mt-4 h-12 w-full", immersive && "rounded-full border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white")} asChild><a href={formUrl} target="_blank" rel="noreferrer">Apply for Founder Pass review <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></a></Button>
-          ) : <Button variant="outline" className={cn("mt-4 h-12 w-full", immersive && "rounded-full border-white/15 bg-transparent text-white")} disabled>Applications opening soon</Button>}
+          ) : null}
         </article>
 
         <article className={cardClass}>

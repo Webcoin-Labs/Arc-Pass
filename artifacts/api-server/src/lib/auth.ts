@@ -7,6 +7,10 @@ export { requireDedicatedAdmin as requireAdmin } from "./admin-auth";
 
 export type AuthedRequest = Request & { user: User };
 
+export function hasVerifiedGithub(user: Pick<User, "githubUserId">): boolean {
+  return Boolean(user.githubUserId);
+}
+
 export async function getUserFromSession(req: Request): Promise<User | null> {
   const sessionToken = req.cookies?.["arc_session"] as string | undefined;
   if (!sessionToken) return null;

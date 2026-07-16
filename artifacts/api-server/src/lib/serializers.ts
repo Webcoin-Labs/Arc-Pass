@@ -111,7 +111,7 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     discordAvatarUrl: user?.discordAvatarUrl ?? null,
     builderRole: pass.builderRole,
     primaryEcosystem: pass.primaryEcosystem,
-    githubVerified: false,
+    githubVerified: !!user?.githubUserId,
     verifiedWalletCount: wallets.length,
     qualifyingTransactionCount: latestSnapshot?.qualifyingTransactionCount ?? null,
     validContractCount: latestSnapshot?.validContractCount ?? null,

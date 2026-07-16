@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Download, ExternalLink, ShieldAlert, Lock } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, Github, ShieldAlert, Lock } from "lucide-react";
 import { SiDiscord, SiX } from "react-icons/si";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useListMyPasses, useClaimFounderPass, useMintFounderPass, getGetMeQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
+import { useGetMe, useGetUserProfile, useListMyPasses, useClaimFounderPass, useMintFounderPass, getGetMeQueryKey, getGetUserProfileQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { FounderPassCard } from "@/components/founder-pass-card";
 import { MintModal, type MintParams } from "@/components/mint-modal";
@@ -20,6 +20,7 @@ export default function ClaimFounderPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { data: user, isLoading: userLoading } = useGetMe({ query: { retry: false, queryKey: getGetMeQueryKey() } });
+  const { data: profile, isLoading: profileLoading } = useGetUserProfile({ query: { enabled: !!user, queryKey: getGetUserProfileQueryKey() } });
   const { data: passes, isLoading: passesLoading } = useListMyPasses({ query: { enabled: !!user, queryKey: getListMyPassesQueryKey() } });
   const claimPass = useClaimFounderPass();
   const mintPass = useMintFounderPass();
@@ -33,7 +34,7 @@ export default function ClaimFounderPage() {
     if (cardRef.current) void downloadNodeAsPng(cardRef.current, "arc-pass-founder.png");
   };
 
-  if (userLoading || passesLoading) {
+  if (userLoading || passesLoading || (!!user && profileLoading)) {
     return (
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 p-6">
         <Skeleton className="aspect-[1/1.48] w-full max-w-[300px] rounded-2xl" />
@@ -83,6 +84,21 @@ export default function ClaimFounderPage() {
         action={{ label: "Return Home", onClick: () => setLocation("/") }}
         className="flex-1"
       />
+    );
+  }
+
+  if (founderPass.claimStatus === "locked" && !profile?.connections.github.connected) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+          <Github className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <h1 className="text-xl font-semibold">Verify your GitHub account</h1>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">Connect GitHub to prove account ownership before claiming your Founder Pass.</p>
+        <Button size="lg" className="mt-6 h-12 w-full max-w-xs gap-2" asChild>
+          <a href="/api/auth/github?returnTo=%2Fclaim%2Ffounder"><Github className="h-4 w-4" aria-hidden="true" /> Connect GitHub</a>
+        </Button>
+      </div>
     );
   }
 

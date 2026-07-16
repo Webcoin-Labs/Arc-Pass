@@ -8,10 +8,12 @@ import adminRouter from "./admin";
 import sharingRouter from "./sharing";
 import webhooksRouter from "./webhooks";
 import adminAuthRouter from "./admin-auth";
+import networkRouter from "./network";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(networkRouter);
 router.use(authRouter);
 router.use(eligibilityRouter);
 router.use(passesRouter);

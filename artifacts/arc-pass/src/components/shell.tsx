@@ -1,4 +1,5 @@
 import { Header } from "./header";
+import { Footer } from "./footer";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col">
         {children}
       </main>
+      <Footer />
     </div>
   )
 }

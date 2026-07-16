@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Download, ExternalLink, Lock } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, Github, Lock } from "lucide-react";
 import { SiDiscord, SiX } from "react-icons/si";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,7 +28,7 @@ import { MintSuccess } from "@/components/mint-success";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadNodeAsPng } from "@/lib/export-image";
 
-const STEP_LABELS = ["Verify identity", "Verify wallets", "Analyse activity", "Review pass", "Record onchain"];
+const STEP_LABELS = ["Verify identity", "Connect GitHub", "Verify wallets", "Analyse activity", "Review pass", "Record onchain"];
 const ANALYSIS_MESSAGES = [
   "Checking verified wallet history",
   "Reviewing contract deployments",
@@ -94,9 +94,10 @@ export default function ClaimBuilderPage() {
   }
 
   const socialConnected = !!profile?.connections.discord.connected || !!profile?.connections.x.connected;
+  const githubConnected = !!profile?.connections.github.connected;
   const builderPass = verifyBuilder.data?.builderPass ?? passes?.builder;
 
-  const step = !socialConnected ? 1 : wallets.length === 0 ? 2 : !builderPass ? 3 : builderPass.claimStatus === "locked" ? 4 : 5;
+  const step = !socialConnected ? 1 : !githubConnected ? 2 : wallets.length === 0 ? 3 : !builderPass ? 4 : builderPass.claimStatus === "locked" ? 5 : 6;
 
   const handleVerify = () => {
     verifyBuilder.mutate(undefined, {
@@ -128,7 +129,7 @@ export default function ClaimBuilderPage() {
   return (
     <div className="flex flex-1 flex-col items-center p-6 py-12">
       <div className="mb-10 w-full max-w-md">
-        <VerificationStepper steps={STEP_LABELS} currentStep={Math.min(step, 5)} />
+        <VerificationStepper steps={STEP_LABELS} currentStep={Math.min(step, 6)} />
       </div>
 
       <div className="w-full max-w-3xl">
@@ -148,7 +149,18 @@ export default function ClaimBuilderPage() {
             </motion.div>
           )}
 
-          {(step === 2 || step === 3) && !verifyBuilder.isPending && (
+          {step === 2 && (
+            <motion.div key="github" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-md text-center">
+              <Github className="mx-auto h-12 w-12" aria-hidden="true" />
+              <h1 className="mt-5 text-2xl font-bold">Connect GitHub</h1>
+              <p className="mt-2 text-muted-foreground">Verify ownership of your developer identity before Arc Pass analyses wallets or allows a claim.</p>
+              <Button size="lg" className="mt-8 h-12 w-full gap-2" asChild>
+                <a href="/api/auth/github?returnTo=%2Fclaim%2Fbuilder"><Github className="h-4 w-4" aria-hidden="true" /> Connect GitHub</a>
+              </Button>
+            </motion.div>
+          )}
+
+          {(step === 3 || step === 4) && !verifyBuilder.isPending && (
             <motion.div key="wallets" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-md">
               <div className="mb-6 text-center">
                 <h1 className="text-2xl font-bold">Connect and verify a wallet</h1>
@@ -173,8 +185,8 @@ export default function ClaimBuilderPage() {
             </motion.div>
           )}
 
-          {step === 4 && !verifyBuilder.isPending && builderPass && (
-            <motion.div key="s4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 md:flex-row md:items-start">
+          {step === 5 && !verifyBuilder.isPending && builderPass && (
+            <motion.div key="s5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 md:flex-row md:items-start">
               <BuilderPassCard
                 ref={cardRef}
                 data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username }}
@@ -212,8 +224,8 @@ export default function ClaimBuilderPage() {
             </motion.div>
           )}
 
-          {step === 5 && builderPass && builderPass.claimStatus !== "minted" && (
-            <motion.div key="s5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 text-center">
+          {step === 6 && builderPass && builderPass.claimStatus !== "minted" && (
+            <motion.div key="s6" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 text-center">
               <BuilderPassCard
                 ref={cardRef}
                 data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username }}

@@ -8,6 +8,8 @@ import { LoginModal } from "@/components/login-modal";
 import { AccountDropdown } from "@/components/account-dropdown";
 import { MobileNavigation } from "@/components/mobile-navigation";
 import { ArcMascot } from "@/components/arc-mascot";
+import { ArcGasIndicator } from "@/components/arc-gas-indicator";
+import { ArcPassBrand } from "@/components/arc-pass-brand";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -41,12 +43,13 @@ export function Header() {
         "mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-5",
         isLanding && "h-14 rounded-full border border-white/15 bg-[#080a12]/80 shadow-lg backdrop-blur-xl",
       )}>
-        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Arc Pass home">
-          <img src="/favicon.svg" alt="" className="size-9 shrink-0" width={36} height={36} />
-          <div className="min-w-0 leading-none">
-            <span className="block text-sm font-semibold sm:text-base">Arc Pass</span>
-            <span className={cn("mt-1 block truncate text-[10px]", isLanding ? "text-white/45" : "text-muted-foreground")}>by Webcoin Labs</span>
-          </div>
+        <Link
+          href="/"
+          className={cn("flex min-w-0 items-center", !isLanding && "rounded-lg bg-[#080a12] px-2.5 py-1.5")}
+          aria-label="Arc Pass by Webcoin Labs home"
+        >
+          <ArcPassBrand compact className="sm:hidden" />
+          <ArcPassBrand className="hidden sm:inline-flex" />
         </Link>
 
         <nav className={cn("hidden items-center lg:flex", isLanding ? "gap-1 rounded-full border border-white/10 bg-white/5 p-1" : "gap-6")} aria-label="Primary navigation">
@@ -60,6 +63,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {isLanding && <ArcGasIndicator />}
           {isLanding && <ArcMascot compact className="!h-12 md:!h-16" />}
           {!isLanding && <div className="hidden sm:block"><ThemeToggle /></div>}
 

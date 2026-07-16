@@ -19,7 +19,7 @@ import {
   GetBuilderPassDownloadUrlParams,
   MintBuilderPassBody,
 } from "@workspace/api-zod";
-import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { hasVerifiedGithub, requireAuth, type AuthedRequest } from "../lib/auth";
 import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply, builderPassClaimed, builderPassMinted } from "../lib/serializers";
 import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
 import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
@@ -113,6 +113,10 @@ router.get("/passes/founder/:id/download-url", async (req, res): Promise<void> =
 
 router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
+  if (!hasVerifiedGithub(user)) {
+    res.status(403).json({ error: "Connect and verify your GitHub account before claiming a Founder Pass.", code: "github_verification_required" });
+    return;
+  }
   const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
 
   if (!pass) {
@@ -457,6 +461,10 @@ router.post("/passes/builder/upgrade", requireAuth, async (req, res): Promise<vo
 
 router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
+  if (!hasVerifiedGithub(user)) {
+    res.status(403).json({ error: "Connect and verify your GitHub account before claiming an Onchain Builder Pass.", code: "github_verification_required" });
+    return;
+  }
   const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
 
   if (!pass) {

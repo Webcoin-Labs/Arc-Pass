@@ -10,7 +10,6 @@ import {
   Check,
   Fingerprint,
   LockKeyhole,
-  ShieldCheck,
   WalletCards,
 } from "lucide-react";
 import { EligibilityChecker } from "@/components/eligibility-checker";
@@ -89,8 +88,8 @@ export default function LandingPage() {
   };
 
   const claimed = supply?.totalClaimed ?? 0;
-  const phaseName = supply?.phaseName ?? "Phase 1";
-  const remaining = supply?.remainingClaims ?? 2000;
+  const phaseName = supply?.phaseName ?? "Wave 1";
+  const remaining = supply?.remainingClaims ?? 2499;
 
   return (
     <div className="flex flex-1 flex-col bg-[#02030a] text-white [color-scheme:dark]">
@@ -286,19 +285,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 bg-[#02030a] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/favicon.svg" alt="" className="size-9" width={36} height={36} />
-            <div><p className="text-sm font-semibold">Arc Pass</p><p className="text-xs text-white/40">A Webcoin Labs credential</p></div>
-          </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/55" aria-label="Footer navigation">
-            <Link href="/faq" className="cursor-pointer hover:text-white">FAQ</Link>
-            <Link href="/docs" className="cursor-pointer hover:text-white">Documentation</Link>
-            <Link href="/admin" className="flex cursor-pointer items-center gap-1.5 hover:text-white"><ShieldCheck className="size-3.5" aria-hidden="true" /> Admin Portal</Link>
-          </nav>
-        </div>
-      </footer>
     </div>
   );
 }
