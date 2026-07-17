@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Download, ExternalLink, Github, Lock } from "lucide-react";
-import { SiDiscord, SiX } from "react-icons/si";
+import { SiX } from "react-icons/si";
+import { DiscordIcon } from "@/components/discord-icon";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -80,7 +81,7 @@ export default function ClaimBuilderPage() {
         <div className="mt-6 flex w-full max-w-xs flex-col gap-3">
           <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
             <a href="/api/auth/discord">
-              <SiDiscord className="h-4 w-4 text-[#5865F2]" /> Continue with Discord
+              <DiscordIcon className="h-4 w-5 text-[#5865F2]" /> Continue with Discord
             </a>
           </Button>
           <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
@@ -95,9 +96,14 @@ export default function ClaimBuilderPage() {
 
   const socialConnected = !!profile?.connections.discord.connected || !!profile?.connections.x.connected;
   const githubConnected = !!profile?.connections.github.connected;
-  const builderPass = verifyBuilder.data?.builderPass ?? passes?.builder;
+  // Prefer the dashboard query because it is invalidated after claiming and
+  // minting. The verification response is only a fallback while that query
+  // is refreshing; otherwise it can leave the page showing the old locked
+  // state after a successful claim.
+  const builderPass = passes?.builder ?? verifyBuilder.data?.builderPass;
 
-  const step = !socialConnected ? 1 : !githubConnected ? 2 : wallets.length === 0 ? 3 : !builderPass ? 4 : builderPass.claimStatus === "locked" ? 5 : 6;
+  const developmentTestIdentity = profile?.isDevelopmentTestIdentity === true;
+  const step = !socialConnected ? 1 : !githubConnected ? 2 : wallets.length === 0 && !developmentTestIdentity ? 3 : !builderPass ? 4 : builderPass.claimStatus === "locked" ? 5 : 6;
 
   const handleVerify = () => {
     verifyBuilder.mutate(undefined, {
@@ -126,6 +132,16 @@ export default function ClaimBuilderPage() {
     );
   };
 
+  const handleShare = () => {
+    if (!builderPass) return;
+    const shareUrl = `${window.location.origin}/api/share/builder/${builderPass.id}`;
+    const intentUrl = `https://x.com/intent/post?${new URLSearchParams({
+      text: "My Arc Builder Pass is now minted onchain, verified by Webcoin Labs.",
+      url: shareUrl,
+    }).toString()}`;
+    window.open(intentUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="flex flex-1 flex-col items-center p-6 py-12">
       <div className="mb-10 w-full max-w-md">
@@ -140,7 +156,7 @@ export default function ClaimBuilderPage() {
               <p className="mt-2 text-muted-foreground">X or Discord is sufficient. You can connect the second account later.</p>
               <Button size="lg" className="mt-8 h-12 w-full gap-2" asChild>
                 <a href="/api/auth/discord">
-                  <SiDiscord className="h-4 w-4" /> Connect Discord
+                  <DiscordIcon className="h-4 w-5" /> Connect Discord
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="mt-3 h-12 w-full gap-2" asChild>
@@ -153,6 +169,7 @@ export default function ClaimBuilderPage() {
             <motion.div key="github" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-md text-center">
               <Github className="mx-auto h-12 w-12" aria-hidden="true" />
               <h1 className="mt-5 text-2xl font-bold">Connect GitHub</h1>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-pretty text-muted-foreground">Builder review uses a baseline of an account at least 180 days old with approximately 50 or more contributions in the previous 12 months.</p>
               <p className="mt-2 text-muted-foreground">Verify ownership of your developer identity before Arc Pass analyses wallets or allows a claim.</p>
               <Button size="lg" className="mt-8 h-12 w-full gap-2" asChild>
                 <a href="/api/auth/github?returnTo=%2Fclaim%2Fbuilder"><Github className="h-4 w-4" aria-hidden="true" /> Connect GitHub</a>
@@ -232,8 +249,8 @@ export default function ClaimBuilderPage() {
                 className="max-w-[280px]"
               />
               <div>
-                <h2 className="text-2xl font-bold">Pass Claimed</h2>
-                <p className="mt-2 max-w-sm text-muted-foreground">The final step is to record it securely onchain.</p>
+                <h2 className="text-2xl font-bold">Added to your inventory</h2>
+                <p className="mt-2 max-w-sm text-muted-foreground">Your Builder Pass is claimed. Mint it onchain to create the permanent, non-transferable credential.</p>
               </div>
               <Button size="lg" className="h-12 w-64" onClick={() => setMintOpen(true)}>
                 Mint Onchain <ExternalLink className="ml-2 h-4 w-4" />
@@ -254,9 +271,10 @@ export default function ClaimBuilderPage() {
                 network={builderPass.network}
                 transactionHash={builderPass.transactionHash}
                 issuedAt={builderPass.initiallyIssuedAt}
-                onViewPass={() => setLocation(`/pass/builder/${builderPass.id}`)}
-                onDownload={handleDownload}
-                className="w-full max-w-sm flex-1"
+                 onViewPass={() => setLocation(`/pass/builder/${builderPass.id}`)}
+                 onDownload={handleDownload}
+                 onShare={handleShare}
+                 className="w-full max-w-sm flex-1"
               />
             </motion.div>
           )}

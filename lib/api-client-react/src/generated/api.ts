@@ -1074,7 +1074,7 @@ export const getVerifyBuilderUrl = () => {
 }
 
 /**
- * Requires Discord connected (required), GitHub connected (required), and at least one wallet added. Analyzes deterministic onchain data plus qualitative GitHub signal and assigns the highest qualifying tier. Requires at least one valid deployed contract to qualify for any tier.
+ * Requires Discord connected (required), GitHub connected (required), and at least one wallet added. Analyzes activity returned by the configured indexer plus qualitative GitHub signal and assigns the highest qualifying tier. If the indexer is unavailable, verification fails closed. Requires at least one valid deployed contract to qualify for any tier.
  * @summary Run initial Builder verification using connected accounts and wallets
  */
 export const verifyBuilder = async ( options?: RequestInit): Promise<BuilderVerificationResult> => {
@@ -2758,6 +2758,78 @@ export const useAdminRevokeFounderInvite = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getAdminRevokeFounderInviteMutationOptions(options));
+    }
+
+export const getAdminRevokeFounderPassUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/founder-passes/${id}/revoke`
+}
+
+/**
+ * @summary Admin - revoke a Founder credential or invitation
+ */
+export const adminRevokeFounderPass = async (id: number,
+    reasonInput?: ReasonInput, options?: RequestInit): Promise<AdminFounderPass> => {
+
+  return customFetch<AdminFounderPass>(getAdminRevokeFounderPassUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reasonInput)
+  }
+);}
+
+
+
+
+
+export const getAdminRevokeFounderPassMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRevokeFounderPass>>, TError,{id: number;data?: BodyType<ReasonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRevokeFounderPass>>, TError,{id: number;data?: BodyType<ReasonInput>}, TContext> => {
+
+const mutationKey = ['adminRevokeFounderPass'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRevokeFounderPass>>, {id: number;data?: BodyType<ReasonInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminRevokeFounderPass(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRevokeFounderPassMutationResult = NonNullable<Awaited<ReturnType<typeof adminRevokeFounderPass>>>
+    export type AdminRevokeFounderPassMutationBody = BodyType<ReasonInput> | undefined
+    export type AdminRevokeFounderPassMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Admin - revoke a Founder credential or invitation
+ */
+export const useAdminRevokeFounderPass = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRevokeFounderPass>>, TError,{id: number;data?: BodyType<ReasonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRevokeFounderPass>>,
+        TError,
+        {id: number;data?: BodyType<ReasonInput>},
+        TContext
+      > => {
+      return useMutation(getAdminRevokeFounderPassMutationOptions(options));
     }
 
 export const getAdminListBuilderPassesUrl = (params?: AdminListBuilderPassesParams,) => {

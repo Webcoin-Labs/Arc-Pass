@@ -12,6 +12,8 @@ export function buildGithubAuthorizeUrl(state: string, codeChallenge: string): s
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.redirectUri);
+  // read:user includes the user's contribution calendar, including private
+  // contributions when the account has opted into showing them.
   url.searchParams.set("scope", "read:user");
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", codeChallenge);
@@ -20,7 +22,7 @@ export function buildGithubAuthorizeUrl(state: string, codeChallenge: string): s
   return url.toString();
 }
 
-export async function exchangeGithubCode(code: string, codeVerifier: string): Promise<OAuthProfile> {
+async function exchangeGithubCodeInternal(code: string, codeVerifier: string): Promise<{ profile: OAuthProfile; accessToken: string }> {
   const config = readProviderEnv("GITHUB");
   if (!config) throw new Error("GitHub OAuth is not configured");
 
@@ -58,9 +60,54 @@ export async function exchangeGithubCode(code: string, codeVerifier: string): Pr
   const profile = (await profileResponse.json()) as { id: number; login: string; name?: string; avatar_url?: string };
 
   return {
-    providerUserId: String(profile.id),
-    username: profile.login,
-    displayName: profile.name ?? profile.login,
-    avatarUrl: profile.avatar_url ?? null,
+    accessToken,
+    profile: {
+      providerUserId: String(profile.id),
+      username: profile.login,
+      displayName: profile.name ?? profile.login,
+      avatarUrl: profile.avatar_url ?? null,
+    },
   };
+}
+
+/**
+ * Returns the account profile while keeping the access token private to the
+ * server. Callers should not persist or expose the token.
+ */
+export async function exchangeGithubCode(code: string, codeVerifier: string): Promise<OAuthProfile> {
+  return (await exchangeGithubCodeInternal(code, codeVerifier)).profile;
+}
+
+/** Exchanges OAuth and snapshots the authenticated user's real contribution count. */
+export async function exchangeGithubCodeWithContributions(code: string, codeVerifier: string): Promise<{ profile: OAuthProfile; contributionCount: number | null }> {
+  const { profile, accessToken } = await exchangeGithubCodeInternal(code, codeVerifier);
+  return { profile, contributionCount: await fetchGithubContributionCount(accessToken) };
+}
+
+/**
+ * GitHub's REST events are not a contribution total. Use the GraphQL
+ * contribution calendar so commits, issues, pull requests and reviews are
+ * counted by GitHub itself. A temporary provider failure returns null rather
+ * than fabricating a value or blocking identity linking.
+ */
+export async function fetchGithubContributionCount(accessToken: string): Promise<number | null> {
+  const response = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "User-Agent": "arc-pass",
+    },
+    body: JSON.stringify({
+      query: "query { viewer { contributionsCollection { contributionCalendar { totalContributions } } } }",
+    }),
+  });
+
+  if (!response.ok) return null;
+  const payload = (await response.json()) as {
+    data?: { viewer?: { contributionsCollection?: { contributionCalendar?: { totalContributions?: number } } } };
+    errors?: unknown[];
+  };
+  const count = payload.data?.viewer?.contributionsCollection?.contributionCalendar?.totalContributions;
+  return payload.errors?.length || !Number.isSafeInteger(count) ? null : count ?? null;
 }

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, founderPassesTable, builderPassesTable, builderTiersTable, usersTable } from "@workspace/db";
+import { db, founderPassesTable, founderTiersTable, builderPassesTable, builderTiersTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { configuration } from "../lib/env";
 
@@ -24,6 +24,63 @@ async function shareRecord(type: string, id: number) {
   }
   return null;
 }
+
+async function metadataRecord(type: string, id: number) {
+  if (type === "founder") {
+    const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, id));
+    if (!pass || pass.claimStatus !== "minted") return null;
+    const [tier] = pass.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, pass.founderTierId)) : [null];
+    return {
+      name: `${pass.displayName || "Verified founder"} · Arc Founder Pass`,
+      description: "A permanent, non-transferable Founder credential issued by Webcoin Labs.",
+      attributes: [
+        { trait_type: "Credential", value: "Founder Pass" },
+        { trait_type: "Founder type", value: pass.variant === "premium_black" ? "Premium Founder" : "Normal Founder" },
+        ...(tier ? [{ trait_type: "Founder tier", value: tier.name }] : []),
+        ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
+        { trait_type: "Transferable", value: "No" },
+      ],
+    };
+  }
+
+  if (type === "builder") {
+    const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, id));
+    if (!pass || pass.claimStatus !== "minted") return null;
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pass.userId));
+    const [tier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
+    return {
+      name: `${user?.displayName || "Verified builder"} · Arc Onchain Builder Pass`,
+      description: "A permanent, non-transferable Onchain Builder credential issued by Webcoin Labs.",
+      attributes: [
+        { trait_type: "Credential", value: "Onchain Builder Pass" },
+        ...(tier ? [{ trait_type: "Builder tier", value: tier.name }] : []),
+        ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
+        { trait_type: "Transferable", value: "No" },
+      ],
+    };
+  }
+
+  return null;
+}
+
+// ERC-721 metadata endpoint. The contract stores this exact URL at mint time.
+// It is intentionally public and only resolves already-minted credentials.
+router.get("/metadata/:type/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const type = String(req.params.type);
+  const record = Number.isSafeInteger(id) ? await metadataRecord(type, id) : null;
+  if (!record) { res.sendStatus(404); return; }
+
+  const base = configuration.appUrl.replace(/\/$/, "");
+  res
+    .type("json")
+    .set("Cache-Control", "public, max-age=300")
+    .json({
+      ...record,
+      image: `${base}/api/share/${type}/${id}/image`,
+      external_url: `${base}/pass/${type}/${id}`,
+    });
+});
 
 router.get("/share/:type/:id/image", async (req, res): Promise<void> => {
   const id = Number(req.params.id);

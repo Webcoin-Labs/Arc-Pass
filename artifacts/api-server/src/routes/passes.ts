@@ -24,8 +24,42 @@ import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBui
 import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
 import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
+import { isDevelopmentTestUser } from "../lib/dev-test-identities";
 
 const router: IRouter = Router();
+
+async function getDashboardPasses(user: (typeof usersTable.$inferSelect)) {
+  const [founderRow] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
+  const [builderRow] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
+  const [founderTier] = founderRow?.founderTierId
+    ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, founderRow.founderTierId))
+    : [null];
+
+  const founder = founderRow ? serializeFounderPass(founderRow, founderTier ?? null, false) : null;
+  const builder = builderRow ? await buildBuilderPassDTO(builderRow, false) : null;
+  if (!isDevelopmentTestUser(user)) return { founder, builder };
+
+  // Local QA projection only. The database row remains locked and no claim,
+  // mint, wallet signature, token ID, transaction hash, or onchain record is
+  // forged. The UI must still make the tester click Claim before showing the
+  // claimed/inventory state.
+  return {
+    founder: founder ? {
+      ...founder,
+      eligibilityStatus: "eligible",
+      founderTitle: founder.founderTitle ?? "Founder",
+      companyName: founder.companyName ?? "Webcoin Labs",
+      companyIndustry: founder.companyIndustry ?? "Identity Infrastructure",
+      companyLogoUrl: founder.companyLogoUrl ?? "/brand/webcoin-mono-white.webp",
+    } : null,
+    builder: builder ? {
+      ...builder,
+      eligibilityStatus: "eligible",
+      builderRole: builder.builderRole ?? "Arc Ecosystem Builder",
+      githubVerified: true,
+    } : null,
+  };
+}
 
 async function isOwnershipVerifiedWallet(userId: number, address: string): Promise<boolean> {
   const verifiedWallets = await db
@@ -42,32 +76,15 @@ async function isOwnershipVerifiedWallet(userId: number, address: string): Promi
 
 router.get("/passes/me", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
-
-  const [founderRow] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
-  const [builderRow] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
-
-  const [founderTier] = founderRow?.founderTierId
-    ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, founderRow.founderTierId))
-    : [null];
-
-  res.json({
-    founder: founderRow ? serializeFounderPass(founderRow, founderTier ?? null, false) : null,
-    builder: builderRow ? await buildBuilderPassDTO(builderRow, false) : null,
-  });
+  res.json(await getDashboardPasses(user));
 });
 
 router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
-
-  const [founderRow] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
-  const [builderRow] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
-  const [founderTier] = founderRow?.founderTierId
-    ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, founderRow.founderTierId))
-    : [null];
+  const passes = await getDashboardPasses(user);
 
   res.json({
-    founder: founderRow ? serializeFounderPass(founderRow, founderTier ?? null, false) : null,
-    builder: builderRow ? await buildBuilderPassDTO(builderRow, false) : null,
+    ...passes,
     builderSupply: await getBuilderSupply(),
   });
 });
@@ -113,7 +130,7 @@ router.get("/passes/founder/:id/download-url", async (req, res): Promise<void> =
 
 router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
-  if (!hasVerifiedGithub(user)) {
+  if (!hasVerifiedGithub(user) && !isDevelopmentTestUser(user)) {
     res.status(403).json({ error: "Connect and verify your GitHub account before claiming a Founder Pass.", code: "github_verification_required" });
     return;
   }
@@ -139,7 +156,7 @@ router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void
       claimedAt: new Date(),
       displayName: pass.displayName ?? user.displayName,
       username: pass.username ?? user.xUsername ?? user.discordUsername ?? user.username,
-      avatarUrl: pass.avatarUrl ?? user.avatarUrl,
+      avatarUrl: pass.avatarUrl ?? user.avatarUrl ?? user.discordAvatarUrl,
     })
     .where(eq(founderPassesTable.id, pass.id))
     .returning();
@@ -190,7 +207,8 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
   }
 
   const identityHash = computeIdentityHash("founder", user.id);
-  const mintResult = await chainAdapter.mintFounderPass({ identityHash, destinationWallet, network: network as Network, variant: pass.variant });
+  const metadataUri = `${configuration.appUrl.replace(/\/$/, "")}/api/metadata/founder/${pass.id}`;
+  const mintResult = await chainAdapter.mintFounderPass({ identityHash, destinationWallet, network: network as Network, variant: pass.variant, metadataUri });
 
   const [{ value: mintedCount }] = await db
     .select({ value: count() })
@@ -281,8 +299,12 @@ async function runBuilderAnalysis(userId: number) {
 router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
 
-  if (!user.discordUserId && !user.xUserId) {
-    res.status(400).json({ error: "Verify X or Discord before running Onchain Builder verification" });
+  if (!user.discordUserId && !isDevelopmentTestUser(user)) {
+    res.status(400).json({ error: "Connect and verify your Discord account before running Onchain Builder verification", code: "discord_verification_required" });
+    return;
+  }
+  if (!hasVerifiedGithub(user) && !isDevelopmentTestUser(user)) {
+    res.status(400).json({ error: "Connect and verify your GitHub account before running Onchain Builder verification", code: "github_verification_required" });
     return;
   }
 
@@ -461,7 +483,11 @@ router.post("/passes/builder/upgrade", requireAuth, async (req, res): Promise<vo
 
 router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
-  if (!hasVerifiedGithub(user)) {
+  if (!user.discordUserId && !isDevelopmentTestUser(user)) {
+    res.status(403).json({ error: "Connect and verify your Discord account before claiming an Onchain Builder Pass.", code: "discord_verification_required" });
+    return;
+  }
+  if (!hasVerifiedGithub(user) && !isDevelopmentTestUser(user)) {
     res.status(403).json({ error: "Connect and verify your GitHub account before claiming an Onchain Builder Pass.", code: "github_verification_required" });
     return;
   }
@@ -569,7 +595,8 @@ router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void>
   }
 
   const identityHash = computeIdentityHash("builder", user.id);
-  const mintResult = await chainAdapter.mintBuilderPass({ identityHash, destinationWallet, network: network as Network, tierSlug: currentTier.slug });
+  const metadataUri = `${configuration.appUrl.replace(/\/$/, "")}/api/metadata/builder/${pass.id}`;
+  const mintResult = await chainAdapter.mintBuilderPass({ identityHash, destinationWallet, network: network as Network, tierSlug: currentTier.slug, metadataUri });
 
   const [updated] = await db
     .update(builderPassesTable)

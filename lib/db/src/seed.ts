@@ -1,4 +1,5 @@
 import { db, pool, founderTiersTable, builderTiersTable } from "./index";
+import { eq, inArray } from "drizzle-orm";
 
 // Seeds the two tier-configuration tables with sensible starting values.
 // Safe to re-run — existing rows (matched by unique name/slug) are left
@@ -9,12 +10,31 @@ async function seed() {
     .insert(founderTiersTable)
     .values([
       { name: "Emerging Founder", rank: 1, description: "Early-stage founders building their first verified track record.", isActive: true },
-      { name: "Verified Founder", rank: 2, description: "Founders with a confirmed company and verified identity.", isActive: true },
-      { name: "Growth Founder", rank: 3, description: "Founders leading companies with demonstrated traction.", isActive: true },
-      { name: "Premier Founder", rank: 4, description: "Recognized founders with significant ecosystem contribution.", isActive: true },
-      { name: "Network Founder", rank: 5, description: "Founders with deep, sustained involvement across the ecosystem.", isActive: true },
+      { name: "Formal Founder", rank: 2, description: "Founders with a confirmed company and verified identity.", isActive: true },
+      { name: "Premier Founder", rank: 3, description: "Recognized founders with significant ecosystem contribution.", isActive: true },
     ])
     .onConflictDoNothing({ target: founderTiersTable.name });
+
+  // Keep the active Founder catalog intentionally small. Legacy labels remain
+  // in the table so already-issued credentials can still render historically,
+  // but they cannot be selected for new invitations or edits.
+  await db
+    .update(founderTiersTable)
+    .set({ isActive: false })
+    .where(inArray(founderTiersTable.name, ["Verified Founder", "Growth Founder", "Network Founder"]));
+
+  await db
+    .update(founderTiersTable)
+    .set({ rank: 1, isActive: true })
+    .where(eq(founderTiersTable.name, "Emerging Founder"));
+  await db
+    .update(founderTiersTable)
+    .set({ rank: 2, isActive: true })
+    .where(eq(founderTiersTable.name, "Formal Founder"));
+  await db
+    .update(founderTiersTable)
+    .set({ rank: 3, isActive: true })
+    .where(eq(founderTiersTable.name, "Premier Founder"));
 
   await db
     .insert(builderTiersTable)

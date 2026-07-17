@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { CheckCircle2, UserCircle, Link2, LogOut, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,15 @@ import {
 import type { User } from "@workspace/api-client-react";
 
 export function AccountDropdown({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const [location] = useLocation();
+
+  const scrollToSection = (id: string) => (e: React.MouseEvent) => {
+    if (location !== "/dashboard") return;
+    e.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.history.replaceState(null, "", `/dashboard#${id}`);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -38,13 +47,13 @@ export function AccountDropdown({ user, onLogout }: { user: User; onLogout: () =
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/dashboard#account" className="flex w-full items-center">
+          <Link href="/dashboard#account" onClick={scrollToSection("account")} className="flex w-full items-center">
             <UserCircle className="mr-2 h-4 w-4" aria-hidden="true" />
             Profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/dashboard#connections" className="flex w-full items-center">
+          <Link href="/dashboard#connections" onClick={scrollToSection("connections")} className="flex w-full items-center">
             <Link2 className="mr-2 h-4 w-4" aria-hidden="true" />
             Connected Accounts
           </Link>

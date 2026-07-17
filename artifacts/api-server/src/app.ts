@@ -36,8 +36,35 @@ app.use(cors({
 app.disable("x-powered-by");
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (configuration.isProduction) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+app.use((req, res, next) => {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    next();
+    return;
+  }
+  const requestOrigin = req.get("origin") || req.get("referer");
+  if (!requestOrigin) {
+    next();
+    return;
+  }
+  let allowedOrigin: string;
+  let suppliedOrigin: string;
+  try {
+    allowedOrigin = new URL(configuration.appUrl).origin;
+    suppliedOrigin = new URL(requestOrigin).origin;
+  } catch {
+    res.status(403).json({ error: "Request origin is not allowed" });
+    return;
+  }
+  if (suppliedOrigin !== allowedOrigin) {
+    res.status(403).json({ error: "Request origin is not allowed" });
+    return;
+  }
   next();
 });
 app.use(express.json({

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const sizeMap = {
@@ -22,10 +23,22 @@ export function CompanyLogo({
   size?: keyof typeof sizeMap;
   className?: string;
 }) {
-  if (logoUrl) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [logoUrl]);
+
+  if (logoUrl && !imageFailed) {
     return (
       <span className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-white", sizeMap[size], className)}>
-        <img src={logoUrl} alt={name ? `${name} logo` : "Company logo"} className="h-full w-full object-contain p-1.5" />
+        <img
+          src={logoUrl}
+          alt={name ? `${name} logo` : "Company logo"}
+          className="h-full w-full object-contain p-1.5"
+          crossOrigin="anonymous"
+          onError={() => setImageFailed(true)}
+        />
       </span>
     );
   }
@@ -39,7 +52,7 @@ export function CompanyLogo({
 
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center rounded-full border border-border bg-muted font-semibold text-muted-foreground", sizeMap[size], className)}
+      className={cn("inline-flex shrink-0 items-center justify-center rounded-full border border-white/20 bg-white font-semibold text-[#14264a]", sizeMap[size], className)}
       aria-hidden="true"
     >
       {initials || "?"}

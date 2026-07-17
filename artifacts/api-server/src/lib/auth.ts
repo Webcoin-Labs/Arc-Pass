@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { db, sessionsTable, usersTable, founderPassesTable, type User } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, or } from "drizzle-orm";
 import crypto from "crypto";
 import { logger } from "./logger";
 export { requireDedicatedAdmin as requireAdmin } from "./admin-auth";
@@ -11,6 +11,19 @@ export function hasVerifiedGithub(user: Pick<User, "githubUserId">): boolean {
   return Boolean(user.githubUserId);
 }
 
+/** Store only a keyed digest of the browser token; the raw token remains in the HttpOnly cookie. */
+export function hashSessionToken(token: string): string {
+  const secret = process.env.SESSION_SECRET || "arc-pass-development-session-hash";
+  return crypto.createHmac("sha256", secret).update(token).digest("hex");
+}
+
+export async function deleteSession(token: string): Promise<void> {
+  const digest = hashSessionToken(token);
+  // The raw-token branch is a one-time compatibility path for sessions created
+  // before token hashing was introduced.
+  await db.delete(sessionsTable).where(or(eq(sessionsTable.token, digest), eq(sessionsTable.token, token)));
+}
+
 export async function getUserFromSession(req: Request): Promise<User | null> {
   const sessionToken = req.cookies?.["arc_session"] as string | undefined;
   if (!sessionToken) return null;
@@ -18,10 +31,13 @@ export async function getUserFromSession(req: Request): Promise<User | null> {
   const [session] = await db
     .select()
     .from(sessionsTable)
-    .where(eq(sessionsTable.token, sessionToken));
+    .where(or(eq(sessionsTable.token, hashSessionToken(sessionToken)), eq(sessionsTable.token, sessionToken)));
 
   if (!session) return null;
   if (session.expiresAt < new Date()) return null;
+  if (session.token === sessionToken) {
+    await db.update(sessionsTable).set({ token: hashSessionToken(sessionToken) }).where(eq(sessionsTable.id, session.id));
+  }
 
   const [user] = await db
     .select()
@@ -51,7 +67,7 @@ export async function createSession(userId: number, res: Response): Promise<void
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  await db.insert(sessionsTable).values({ userId, token, expiresAt });
+  await db.insert(sessionsTable).values({ userId, token: hashSessionToken(token), expiresAt });
 
   res.cookie("arc_session", token, {
     httpOnly: true,

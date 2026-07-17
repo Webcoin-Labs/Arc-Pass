@@ -92,6 +92,7 @@ export interface UserProfile {
   avatarUrl: string | null;
   provider: UserProfileProvider;
   isAdmin: boolean;
+  isDevelopmentTestIdentity: boolean;
   createdAt: string;
   connections: UserConnections;
 }
@@ -440,6 +441,14 @@ export interface BuilderTierHistoryEntry {
   transactionHash?: string | null;
 }
 
+export interface DiscordPrimaryRole {
+  id: string;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  hasRole: boolean | null;
+}
+
 export type BuilderPassEligibilityStatus = typeof BuilderPassEligibilityStatus[keyof typeof BuilderPassEligibilityStatus];
 
 
@@ -480,10 +489,20 @@ export interface BuilderPass {
   /** @nullable */
   discordAvatarUrl?: string | null;
   /** @nullable */
+  discordCommunityMember?: boolean | null;
+  /** @nullable */
+  discordCommunityJoinedAt?: string | null;
+  discordCommunityRoles?: string[];
+  discordCommunityPrimaryRoles?: DiscordPrimaryRole[];
+  /** @nullable */
   builderRole?: string | null;
   /** @nullable */
   primaryEcosystem?: string | null;
   githubVerified?: boolean;
+  /** @nullable */
+  githubContributionCount?: number | null;
+  /** @nullable */
+  githubContributionsUpdatedAt?: string | null;
   verifiedWalletCount?: number;
   /** @nullable */
   qualifyingTransactionCount?: number | null;

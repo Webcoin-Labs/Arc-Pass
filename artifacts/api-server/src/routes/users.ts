@@ -5,6 +5,7 @@ import { getAddress, isAddress, verifyMessage, type Hex } from "viem";
 import { createHash, randomBytes } from "crypto";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { configuration } from "../lib/env";
+import { isDevelopmentTestUser } from "../lib/dev-test-identities";
 
 const router: IRouter = Router();
 const MAX_WALLETS = 3;
@@ -44,6 +45,7 @@ function publicWallet(wallet: typeof walletsTable.$inferSelect) {
 
 router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
+  const testIdentity = isDevelopmentTestUser(user);
   res.json({
     id: user.id,
     username: user.username,
@@ -51,11 +53,12 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
     avatarUrl: user.avatarUrl,
     provider: user.provider,
     isAdmin: user.isAdmin,
+    isDevelopmentTestIdentity: isDevelopmentTestUser(user),
     createdAt: user.createdAt,
     connections: {
-      x: { connected: !!user.xUserId, username: user.xUsername },
-      discord: { connected: !!user.discordUserId, username: user.discordUsername, avatarUrl: user.discordAvatarUrl },
-      github: { connected: !!user.githubUserId, username: user.githubUsername },
+      x: { connected: testIdentity || !!user.xUserId, username: testIdentity ? "test" : user.xUsername },
+      discord: { connected: testIdentity || !!user.discordUserId, username: testIdentity ? "test" : user.discordUsername, avatarUrl: user.discordAvatarUrl },
+      github: { connected: testIdentity || !!user.githubUserId, username: testIdentity ? "test" : user.githubUsername },
     },
   });
 });

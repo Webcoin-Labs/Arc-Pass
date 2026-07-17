@@ -9,7 +9,8 @@ Powered by [Webcoin Labs](https://webcoin.labs).
 | | Founder Pass | Builder Pass |
 |---|---|---|
 | Eligibility | Admin invite-only (X or Discord handle) | Verified onchain activity + GitHub contribution |
-| Supply | Uncapped, admin-controlled | Capped at 1,500 unique holders |
+| Supply | Uncapped, admin-controlled | No permanent cap; claims open in controlled phases (2,499 in Phase 1) |
+| Benefits | Founder Sprint, review support, curated introductions, directory visibility | Verified builder proof, tier progression, ecosystem visibility, build opportunities |
 | Permanence | Permanent once minted — variant and tier locked forever | Upgrades in place; identity and pass number never change |
 | Variants / Tiers | Normal / Premium Black + configurable Founder tiers | Bronze → Silver → Gold → Platinum → Diamond |
 
@@ -49,6 +50,10 @@ pnpm --filter @workspace/api-spec run codegen                 # regenerate API h
 ```
 
 Every external integration (OAuth, Gemini, onchain minting, activity indexing) has a documented env var set in [`.env.example`](./.env.example) and fails closed / falls back to a mock when unset — see `replit.md` for exactly what's mocked vs. real at any given time.
+
+## Cloudflare R2 uploads
+
+The admin image uploader stores files on local disk during development and automatically switches to Cloudflare R2 when all five `CLOUDFLARE_R2_*` variables in [`.env.example`](./.env.example) are configured. Create an R2 Object Read & Write token scoped to the Arc Pass bucket, then use the bucket's S3 endpoint and a public custom domain. Partial R2 configuration is rejected at startup so production cannot silently fall back to ephemeral storage.
 
 ## Project structure
 

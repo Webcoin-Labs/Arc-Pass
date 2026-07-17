@@ -1,4 +1,4 @@
-import { CheckCircle2, Download, ExternalLink } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { abbreviateAddress, formatDate, formatNetworkLabel, explorerTxUrl } from "@/lib/format";
 
@@ -10,6 +10,7 @@ export function MintSuccess({
   issuedAt,
   onViewPass,
   onDownload,
+  onShare,
   className,
 }: {
   tokenId?: string | null;
@@ -19,6 +20,7 @@ export function MintSuccess({
   issuedAt?: string | null;
   onViewPass: () => void;
   onDownload: () => void;
+  onShare?: () => void;
   className?: string;
 }) {
   const txUrl = explorerTxUrl(network, transactionHash);
@@ -30,7 +32,7 @@ export function MintSuccess({
           <CheckCircle2 className="h-7 w-7 text-success" aria-hidden="true" />
         </div>
         <h2 className="text-2xl font-bold">Your Arc Pass is now onchain.</h2>
-        <p className="mt-1 text-muted-foreground">Pass claimed successfully.</p>
+        <p className="mt-1 text-muted-foreground">Your credential is minted and recorded onchain.</p>
       </div>
 
       <dl className="grid grid-cols-2 gap-4 rounded-2xl border bg-card p-5 font-mono text-sm tabular-nums">
@@ -58,6 +60,11 @@ export function MintSuccess({
         </Button>
         <Button onClick={onViewPass}>View Pass</Button>
       </div>
+      {onShare && (
+        <Button variant="outline" className="mt-3 w-full" onClick={onShare}>
+          <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share on X
+        </Button>
+      )}
       {txUrl && (
         <Button variant="ghost" className="mt-2 w-full" asChild>
           <a href={txUrl} target="_blank" rel="noreferrer">

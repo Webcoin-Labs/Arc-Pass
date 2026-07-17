@@ -44,6 +44,25 @@ test("GitHub code exchange verifies the account with the user access token", asy
   });
 });
 
+test("GitHub contribution snapshot uses the authenticated contribution calendar", async (t) => {
+  const { exchangeGithubCodeWithContributions } = await import("./oauth/github");
+  const calls: string[] = [];
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    calls.push(url);
+    if (url.endsWith("/login/oauth/access_token")) return Response.json({ access_token: "github-user-token" });
+    if (url.endsWith("/user")) return Response.json({ id: 42, login: "arc-builder", name: "Arc Builder", avatar_url: null });
+    return Response.json({ data: { viewer: { contributionsCollection: { contributionCalendar: { totalContributions: 137 } } } } });
+  }) as typeof fetch;
+
+  const result = await exchangeGithubCodeWithContributions("authorization-code", "pkce-verifier");
+  assert.equal(result.contributionCount, 137);
+  assert.equal(calls.at(-1), "https://api.github.com/graphql");
+});
+
 test("claim identity requires an ownership-verified GitHub link", async () => {
   const { hasVerifiedGithub } = await import("./auth");
   assert.equal(hasVerifiedGithub({ githubUserId: null }), false);

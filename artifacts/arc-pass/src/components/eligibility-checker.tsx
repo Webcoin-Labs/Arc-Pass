@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { SiDiscord, SiX } from "react-icons/si";
+import { SiX } from "react-icons/si";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { EligibilityQueryPlatform } from "@workspace/api-client-react";
+import { DiscordIcon } from "@/components/discord-icon";
 
 export function EligibilityChecker({
   onSubmit,
@@ -18,7 +19,7 @@ export function EligibilityChecker({
   variant?: "default" | "immersive";
 }) {
   const [platform, setPlatform] = useState<EligibilityQueryPlatform>("x");
-  const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState(import.meta.env.DEV ? "test" : "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +47,7 @@ export function EligibilityChecker({
             "h-10 gap-2 text-xs sm:text-sm data-[state=active]:shadow-none",
             immersive ? "rounded-full text-white/50 data-[state=active]:bg-white data-[state=active]:text-[#070912]" : "rounded-none data-[state=active]:bg-black data-[state=active]:text-white",
           )}>
-            <SiDiscord className="h-3.5 w-3.5" aria-hidden="true" /> Discord Username
+            <DiscordIcon className="h-3.5 w-4" /> Discord Username
           </TabsTrigger>
         </TabsList>
       </Tabs>

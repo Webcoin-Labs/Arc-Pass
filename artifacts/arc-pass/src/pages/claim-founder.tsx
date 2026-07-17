@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Download, ExternalLink, Github, ShieldAlert, Lock } from "lucide-react";
-import { SiDiscord, SiX } from "react-icons/si";
+import { SiX } from "react-icons/si";
+import { DiscordIcon } from "@/components/discord-icon";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useGetUserProfile, useListMyPasses, useClaimFounderPass, useMintFounderPass, getGetMeQueryKey, getGetUserProfileQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
@@ -12,7 +13,7 @@ import { MintModal, type MintParams } from "@/components/mint-modal";
 import { MintSuccess } from "@/components/mint-success";
 import { EmptyState } from "@/components/empty-state";
 import { PassStatusBadge } from "@/components/pass-status-badge";
-import { founderEligibilityMeta } from "@/lib/pass-status";
+import { founderOverallStatusMeta } from "@/lib/pass-status";
 import { downloadNodeAsPng } from "@/lib/export-image";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -36,8 +37,8 @@ export default function ClaimFounderPage() {
 
   if (userLoading || passesLoading || (!!user && profileLoading)) {
     return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 p-6">
-        <Skeleton className="aspect-[1/1.48] w-full max-w-[300px] rounded-2xl" />
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 p-6">
+        <Skeleton className="aspect-[1.48/1] w-full max-w-[600px] rounded-[30px]" />
         <Skeleton className="h-11 w-full" />
       </div>
     );
@@ -59,7 +60,7 @@ export default function ClaimFounderPage() {
           </Button>
           <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
             <a href="/api/auth/discord">
-              <SiDiscord className="h-4 w-4 text-[#5865F2]" /> Continue with Discord
+              <DiscordIcon className="h-4 w-5 text-[#5865F2]" /> Continue with Discord
             </a>
           </Button>
         </div>
@@ -94,7 +95,7 @@ export default function ClaimFounderPage() {
           <Github className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
         </div>
         <h1 className="text-xl font-semibold">Verify your GitHub account</h1>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">Connect GitHub to prove account ownership before claiming your Founder Pass.</p>
+        <p className="mt-2 max-w-md text-sm leading-6 text-pretty text-muted-foreground">Connect GitHub to prove account ownership before claiming. The review baseline is an account at least 180 days old with approximately 50 or more contributions in the previous 12 months.</p>
         <Button size="lg" className="mt-6 h-12 w-full max-w-xs gap-2" asChild>
           <a href="/api/auth/github?returnTo=%2Fclaim%2Ffounder"><Github className="h-4 w-4" aria-hidden="true" /> Connect GitHub</a>
         </Button>
@@ -122,11 +123,22 @@ export default function ClaimFounderPage() {
     );
   };
 
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}/api/share/founder/${founderPass.id}`;
+    const intentUrl = `https://x.com/intent/post?${new URLSearchParams({
+      text: "My Arc Founder Pass is now minted onchain, verified by Webcoin Labs.",
+      url: shareUrl,
+    }).toString()}`;
+    window.open(intentUrl, "_blank", "noopener,noreferrer");
+  };
+
   const cardData = {
     variant: founderPass.variant,
     displayName: founderPass.displayName,
     username: founderPass.username,
+    xUsername: profile?.connections.x.username,
     avatarUrl: founderPass.avatarUrl,
+    fallbackAvatarUrl: profile?.avatarUrl ?? profile?.connections.discord.avatarUrl,
     founderTitle: founderPass.founderTitle,
     companyName: founderPass.companyName,
     companyIndustry: founderPass.companyIndustry,
@@ -143,27 +155,28 @@ export default function ClaimFounderPage() {
     <div className="flex flex-1 flex-col items-center justify-center p-6 py-14">
       <AnimatePresence mode="wait">
         {founderPass.claimStatus === "minted" ? (
-          <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-4xl flex-col items-center gap-10 md:flex-row md:items-start">
-            <FounderPassCard ref={cardRef} data={cardData} className="max-w-[300px]" />
+          <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-start">
+            <FounderPassCard ref={cardRef} data={cardData} className="max-w-[620px]" />
             <MintSuccess
               tokenId={founderPass.tokenId}
               destinationWallet={founderPass.destinationWallet}
               network={founderPass.network}
               transactionHash={founderPass.transactionHash}
               issuedAt={founderPass.issuedAt}
-              onViewPass={() => setLocation(`/pass/founder/${founderPass.id}`)}
-              onDownload={handleDownload}
-              className="w-full max-w-sm flex-1"
+               onViewPass={() => setLocation(`/pass/founder/${founderPass.id}`)}
+               onDownload={handleDownload}
+               onShare={handleShare}
+               className="w-full max-w-sm flex-1"
             />
           </motion.div>
         ) : (
-          <motion.div key="claim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-3xl flex-col items-center gap-10 md:flex-row">
-            <div className="flex-1 text-center md:text-left">
-              <PassStatusBadge meta={founderEligibilityMeta(founderPass.eligibilityStatus)} className="mb-4" />
+          <motion.div key="claim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row">
+            <div className="w-full max-w-md flex-1 text-center lg:text-left">
+              <PassStatusBadge meta={founderOverallStatusMeta(founderPass)} className="mb-4" />
               <h1 className="text-3xl font-bold sm:text-4xl">Here's your pass.</h1>
               <p className="mt-3 text-lg text-muted-foreground">
                 {founderPass.claimStatus === "claimed"
-                  ? "Your pass is linked to your profile. Record it onchain to make it permanent."
+                  ? "Added to your inventory. Mint it onchain when you’re ready to make the credential permanent."
                   : "Your identity has been verified. Review and claim your credential."}
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row md:flex-col">
@@ -181,7 +194,7 @@ export default function ClaimFounderPage() {
                 )}
               </div>
             </div>
-            <FounderPassCard ref={cardRef} data={cardData} className="max-w-[300px]" />
+            <FounderPassCard ref={cardRef} data={cardData} className="max-w-[620px]" />
           </motion.div>
         )}
       </AnimatePresence>

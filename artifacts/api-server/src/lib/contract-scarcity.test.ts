@@ -9,8 +9,14 @@ const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 test("Builder contract has unlimited supply while preserving identity and upgrade integrity", async () => {
   const source = await readFile(path.join(workspace, "contracts/BuilderPass.sol"), "utf8");
   assert.doesNotMatch(source, /MAX_SUPPLY|remainingSupply|allocation complete/);
-  assert.doesNotMatch(source, /function\s+(transfer|transferFrom|safeTransferFrom|approve|setApprovalForAll)\b/);
+  assert.match(source, /function\s+transferFrom\b/);
+  assert.match(source, /BuilderPass: non-transferable/);
+  assert.match(source, /function\s+tokenURI\b/);
+  assert.match(source, /supportsInterface/);
   assert.match(source, /identity already has a pass/);
+  assert.match(source, /metadataUri/);
+  assert.match(source, /block\.chainid/);
+  assert.match(source, /non-canonical signature/);
   assert.match(source, /totalSupply \+= 1/);
   const revokeBody = source.match(/function revoke[\s\S]*?\n    }/)?.[0] || "";
   assert.doesNotMatch(revokeBody, /totalSupply\s*[-=]/);
@@ -28,9 +34,16 @@ test("Phase 1 claim allocation is enforced atomically by the backend", async () 
 
 test("Founder contract keeps variant immutable and exposes no transfer API", async () => {
   const source = await readFile(path.join(workspace, "contracts/FounderPass.sol"), "utf8");
-  assert.doesNotMatch(source, /function\s+(transfer|transferFrom|safeTransferFrom|approve|setApprovalForAll|setVariant)\b/);
+  assert.match(source, /function\s+transferFrom\b/);
+  assert.match(source, /FounderPass: non-transferable/);
+  assert.match(source, /function\s+tokenURI\b/);
+  assert.match(source, /supportsInterface/);
+  assert.doesNotMatch(source, /function\s+setVariant\b/);
   assert.match(source, /identity already has a pass/);
   assert.match(source, /signature already used/);
+  assert.match(source, /metadataUri/);
+  assert.match(source, /block\.chainid/);
+  assert.match(source, /non-canonical signature/);
 });
 
 test("Both mint routes require an ownership-verified destination wallet", async () => {

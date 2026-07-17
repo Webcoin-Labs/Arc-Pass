@@ -1,12 +1,12 @@
 import { Router, type IRouter, type Response } from "express";
-import { db, usersTable, sessionsTable } from "@workspace/db";
+import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getUserFromSession, createSession, linkPendingFounderInvite } from "../lib/auth";
+import { getUserFromSession, createSession, deleteSession, linkPendingFounderInvite } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { signOAuthState, verifyOAuthState, createPkcePair } from "../lib/oauth/provider";
 import { isXOAuthConfigured, buildXAuthorizeUrl, exchangeXCode } from "../lib/oauth/x";
-import { isDiscordOAuthConfigured, buildDiscordAuthorizeUrl, exchangeDiscordCode } from "../lib/oauth/discord";
-import { isGithubOAuthConfigured, buildGithubAuthorizeUrl, exchangeGithubCode } from "../lib/oauth/github";
+import { isDiscordOAuthConfigured, buildDiscordAuthorizeUrl, exchangeDiscordCode, getArcGuildMembership, type ArcGuildMembershipSnapshot } from "../lib/oauth/discord";
+import { isGithubOAuthConfigured, buildGithubAuthorizeUrl, exchangeGithubCodeWithContributions } from "../lib/oauth/github";
 import type { OAuthProfile } from "../lib/oauth/types";
 import { configuration } from "../lib/env";
 import { grantDevelopmentTestEntitlements } from "../lib/dev-test-identities";
@@ -25,6 +25,30 @@ function safeReturnTo(req: import("express").Request): string {
 
 type Provider = "x" | "discord" | "github";
 
+function discordMembershipPatch(membership: ArcGuildMembershipSnapshot | undefined) {
+  if (!membership) return {};
+  if (membership.member === null) return {
+    discordArcPrimaryRoles: membership.primaryRoles,
+    discordArcMembershipCheckedAt: new Date(),
+  };
+  return {
+    discordArcMember: membership.member,
+    discordArcJoinedAt: membership.joinedAt ? new Date(membership.joinedAt) : null,
+    discordArcRoleIds: membership.roleIds,
+    discordArcRoleNames: membership.roleNames,
+    discordArcPrimaryRoles: membership.primaryRoles,
+    discordArcMembershipCheckedAt: new Date(),
+  };
+}
+
+function githubContributionPatch(contributionCount: number | null | undefined) {
+  if (contributionCount === undefined) return {};
+  return {
+    githubContributionCount: contributionCount,
+    githubContributionsUpdatedAt: new Date(),
+  };
+}
+
 /**
  * Applies a resolved OAuth profile: links it to the current session (link
  * intent) or finds/creates an identity and signs the caller in (login
@@ -38,8 +62,10 @@ async function completeOAuth(params: {
   linkUserId: number | null;
   currentUserId: number | null;
   res: Response;
+  discordMembership?: ArcGuildMembershipSnapshot;
+  githubContributionCount?: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { provider, profile, intent, linkUserId, currentUserId, res } = params;
+  const { provider, profile, intent, linkUserId, currentUserId, res, discordMembership, githubContributionCount } = params;
 
   if (intent === "link") {
     if (!linkUserId || linkUserId !== currentUserId) {
@@ -54,17 +80,15 @@ async function completeOAuth(params: {
 
     const patch =
       provider === "x"
-        ? { xUserId: profile.providerUserId, xUsername: profile.username }
+          ? { xUserId: profile.providerUserId, xUsername: profile.username, ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}) }
         : provider === "discord"
-          ? { discordUserId: profile.providerUserId, discordUsername: profile.username, discordAvatarUrl: profile.avatarUrl }
-          : { githubUserId: profile.providerUserId, githubUsername: profile.username };
+          ? { discordUserId: profile.providerUserId, discordUsername: profile.username, discordAvatarUrl: profile.avatarUrl, ...discordMembershipPatch(discordMembership) }
+          : { githubUserId: profile.providerUserId, githubUsername: profile.username, ...githubContributionPatch(githubContributionCount) };
 
     await db.update(usersTable).set(patch).where(eq(usersTable.id, linkUserId));
     if (provider !== "github") {
       await linkPendingFounderInvite(linkUserId, provider, profile.username);
-    }
-    if (provider === "x") {
-      await grantDevelopmentTestEntitlements(linkUserId, profile.username);
+      await grantDevelopmentTestEntitlements(linkUserId, provider, profile.username);
     }
     return { ok: true };
   }
@@ -84,7 +108,7 @@ async function completeOAuth(params: {
     const profilePatch =
       provider === "x"
         ? { username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl, xUsername: profile.username }
-        : { username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl, discordUsername: profile.username, discordAvatarUrl: profile.avatarUrl };
+         : { username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl, discordUsername: profile.username, discordAvatarUrl: profile.avatarUrl, ...discordMembershipPatch(discordMembership) };
     await db.update(usersTable).set(profilePatch).where(eq(usersTable.id, userId));
   } else {
     const [created] = await db
@@ -97,16 +121,14 @@ async function completeOAuth(params: {
         providerId: profile.providerUserId,
         ...(provider === "x"
           ? { xUserId: profile.providerUserId, xUsername: profile.username }
-          : { discordUserId: profile.providerUserId, discordUsername: profile.username, discordAvatarUrl: profile.avatarUrl }),
+          : { discordUserId: profile.providerUserId, discordUsername: profile.username, discordAvatarUrl: profile.avatarUrl, ...discordMembershipPatch(discordMembership) }),
       })
       .returning();
     userId = created.id;
   }
 
   await linkPendingFounderInvite(userId, provider, profile.username);
-  if (provider === "x") {
-    await grantDevelopmentTestEntitlements(userId, profile.username);
-  }
+  await grantDevelopmentTestEntitlements(userId, provider, profile.username);
 
   await createSession(userId, res);
   return { ok: true };
@@ -149,6 +171,42 @@ async function mockOAuth(provider: Provider, req: import("express").Request, res
 }
 
 // ---- X ----
+
+router.get("/auth/dev-test/:provider", async (req, res): Promise<void> => {
+  if (configuration.isProduction || !configuration.enableDevTestIdentities) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const provider = req.params.provider;
+  if (provider !== "x" && provider !== "discord") {
+    res.status(404).json({ error: "Test identity is not configured" });
+    return;
+  }
+  const testHandles = provider === "x" ? configuration.devEligibleXHandles : configuration.devEligibleDiscordHandles;
+  if (!testHandles.has("test")) { res.status(404).json({ error: "Test identity is not configured" }); return; }
+
+  try {
+    const result = await completeOAuth({
+      provider,
+      profile: {
+        providerUserId: `development_${provider}_test`,
+        username: "test",
+        displayName: provider === "x" ? "Test X User" : "Test Discord User",
+        avatarUrl: null,
+      },
+      intent: "login",
+      linkUserId: null,
+      currentUserId: null,
+      res,
+    });
+    if (!result.ok) throw new Error(result.error);
+    res.redirect(frontendUrl(safeReturnTo(req)));
+  } catch (err) {
+    req.log.error({ err, provider }, "Development test sign-in failed");
+    res.redirect(frontendUrl("/?authError=test_identity"));
+  }
+});
 
 router.get("/auth/x", async (req, res): Promise<void> => {
   try {
@@ -235,7 +293,8 @@ router.get("/auth/discord/callback", async (req, res): Promise<void> => {
     if (!code || !stateParam) throw new Error("Missing code or state");
 
     const oauthState = await verifyOAuthState(stateParam);
-    const { profile } = await exchangeDiscordCode(code);
+    const { profile, accessToken } = await exchangeDiscordCode(code);
+    const discordMembership = await getArcGuildMembership(accessToken);
     const currentUser = await getUserFromSession(req);
 
     const result = await completeOAuth({
@@ -245,6 +304,7 @@ router.get("/auth/discord/callback", async (req, res): Promise<void> => {
       linkUserId: oauthState.linkUserId ?? null,
       currentUserId: currentUser?.id ?? null,
       res,
+      discordMembership,
     });
 
     if (!result.ok) {
@@ -290,7 +350,7 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
     if (!code || !stateParam) throw new Error("Missing code or state");
 
     const oauthState = await verifyOAuthState(stateParam);
-    const profile = await exchangeGithubCode(code, oauthState.codeVerifier ?? "");
+    const { profile, contributionCount } = await exchangeGithubCodeWithContributions(code, oauthState.codeVerifier ?? "");
     const currentUser = await getUserFromSession(req);
 
     const result = await completeOAuth({
@@ -300,6 +360,7 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
       linkUserId: oauthState.linkUserId ?? null,
       currentUserId: currentUser?.id ?? null,
       res,
+      githubContributionCount: contributionCount,
     });
 
     if (!result.ok) {
@@ -342,7 +403,7 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
   try {
     const sessionToken = req.cookies?.["arc_session"] as string | undefined;
     if (sessionToken) {
-      await db.delete(sessionsTable).where(eq(sessionsTable.token, sessionToken));
+      await deleteSession(sessionToken);
     }
     res.clearCookie("arc_session", { path: "/" });
     res.json({ success: true });

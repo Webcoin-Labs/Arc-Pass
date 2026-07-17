@@ -30,8 +30,8 @@ export default function PassDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 p-6 pt-12 md:flex-row">
-        <Skeleton className="aspect-[1/1.48] w-full max-w-sm rounded-2xl" />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 p-6 pt-12 lg:flex-row">
+        <Skeleton className="aspect-[1.48/1] w-full max-w-xl rounded-[30px]" />
         <div className="mt-8 flex-1 space-y-6">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-32 w-full" />
@@ -47,13 +47,13 @@ export default function PassDetailPage() {
   const downloadFilename = `arc-pass-${type}.png`;
 
   return (
-    <div className="mx-auto w-full max-w-5xl p-6 pb-24 pt-12">
+    <div className="mx-auto w-full max-w-6xl p-4 pb-24 pt-10 sm:p-6 sm:pt-12">
       <Button variant="ghost" onClick={() => window.history.back()} className="-ml-4 mb-8 text-muted-foreground">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back
       </Button>
 
-      <div className="flex flex-col items-start gap-12 md:flex-row">
-        <div className="sticky top-24 mx-auto w-full max-w-sm md:mx-0">
+      <div className="flex flex-col items-start gap-12 lg:flex-row">
+        <div className="mx-auto w-full max-w-xl lg:sticky lg:top-24 lg:mx-0">
           {type === "founder" && founderPass && <FounderPassCard ref={cardRef} data={founderPass} className="w-full" />}
           {type === "builder" && builderPass && <BuilderPassCard ref={cardRef} data={builderPass} className="w-full" />}
 

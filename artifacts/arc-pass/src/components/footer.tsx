@@ -11,7 +11,7 @@ const exploreLinks = [
   { label: "Founder Pass", href: "/claim/founder" },
   { label: "Builder Pass", href: "/claim/builder" },
   { label: "Credits", href: "/docs#credits" },
-  { label: "Brand Assets", href: "https://webcoin.labs" },
+  { label: "Brand Assets", href: "https://webcoinlabs.com" },
 ];
 
 const connectLinks = [
@@ -56,7 +56,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_2fr] lg:gap-16">
           <div>
-            <a href="https://webcoin.labs" target="_blank" rel="noreferrer" aria-label="Webcoin Labs home" className="inline-flex">
+            <a href="https://webcoinlabs.com" target="_blank" rel="noopener noreferrer" aria-label="Webcoin Labs home" className="inline-flex">
               <img src="/brand/webcoin-mono-white.webp" alt="Webcoin Labs" className="h-7 w-auto max-w-[220px] object-contain object-left" width={640} height={128} />
             </a>
             <p className="mt-4 max-w-xs text-sm leading-6 text-white/60 sm:mt-5">The operating system for founders.</p>

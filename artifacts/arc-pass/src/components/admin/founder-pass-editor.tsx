@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FounderPassCard } from "@/components/founder-pass-card";
 import { CompanyLogoUploader } from "@/components/company-logo-uploader";
-import { useAdminListFounderTiers, useAdminUpdateFounderPass } from "@workspace/api-client-react";
+import { useAdminListFounderTiers, useAdminUpdateFounderPass, useAdminRevokeFounderPass } from "@workspace/api-client-react";
 import type { AdminFounderPass } from "@workspace/api-client-react";
 import { toast } from "sonner";
 
 export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; onSaved: () => void }) {
   const { data: tiers = [] } = useAdminListFounderTiers();
   const updatePass = useAdminUpdateFounderPass();
+  const revokePass = useAdminRevokeFounderPass();
 
   const [form, setForm] = useState({
     eligibilityStatus: pass.eligibilityStatus,
@@ -87,7 +88,7 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)]">
       <div className="space-y-5">
         {isLocked && (
           <Alert>
@@ -119,8 +120,8 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="premium_black">Premium Black</SelectItem>
+                <SelectItem value="normal">Normal Founder</SelectItem>
+                <SelectItem value="premium_black">Premium Founder</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -205,9 +206,26 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
         <Button className="w-full" onClick={handleSave} disabled={updatePass.isPending}>
           {updatePass.isPending ? "Saving…" : "Save Changes"}
         </Button>
+        {!pass.revokedAt && (
+          <Button
+            type="button"
+            variant="destructive"
+            className="mt-2 w-full"
+            disabled={revokePass.isPending}
+            onClick={() => {
+              if (!window.confirm("Revoke this Founder credential? A minted pass will also be revoked onchain.")) return;
+              revokePass.mutate({ id: pass.id, data: { reason: "Revoked by admin" } }, {
+                onSuccess: () => { toast.success("Founder Pass revoked"); onSaved(); },
+                onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Revocation failed"),
+              });
+            }}
+          >
+            {revokePass.isPending ? "Revoking…" : "Revoke Founder Pass"}
+          </Button>
+        )}
       </div>
 
-      <div className="lg:sticky lg:top-6">
+      <div className="xl:sticky xl:top-6">
         <p className="mb-3 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">Live Preview</p>
         <FounderPassCard
           interactive={false}

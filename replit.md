@@ -1,80 +1,56 @@
 # Arc Pass
 
-A verified credential platform for Arc founders and builders. Two
-non-transferable identity credentials — Founder Pass (invite-only,
-permanent) and Builder Pass (activity-based, capped at 1,500 holders,
-upgradeable) — verified through OAuth, onchain activity, and GitHub
-contribution, then recorded onchain.
+Arc Pass is a verified-credential platform for Arc founders and builders. It
+issues two non-transferable credentials: an invite-only Founder Pass and an
+activity-based Builder Pass. Eligibility is verified through OAuth, GitHub,
+wallet ownership signatures, and real onchain/indexer data before a credential
+is recorded onchain.
 
-## Run & Operate
+## Run and operate
 
-- `pnpm --filter @workspace/arc-pass run dev` — run the frontend (proxies `/api` and `/uploads` to the API server, see `API_PROXY_TARGET`)
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port from `PORT`, default use 8080)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/db run seed` — seed Founder/Builder tier configuration (Bronze–Diamond, placeholder Founder tiers)
-- Copy `.env.example` to `.env` and fill in what you have — every external integration has a working mock/fallback when unset (see "Architecture decisions")
+- `pnpm --filter @workspace/arc-pass run dev` — run the Vite frontend.
+- `pnpm --filter @workspace/api-server run dev` — run the API server.
+- `pnpm run typecheck` — typecheck every workspace package.
+- `pnpm run build` — typecheck and build every package.
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API clients after OpenAPI changes.
+- `pnpm --filter @workspace/db run push` / `seed` — development database setup only.
 
-## Stack
-
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- Frontend: React 19 + Vite + Tailwind CSS v4 + shadcn/ui (Radix) + Framer Motion + wouter + viem + html-to-image
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec) — React Query hooks + Zod schemas
-- Signed authorizations: `jose` (mint/upgrade tickets, OAuth state)
-- Build: esbuild (CJS bundle, API); Vite (frontend)
-- Smart contracts: Solidity source in `contracts/` (not yet deployed — see `contracts/README.md`)
-
-## Where things live
-
-- `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth for all API contracts)
-- `lib/db/src/schema/` — Drizzle table definitions (users, founderTiers, builderTiers, founderPasses, builderPasses, builderVerificationSnapshots, builderTierHistory, mintAuthorizations, wallets, sessions)
-- `artifacts/api-server/src/routes/` — Express route handlers (auth, eligibility, passes, users, admin)
-- `artifacts/api-server/src/lib/` — auth middleware, chain adapter, Gemini adapter, OAuth providers, signed claim tickets, tier calculation, uploads
-- `artifacts/arc-pass/src/pages/` — landing, dashboard, claim flows, pass detail, FAQ, docs, admin
-- `artifacts/arc-pass/src/components/` — shared UI (header, pass cards, mint modal, admin panels, shadcn primitives)
-- `contracts/` — `FounderPass.sol`, `BuilderPass.sol` (not yet deployed)
+Copy `.env.example` to `.env`. Development mocks require the explicit
+`ENABLE_DEV_MOCKS=true` flag and are rejected when `NODE_ENV=production`.
+Production never fabricates eligibility, tier, activity counts, or mint
+transactions when an integration is missing.
 
 ## Architecture decisions
 
-- **Auth**: session-based with an HTTP-only cookie (`arc_session`), opaque DB-backed token (no JWT). Real OAuth 2.0 for X (PKCE), Discord, and GitHub when `*_CLIENT_ID`/`*_CLIENT_SECRET`/`*_REDIRECT_URI` are set; falls back to a demo identity otherwise. GitHub is link-only (never a login method) — Founder login is X or Discord, Builder verification additionally requires Discord + GitHub linked to the same account.
-- **Founder eligibility** is 100% admin-controlled (invite by X/Discord handle, pre- or post-signup) — never derived from activity. Variant (Normal / Premium Black) and tier are locked forever once minted.
-- **Builder tier** is calculated deterministically from onchain activity (`chain-adapter.ts`) plus a contract-deployment baseline gate — Gemini (`gemini-adapter.ts`) only produces qualitative summaries, never tier-deciding counts. Exact thresholds live in the `builder_tiers` table (admin-editable) and are never exposed to non-admins.
-- **Onchain minting** goes through `chain-adapter.ts`: a deterministic mock by default, or real viem calls (with EIP-191–signed authorizations matching the deployed contracts) once `CHAIN_RPC_URL` + `RELAYER_PRIVATE_KEY` + both contract addresses are set. See `contracts/README.md` — contracts are written but not deployed.
-- **Replay protection** is layered: `mint_authorizations` tracks single-use nonces backend-side (`signed-claims.ts`) before a signature is ever requested, and the contracts independently reject a replayed signature via `usedSignatures`.
-- **Builder supply cap (1,500)** excludes revoked passes — `mintedAndNotRevoked()` in `serializers.ts` is the one place that rule lives, mirrored by `activeSupply` in `BuilderPass.sol`.
-- Local dev runs the frontend (Vite) and API as separate processes/ports — `vite.config.ts` proxies `/api` and `/uploads` to `API_PROXY_TARGET` so relative fetches work outside Replit's own routing.
+- Sessions use an HttpOnly `arc_session` cookie while only an HMAC digest is stored in PostgreSQL.
+- X and Discord can establish a login; GitHub is link-only and is required before claiming.
+- Wallets must sign a server nonce; only ownership-verified wallets can receive a pass.
+- Builder verification requires a real activity provider. Missing or failed indexer configuration returns `Verification is temporarily unavailable.`
+- Onchain minting uses viem and EIP-191 authorizations against the deployed contracts. Development chain mocks are opt-in only.
+- Builder phase allocation is controlled by `BUILDER_PHASE_CLAIM_LIMIT` (2,499 by default). The Solidity Builder contract has no permanent cap; revocation does not restore supply or identity history.
+- Founder variants are Normal and Premium. Founder tiers are Emerging, Formal, and Premier.
+- Discord membership is best-effort supporting evidence. `ARC_DISCORD_PRIMARY_ROLE_IDS` accepts up to two role IDs and the pass displays membership date plus whether each role is present.
 
-## Product routes
+## Important production configuration
 
-- **`/`** — Eligibility checker (X/Discord username preview only, never authenticates) with scan animation + both Founder/Builder result cards always shown
-- **`/dashboard`** — Auth-gated: both passes, profile, connected accounts, re-verification, tier upgrades
-- **`/claim/founder`**, **`/claim/builder`** — claim flows (Builder is 5 steps: Discord, GitHub, wallets, review, mint)
-- **`/pass/:type/:id`** — public pass page (`type` is `founder` or `builder` — the two are separate tables/id spaces, so a bare `/pass/:id` would be ambiguous)
-- **`/admin`** — Overview, Founder Passes, Builder Passes, Reviews & Upgrades, Tier Configuration, Mint Records, Settings (single page, section switcher — see note below)
-- **`/faq`**, **`/docs`**
+Production requires `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, OAuth state and
+mint signing keys, complete OAuth groups, complete chain minting variables
+(including `ARC_CHAIN_ID`), a real activity provider, and all five Cloudflare
+R2 variables. Local upload storage is ephemeral and is rejected in production.
 
-Note: the spec's admin nav lists 11 sections (Founder Applications, Founder
-Passes, Eligibility Reviews, Re-verifications, Tier Upgrades, Company Assets
-among them). These are consolidated into the 7 above where they'd otherwise
-just be thin filtered views of the same two tables — "Reviews & Upgrades"
-covers eligibility reviews + re-verifications + tier upgrades in one
-operational queue, and company logo upload lives inline in the Founder Pass
-editor rather than a separate asset library (there's no deduplicated
-"company" entity in the data model).
+## Smart contracts
 
-## Gotchas
+`contracts/FounderPass.sol` and `contracts/BuilderPass.sol` are soulbound,
+replay-protected credential contracts with HTTPS metadata URIs. HTTPS metadata
+works without IPFS; IPFS is optional if immutable pinning is desired. The source
+has not received a formal third-party audit, so deploy only after an external
+review and a verified deployment checklist.
 
-- The `label.tsx` shadcn component must use `import * as LabelPrimitive from "@radix-ui/react-label"` (namespace import), not a named import
-- Re-run codegen (`pnpm --filter @workspace/api-spec run codegen`) after every OpenAPI spec change, then `pnpm run typecheck:libs` to refresh the `lib/db`/`lib/api-zod` composite build output — `tsc -p` in the artifacts (non-`--build` mode) reads those `dist/*.d.ts` files via project references, not live source, so stale libs cause misleading type errors downstream
-- Orval's generated React Query hooks type `options.query` as the raw (non-`Partial`) `UseQueryOptions`, which react-query v5 requires `queryKey` on — pass it explicitly via the hook's exported `getXQueryKey()` helper whenever you override `retry`/`enabled` (see any page for the pattern)
-- Auth middleware (`requireAuth`/`requireAdmin`) attaches `req.user` — access it with `(req as AuthedRequest).user` (type exported from `lib/auth.ts`)
-- `select.tsx` and `tooltip.tsx` were originally broken stubs (a native `<select>` faking the Radix API, and a self-importing circular tooltip) — both now wrap the real `@radix-ui/react-*` primitives that were already a dependency
+## Known operational risks
 
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- `railway.json` currently uses Drizzle `push` before deploy. Replace it with a
+  reviewed migration runner before applying schema changes automatically in a
+  production environment.
+- `pnpm audit --prod` currently reports transitive `ws`/`uuid` advisories in
+  the wallet-connector dependency tree. Upgrade the upstream RainbowKit/Wagmi
+  connector set when a compatible patched release is available.

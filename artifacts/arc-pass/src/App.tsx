@@ -38,6 +38,7 @@ const authErrorMessages: Record<string, string> = {
   github_unavailable: 'GitHub verification is not configured yet.',
   github_already_linked: 'That GitHub account is already connected to another Arc Pass identity.',
   login_required_before_github: 'Sign in with X or Discord before connecting GitHub.',
+  test_identity: 'The local test identity could not be created. Check the development test configuration.',
   session_mismatch: 'Your session changed during verification. Sign in and try again.',
 };
 

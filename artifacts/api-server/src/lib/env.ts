@@ -24,9 +24,11 @@ function commaSeparatedValues(name: string): string[] {
 }
 
 const devEligibleXHandles = commaSeparatedValues("DEV_ELIGIBLE_X_HANDLES");
+const devEligibleDiscordHandles = commaSeparatedValues("DEV_ELIGIBLE_DISCORD_HANDLES");
 const devAdminBootstrapEmail = process.env.DEV_ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase() ?? "";
 const builderPhaseName = process.env.BUILDER_PHASE_NAME?.trim() || "Wave 1";
 const builderPhaseClaimLimit = Number(process.env.BUILDER_PHASE_CLAIM_LIMIT || "2499");
+const discordPrimaryRoleIds = commaSeparatedValues("ARC_DISCORD_PRIMARY_ROLE_IDS").slice(0, 2);
 
 export function assertMockPolicy(nodeEnv: string | undefined, enabled: boolean): void {
   if (nodeEnv === "production" && enabled) throw new Error("ENABLE_DEV_MOCKS=true is forbidden in production");
@@ -54,15 +56,15 @@ export function validateEnvironment(): void {
   assertMockPolicy(process.env.NODE_ENV, enableDevMocks);
   assertDevelopmentFixturePolicy(process.env.NODE_ENV, {
     testIdentitiesEnabled: enableDevTestIdentities,
-    testIdentityHandlesConfigured: devEligibleXHandles.length > 0,
+    testIdentityHandlesConfigured: devEligibleXHandles.length > 0 || devEligibleDiscordHandles.length > 0,
     adminBootstrapEnabled: enableDevAdminBootstrap,
     adminBootstrapEmailConfigured: Boolean(devAdminBootstrapEmail),
   });
   if (isProduction && configured("DEV_DATABASE_URL")) {
     throw new Error("DEV_DATABASE_URL is forbidden in production");
   }
-  if (enableDevTestIdentities && devEligibleXHandles.length === 0) {
-    throw new Error("ENABLE_DEV_TEST_IDENTITIES=true requires DEV_ELIGIBLE_X_HANDLES");
+  if (enableDevTestIdentities && devEligibleXHandles.length === 0 && devEligibleDiscordHandles.length === 0) {
+    throw new Error("ENABLE_DEV_TEST_IDENTITIES=true requires at least one development test handle");
   }
   if (enableDevAdminBootstrap && !devAdminBootstrapEmail) {
     throw new Error("ENABLE_DEV_ADMIN_BOOTSTRAP=true requires DEV_ADMIN_BOOTSTRAP_EMAIL");
@@ -70,15 +72,49 @@ export function validateEnvironment(): void {
   if (!Number.isSafeInteger(builderPhaseClaimLimit) || builderPhaseClaimLimit <= 0) {
     throw new Error("BUILDER_PHASE_CLAIM_LIMIT must be a positive integer");
   }
+  if (configured("ARC_CHAIN_ID")) {
+    const chainId = Number(process.env.ARC_CHAIN_ID);
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("ARC_CHAIN_ID must be a positive integer");
+    }
+  }
   assertCompleteGroup("X OAuth", ["X_CLIENT_ID", "X_CLIENT_SECRET", "X_REDIRECT_URI"]);
   assertCompleteGroup("Discord OAuth", ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI"]);
+  if (commaSeparatedValues("ARC_DISCORD_PRIMARY_ROLE_IDS").length > 2) {
+    throw new Error("ARC_DISCORD_PRIMARY_ROLE_IDS may contain at most two role IDs");
+  }
+  if (discordPrimaryRoleIds.length > 0) {
+    assertCompleteGroup("Discord primary roles", ["ARC_DISCORD_GUILD_ID", "DISCORD_BOT_TOKEN"]);
+  }
   assertCompleteGroup("GitHub OAuth", ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_REDIRECT_URI"]);
-  assertCompleteGroup("chain minting", ["CHAIN_RPC_URL", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
+  assertCompleteGroup("chain minting", ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
   assertCompleteGroup("activity provider", ["EXPLORER_API_URL", "EXPLORER_API_KEY"]);
   assertCompleteGroup("Typeform webhook", ["TYPEFORM_FORM_ID", "TYPEFORM_API_TOKEN", "TYPEFORM_WEBHOOK_SECRET"]);
+  assertCompleteGroup("Cloudflare R2", ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"]);
+  if (isProduction && !["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"].every(configured)) {
+    throw new Error("Cloudflare R2 is required in production; local upload storage is ephemeral");
+  }
   if (isProduction) {
     for (const name of ["DATABASE_URL", "SESSION_SECRET", "APP_URL", "OAUTH_STATE_SIGNING_KEY", "MINT_SIGNING_KEY"]) {
       if (!configured(name)) throw new Error(`${name} is required in production`);
+    }
+    try {
+      if (new URL(process.env.APP_URL!).protocol !== "https:") throw new Error("APP_URL must use HTTPS in production");
+    } catch (error) {
+      if (error instanceof Error && error.message === "APP_URL must use HTTPS in production") throw error;
+      throw new Error("APP_URL must be a valid HTTPS origin in production");
+    }
+    if (process.env.SESSION_SECRET!.length < 32) throw new Error("SESSION_SECRET must be at least 32 characters in production");
+    for (const name of ["OAUTH_STATE_SIGNING_KEY", "MINT_SIGNING_KEY"]) {
+      let decoded: Buffer;
+      try { decoded = Buffer.from(process.env[name]!, "base64"); } catch { throw new Error(`${name} must be base64 in production`); }
+      if (decoded.length < 32) throw new Error(`${name} must decode to at least 32 bytes in production`);
+    }
+    try {
+      if (new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL!).protocol !== "https:") throw new Error("CLOUDFLARE_R2_PUBLIC_URL must use HTTPS in production");
+    } catch (error) {
+      if (error instanceof Error && error.message === "CLOUDFLARE_R2_PUBLIC_URL must use HTTPS in production") throw error;
+      throw new Error("CLOUDFLARE_R2_PUBLIC_URL must be a valid HTTPS URL in production");
     }
   }
 }
@@ -88,11 +124,14 @@ export const configuration = {
   enableDevMocks,
   enableDevTestIdentities,
   devEligibleXHandles: new Set(devEligibleXHandles),
+  devEligibleDiscordHandles: new Set(devEligibleDiscordHandles),
   enableDevAdminBootstrap,
   devAdminBootstrapEmail,
   builderPhaseName,
   builderPhaseClaimLimit,
+  discordPrimaryRoleIds,
   appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:5173",
-  mintingConfigured: ["CHAIN_RPC_URL", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"].every(configured),
+  mintingConfigured: ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"].every(configured),
   activityProviderConfigured: ["EXPLORER_API_URL", "EXPLORER_API_KEY"].every(configured),
+  cloudflareR2Configured: ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"].every(configured),
 };

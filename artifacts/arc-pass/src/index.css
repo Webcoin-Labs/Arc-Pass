@@ -148,14 +148,14 @@
   --chart-4: 152 40% 40%;
   --chart-5: 32 70% 48%;
 
-  /* Founder Pass — Normal variant material */
+  /* Founder Pass — Normal Founder material */
   --material-founder-normal-from: 227 32% 15%;
   --material-founder-normal-to: 227 28% 9%;
   --material-founder-normal-border: 226 40% 40%;
   --material-founder-normal-accent: 226 70% 62%;
   --material-founder-normal-text: 0 0% 98%;
 
-  /* Founder Pass — Premium Black variant material */
+  /* Founder Pass — Premium Founder material */
   --material-founder-black-from: 240 12% 8%;
   --material-founder-black-to: 240 20% 2%;
   --material-founder-black-border: 240 8% 30%;

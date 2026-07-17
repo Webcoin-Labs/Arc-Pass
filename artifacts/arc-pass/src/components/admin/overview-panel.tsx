@@ -34,8 +34,8 @@ export function OverviewPanel() {
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Founder Passes</h3>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <StatCard label="Total Issued" value={data.founderPassesIssued} />
-          <StatCard label="Normal" value={data.normalFounderPasses} />
-          <StatCard label="Premium Black" value={data.premiumBlackFounderPasses} />
+          <StatCard label="Normal Founder" value={data.normalFounderPasses} />
+          <StatCard label="Premium Founder" value={data.premiumBlackFounderPasses} />
         </div>
       </div>
 

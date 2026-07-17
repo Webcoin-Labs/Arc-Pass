@@ -186,8 +186,8 @@ export function FounderPassesPanel() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="premium_black">Premium Black</SelectItem>
+                    <SelectItem value="normal">Normal Founder</SelectItem>
+                    <SelectItem value="premium_black">Premium Founder</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

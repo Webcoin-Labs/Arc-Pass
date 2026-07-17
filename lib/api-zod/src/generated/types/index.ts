@@ -44,6 +44,7 @@ export * from './builderTierSlug';
 export * from './builderVerificationResult';
 export * from './cooldownErrorResponse';
 export * from './dashboardStats';
+export * from './discordPrimaryRole';
 export * from './downloadUrlResponse';
 export * from './eligibilityQuery';
 export * from './eligibilityQueryPlatform';

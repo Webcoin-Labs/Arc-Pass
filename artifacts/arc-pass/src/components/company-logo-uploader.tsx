@@ -36,12 +36,12 @@ export function CompanyLogoUploader({
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Logo must be 2MB or smaller");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller");
       return;
     }
-    if (!["image/png", "image/webp", "image/jpeg", "image/svg+xml"].includes(file.type)) {
-      toast.error("Use a PNG, WebP, JPEG, or SVG logo");
+    if (!["image/png", "image/webp", "image/jpeg"].includes(file.type)) {
+      toast.error("Use a PNG, WebP, or JPEG image");
       return;
     }
     setUploading(true);
@@ -84,12 +84,12 @@ export function CompanyLogoUploader({
           >
             {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <UploadCloud className="h-5 w-5 text-muted-foreground" />}
             <p className="text-xs font-medium">{uploading ? "Uploading logo…" : value ? "Replace company logo" : "Drag and drop, or click to upload"}</p>
-            <p className="text-[11px] text-muted-foreground">PNG, WebP, JPEG, or SVG · up to 2MB · transparent backgrounds supported</p>
+            <p className="text-[11px] text-muted-foreground">PNG, WebP, or JPEG · up to 5MB · transparent backgrounds supported</p>
           </button>
           <input
             ref={inputRef}
             type="file"
-            accept="image/png,image/webp,image/jpeg,image/svg+xml"
+            accept="image/png,image/webp,image/jpeg"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

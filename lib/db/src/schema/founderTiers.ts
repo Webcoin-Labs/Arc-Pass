@@ -3,8 +3,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 // Admin-configurable Founder tier (distinct from the Founder Pass variant —
-// a tier is a recognition label like "Verified Founder"; a variant is the
-// physical Normal/Premium Black credential material).
+// a tier is a recognition label like "Formal Founder"; a variant is the
+// physical Normal/Premium Founder credential material).
 export const founderTiersTable = pgTable("founder_tiers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),

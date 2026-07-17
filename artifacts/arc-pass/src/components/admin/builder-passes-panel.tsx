@@ -147,8 +147,31 @@ export function BuilderPassesPanel() {
                   <dd>{selected.qualifyingTransactionCount ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Valid contracts</dt>
+                  <dt className="text-xs text-muted-foreground">Contracts deployed</dt>
                   <dd>{selected.validContractCount ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">GitHub contributions</dt>
+                  <dd>{selected.githubContributionCount ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Arc Discord</dt>
+                  <dd>{selected.discordCommunityMember === true ? "Community member" : selected.discordCommunityMember === false ? "Not a member" : "Not checked"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Member since</dt>
+                  <dd>{selected.discordCommunityJoinedAt ? formatDate(selected.discordCommunityJoinedAt) : "—"}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs text-muted-foreground">Primary Discord roles</dt>
+                  <dd className="mt-1 flex flex-wrap gap-2">
+                    {(selected.discordCommunityPrimaryRoles ?? []).slice(0, 2).map((role) => (
+                      <span key={role.id} className="rounded-full border px-2 py-1 text-xs">
+                        {role.name ?? role.id}: {role.hasRole === true ? "Yes" : role.hasRole === false ? "No" : "Unknown"}
+                      </span>
+                    ))}
+                    {(selected.discordCommunityPrimaryRoles ?? []).length === 0 && "—"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Last verified</dt>

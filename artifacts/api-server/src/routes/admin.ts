@@ -34,9 +34,10 @@ import {
 import { requireAdmin } from "../lib/auth";
 import { auditAdmin, type AdminRequest } from "../lib/admin-auth";
 import { serializeFounderPass, serializeFounderTier, serializeBuilderTier, buildBuilderPassDTO, builderPassClaimed, builderPassMinted } from "../lib/serializers";
-import { imageUpload, publicUploadUrl } from "../lib/uploads";
+import { imageUpload, persistUploadedImage } from "../lib/uploads";
 import { REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
+import { chainAdapter } from "../lib/chain-adapter";
 
 const router: IRouter = Router();
 router.use("/admin", requireAdmin);
@@ -292,13 +293,51 @@ router.post("/admin/founder-passes/:id/revoke-invite", requireAdmin, async (req,
     res.status(409).json({ error: "This Founder Pass has already been minted and cannot have its invitation revoked" });
     return;
   }
-
   const [updated] = await db
     .update(founderPassesTable)
     .set({ eligibilityStatus: "ineligible", claimStatus: "locked", revokedAt: new Date(), revokedReason: "Invitation revoked by admin" })
     .where(eq(founderPassesTable.id, params.data.id))
     .returning();
 
+  const tierMap = await founderTierMap();
+  res.json(serializeFounderPass(updated, updated.founderTierId ? (tierMap.get(updated.founderTierId) ?? null) : null, true));
+});
+
+router.post("/admin/founder-passes/:id/revoke", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = AdminRevokeFounderInviteParams.safeParse({ id: parseInt(raw, 10) });
+  const body = AdminRevokeBuilderPassBody.safeParse(req.body ?? {});
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid pass ID" });
+    return;
+  }
+
+  const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
+  if (!pass) {
+    res.status(404).json({ error: "Pass not found" });
+    return;
+  }
+  if (pass.revokedAt) {
+    res.status(409).json({ error: "Pass is already revoked" });
+    return;
+  }
+  const reason = body.success ? (body.data.reason ?? "Revoked by admin") : "Revoked by admin";
+  if (pass.claimStatus === "minted" && pass.tokenId) {
+    if (!chainAdapter.mintingAvailable) {
+      res.status(503).json({ error: "Onchain revocation is temporarily unavailable.", code: "minting_unavailable" });
+      return;
+    }
+    try {
+      const result = await chainAdapter.revokeFounderPass({ tokenId: pass.tokenId, reason });
+      req.log.info({ founderPassId: pass.id, transactionHash: result.transactionHash }, "Founder pass revoked onchain");
+    } catch (err) {
+      req.log.error({ err, founderPassId: pass.id }, "Founder pass onchain revocation failed");
+      res.status(502).json({ error: "Onchain revocation failed; the pass was not changed in the database." });
+      return;
+    }
+  }
+
+  const [updated] = await db.update(founderPassesTable).set({ revokedAt: new Date(), revokedReason: reason }).where(eq(founderPassesTable.id, pass.id)).returning();
   const tierMap = await founderTierMap();
   res.json(serializeFounderPass(updated, updated.founderTierId ? (tierMap.get(updated.founderTierId) ?? null) : null, true));
 });
@@ -449,6 +488,25 @@ router.post("/admin/builder-passes/:id/revoke", requireAdmin, async (req, res): 
     return;
   }
 
+  if (pass.isRevoked) {
+    res.status(409).json({ error: "Pass is already revoked" });
+    return;
+  }
+  if (pass.claimStatus === "minted" && pass.tokenId) {
+    if (!chainAdapter.mintingAvailable) {
+      res.status(503).json({ error: "Onchain revocation is temporarily unavailable.", code: "minting_unavailable" });
+      return;
+    }
+    try {
+      const result = await chainAdapter.revokeBuilderPass({ tokenId: pass.tokenId, reason: body.success ? (body.data.reason ?? "Revoked by admin") : "Revoked by admin" });
+      req.log.info({ builderPassId: pass.id, transactionHash: result.transactionHash }, "Builder pass revoked onchain");
+    } catch (err) {
+      req.log.error({ err, builderPassId: pass.id }, "Builder pass onchain revocation failed");
+      res.status(502).json({ error: "Onchain revocation failed; the pass was not changed in the database." });
+      return;
+    }
+  }
+
   const [updated] = await db
     .update(builderPassesTable)
     .set({ isRevoked: true, revokedReason: body.success ? (body.data.reason ?? null) : null })
@@ -463,7 +521,7 @@ router.post("/admin/builder-passes/:id/revoke", requireAdmin, async (req, res): 
 // ---------------------------------------------------------------------------
 
 router.get("/admin/founder-tiers", requireAdmin, async (_req, res): Promise<void> => {
-  const tiers = await db.select().from(founderTiersTable).orderBy(founderTiersTable.rank);
+  const tiers = await db.select().from(founderTiersTable).where(eq(founderTiersTable.isActive, true)).orderBy(founderTiersTable.rank);
   res.json(tiers.map((t) => serializeFounderTier(t)));
 });
 
@@ -553,7 +611,8 @@ router.post("/admin/uploads/image", requireAdmin, imageUpload.single("file"), as
     res.status(400).json({ error: "No file uploaded" });
     return;
   }
-  res.status(201).json({ url: publicUploadUrl(req.file.filename) });
+  const url = await persistUploadedImage(req.file);
+  res.status(201).json({ url });
 });
 
 // ---------------------------------------------------------------------------

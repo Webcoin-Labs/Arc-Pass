@@ -17,8 +17,8 @@ export interface BuilderAnalysisInput {
 /**
  * Gemini is used for qualitative, human-readable summaries only — it never
  * decides tier or touches blockchain counts (those come from
- * chain-adapter.ts, deterministically). If GEMINI_API_KEY isn't set this
- * falls back to a plain deterministic summary so the rest of the app never
+ * chain-adapter.ts). If GEMINI_API_KEY isn't set this
+ * falls back to a plain summary so the rest of the app never
  * has to special-case "no API key configured".
  */
 export async function analyzeBuilderProfile(input: BuilderAnalysisInput): Promise<BuilderQualitativeAnalysis> {
@@ -35,7 +35,7 @@ export async function analyzeBuilderProfile(input: BuilderAnalysisInput): Promis
     const prompt = [
       "You are assessing a Web3 builder's public GitHub profile for a credentialing platform.",
       `GitHub username: ${input.githubUsername}`,
-      `Deterministic onchain signal (already computed, do not re-derive): ${input.qualifyingTransactionCount} qualifying transactions, ${input.validContractCount} valid deployed contracts.`,
+      `Indexed onchain signal (already computed, do not re-derive): ${input.qualifyingTransactionCount} qualifying transactions, ${input.validContractCount} valid deployed contracts.`,
       "Write two short paragraphs as JSON: { \"githubSummary\": string, \"ecosystemSummary\": string }.",
       "githubSummary: 1-2 sentences on likely primary development areas and contribution quality, based only on the username and general judgment (no live repo access).",
       "ecosystemSummary: 1 sentence on likely ecosystem contribution given the onchain signal above.",

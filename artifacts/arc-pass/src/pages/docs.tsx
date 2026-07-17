@@ -19,7 +19,7 @@ export default function DocsPage() {
             <div className="rounded-xl border p-5">
               <h3 className="font-semibold">Founder Pass</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Invite-only and administered by Webcoin Labs. Permanent after issuance — the variant (Normal or Premium Black) and
+                Invite-only and administered by Webcoin Labs. Permanent after issuance — the Founder type (Normal Founder or Premium Founder) and
                 founder tier are fixed at mint time and never change.
               </p>
             </div>
@@ -56,8 +56,7 @@ export default function DocsPage() {
         <section>
           <h2 className="text-2xl font-bold">Onchain Builder tiers</h2>
           <p className="mt-3 text-muted-foreground">
-            Tier is calculated using deterministic onchain activity and qualifying contract deployments. An Onchain Builder must have at least one valid deployed contract to qualify for any tier. Exact
-            thresholds are not published publicly and are configured internally.
+            Tier is calculated using indexed onchain activity and qualifying contract deployments. An Onchain Builder must have at least one valid deployed contract to qualify for any tier. If the indexer is unavailable, verification pauses rather than guessing. Exact thresholds are not published publicly and are configured internally.
           </p>
         </section>
 

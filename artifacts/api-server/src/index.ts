@@ -4,6 +4,7 @@ validateEnvironment();
 
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -21,11 +22,41 @@ if (Number.isNaN(port) || port <= 0) {
 
 await seedDevelopmentTestIdentityInvites();
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
+const server = app.listen(port, () => {
   logger.info({ port }, "Server listening");
 });
+
+server.on("error", (error) => {
+  logger.error({ error }, "API server failed");
+  process.exitCode = 1;
+});
+
+let shuttingDown = false;
+
+function shutdown(signal: NodeJS.Signals): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "Shutting down API server");
+
+  const forceExit = setTimeout(() => {
+    logger.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
+  server.close(async (error) => {
+    if (error) logger.error({ error }, "HTTP server shutdown failed");
+    try {
+      await pool.end();
+    } catch (poolError) {
+      logger.error({ error: poolError }, "Database pool shutdown failed");
+      process.exitCode = 1;
+    } finally {
+      clearTimeout(forceExit);
+      process.exit();
+    }
+  });
+}
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);

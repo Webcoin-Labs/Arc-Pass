@@ -16,6 +16,7 @@ export interface UserProfile {
   avatarUrl: string | null;
   provider: UserProfileProvider;
   isAdmin: boolean;
+  isDevelopmentTestIdentity: boolean;
   createdAt: Date;
   connections: UserConnections;
 }

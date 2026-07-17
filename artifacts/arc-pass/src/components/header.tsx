@@ -63,8 +63,8 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {isLanding && <ArcGasIndicator />}
-          {isLanding && <ArcMascot compact className="!h-12 md:!h-16" />}
+          {isLanding && <div className="hidden sm:block"><ArcGasIndicator /></div>}
+          {isLanding && <ArcMascot compact className="hidden !h-12 sm:block md:!h-16" />}
           {!isLanding && <div className="hidden sm:block"><ThemeToggle /></div>}
 
           {isLoading ? (

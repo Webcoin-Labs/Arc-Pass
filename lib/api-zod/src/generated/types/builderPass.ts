@@ -10,6 +10,7 @@ import type { BuilderPassEligibilityStatus } from './builderPassEligibilityStatu
 import type { BuilderPassNetwork } from './builderPassNetwork';
 import type { BuilderTier } from './builderTier';
 import type { BuilderTierHistoryEntry } from './builderTierHistoryEntry';
+import type { DiscordPrimaryRole } from './discordPrimaryRole';
 
 export interface BuilderPass {
   id: number;
@@ -21,10 +22,20 @@ export interface BuilderPass {
   /** @nullable */
   discordAvatarUrl?: string | null;
   /** @nullable */
+  discordCommunityMember?: boolean | null;
+  /** @nullable */
+  discordCommunityJoinedAt?: Date | null;
+  discordCommunityRoles?: string[];
+  discordCommunityPrimaryRoles?: DiscordPrimaryRole[];
+  /** @nullable */
   builderRole?: string | null;
   /** @nullable */
   primaryEcosystem?: string | null;
   githubVerified?: boolean;
+  /** @nullable */
+  githubContributionCount?: number | null;
+  /** @nullable */
+  githubContributionsUpdatedAt?: Date | null;
   verifiedWalletCount?: number;
   /** @nullable */
   qualifyingTransactionCount?: number | null;

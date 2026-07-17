@@ -1,60 +1,99 @@
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
+import { promises as fs } from "fs";
 import os from "os";
 import { randomBytes } from "crypto";
-import { logger } from "./logger";
 
-// Local-disk storage adapter — works out of the box with no external
-// credentials. Swap for an S3/R2/Cloudinary-backed implementation in
-// production by pointing UPLOADS_DIR at a mounted volume or replacing this
-// module's storage engine; nothing else in the app needs to change since
-// routes only depend on the `url` this module returns.
-//
-// Defaults to the OS temp dir rather than a project-relative folder because
-// serverless runtimes (Vercel, Lambda) ship a read-only deployment bundle —
-// only os.tmpdir() is guaranteed writable there. It's still ephemeral (does
-// not survive across invocations/deploys), so uploaded logos won't persist
-// on a serverless host until UPLOADS_DIR points at real persistent/object
-// storage — this only guarantees the app doesn't crash on boot.
-const UPLOADS_DIR = process.env.UPLOADS_DIR ?? path.join(os.tmpdir(), "arc-pass-uploads");
+const UPLOADS_DIR = process.env.UPLOADS_DIR?.trim() || path.join(os.tmpdir(), "arc-pass-uploads");
 const PUBLIC_PATH_PREFIX = "/uploads";
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB — plenty for a logo/emblem
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set(["image/png", "image/webp", "image/jpeg"]);
 
-try {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-} catch (err) {
-  // Never let a read-only filesystem take the whole API down at import
-  // time — company-logo upload just won't work until UPLOADS_DIR is fixed.
-  logger.error({ err, UPLOADS_DIR }, "Could not create uploads directory — image uploads will fail until this is fixed");
+const r2Configuration = {
+  endpoint: process.env.CLOUDFLARE_R2_ENDPOINT?.trim() ?? "",
+  accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID?.trim() ?? "",
+  secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY?.trim() ?? "",
+  bucket: process.env.CLOUDFLARE_R2_BUCKET?.trim() ?? "",
+  publicUrl: process.env.CLOUDFLARE_R2_PUBLIC_URL?.trim().replace(/\/+$/, "") ?? "",
+};
+
+export const cloudflareR2Configured = Object.values(r2Configuration).every(Boolean);
+
+let r2Client: S3Client | null = null;
+
+function getR2Client(): S3Client {
+  if (!cloudflareR2Configured) throw new Error("Cloudflare R2 is not configured");
+  r2Client ??= new S3Client({
+    region: "auto",
+    endpoint: r2Configuration.endpoint,
+    credentials: {
+      accessKeyId: r2Configuration.accessKeyId,
+      secretAccessKey: r2Configuration.secretAccessKey,
+    },
+  });
+  return r2Client;
 }
 
-const ALLOWED_MIME_TYPES = new Set(["image/png", "image/webp", "image/jpeg", "image/svg+xml"]);
+type DetectedImage = { contentType: "image/png" | "image/webp" | "image/jpeg"; extension: "png" | "webp" | "jpg" };
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${randomBytes(16).toString("hex")}${ext}`);
-  },
-});
+function detectImage(buffer: Buffer): DetectedImage | null {
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { contentType: "image/png", extension: "png" };
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { contentType: "image/jpeg", extension: "jpg" };
+  }
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") {
+    return { contentType: "image/webp", extension: "webp" };
+  }
+  return null;
+}
+
+function createObjectKey(extension: DetectedImage["extension"]): string {
+  const now = new Date();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `arc-pass/${now.getUTCFullYear()}/${month}/${randomBytes(20).toString("hex")}.${extension}`;
+}
 
 export const imageUpload = multer({
-  storage,
-  limits: { fileSize: MAX_FILE_SIZE_BYTES },
-  fileFilter: (_req, file, cb) => {
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 },
+  fileFilter: (_req, file, callback) => {
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      cb(new Error("Unsupported file type — use PNG, WebP, JPEG, or SVG"));
+      const error = new Error("Unsupported file type — use PNG, WebP, or JPEG") as Error & { status?: number };
+      error.status = 400;
+      callback(error);
       return;
     }
-    cb(null, true);
+    callback(null, true);
   },
 });
 
-export function publicUploadUrl(filename: string): string {
-  return `${PUBLIC_PATH_PREFIX}/${filename}`;
+export async function persistUploadedImage(file: Express.Multer.File): Promise<string> {
+  const detected = detectImage(file.buffer);
+  if (!detected) {
+    const error = new Error("The uploaded file is not a valid PNG, WebP, or JPEG image") as Error & { status?: number };
+    error.status = 400;
+    throw error;
+  }
+
+  const objectKey = createObjectKey(detected.extension);
+  if (cloudflareR2Configured) {
+    await getR2Client().send(new PutObjectCommand({
+      Bucket: r2Configuration.bucket,
+      Key: objectKey,
+      Body: file.buffer,
+      ContentType: detected.contentType,
+      CacheControl: "public, max-age=31536000, immutable",
+    }));
+    return `${r2Configuration.publicUrl}/${objectKey}`;
+  }
+
+  const localPath = path.join(UPLOADS_DIR, ...objectKey.split("/"));
+  await fs.mkdir(path.dirname(localPath), { recursive: true });
+  await fs.writeFile(localPath, file.buffer, { flag: "wx" });
+  return `${PUBLIC_PATH_PREFIX}/${objectKey}`;
 }
 
 export const uploadsStaticDir = UPLOADS_DIR;
