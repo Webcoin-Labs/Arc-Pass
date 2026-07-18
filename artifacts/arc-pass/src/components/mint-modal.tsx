@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Wallet as WalletIcon, AlertTriangle, Loader2, ArrowLeft, LockKeyhole } from "lucide-react";
+import { Wallet as WalletIcon, ArrowLeft, LockKeyhole, Loader2 } from "lucide-react";
+import { useAccount } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { connectInjectedWallet } from "@/lib/wallet";
 import type { MintRequestMintMethod, MintRequestNetwork } from "@workspace/api-client-react";
 
 type Screen = "choice" | "connect";
@@ -28,33 +28,19 @@ export function MintModal({
   isPending: boolean;
 }) {
   const [screen, setScreen] = useState<Screen>("choice");
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
+  const { address, isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
 
-  const reset = () => {
-    setScreen("choice");
-    setConnectedAddress(null);
-    setConnectError(null);
-  };
+  const connectedAddress = screen === "connect" && isConnected ? address ?? null : null;
 
   const handleClose = (next: boolean) => {
-    if (!next) reset();
+    if (!next) setScreen("choice");
     onOpenChange(next);
   };
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setScreen("connect");
-    setConnecting(true);
-    setConnectError(null);
-    try {
-      const address = await connectInjectedWallet();
-      setConnectedAddress(address);
-    } catch (err) {
-      setConnectError(err instanceof Error ? err.message : "Couldn't connect a wallet");
-    } finally {
-      setConnecting(false);
-    }
+    if (!isConnected) openConnectModal?.();
   };
 
   return (
@@ -93,23 +79,10 @@ export function MintModal({
                 <ArrowLeft className="h-3 w-3" /> Back
               </button>
               <DialogTitle>Connect Wallet</DialogTitle>
-              <DialogDescription>Approve the connection request in your wallet extension.</DialogDescription>
+              <DialogDescription>Choose a wallet to connect the destination address.</DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              {connecting && (
-                <div className="flex flex-col items-center gap-3 py-6 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Waiting for wallet approval…</p>
-                </div>
-              )}
-              {connectError && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Connection failed</AlertTitle>
-                  <AlertDescription>{connectError}</AlertDescription>
-                </Alert>
-              )}
-              {connectedAddress && !connecting && (
+              {connectedAddress ? (
                 <div className="space-y-4">
                   <div className="rounded-lg border bg-muted/40 p-3 text-center font-mono text-sm tabular-nums">{connectedAddress}</div>
                   <Button
@@ -121,10 +94,9 @@ export function MintModal({
                     Confirm &amp; Mint
                   </Button>
                 </div>
-              )}
-              {connectError && (
+              ) : (
                 <Button variant="outline" className="w-full" onClick={handleConnect}>
-                  Try again
+                  Open wallet picker
                 </Button>
               )}
             </div>

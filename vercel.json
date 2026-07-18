@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/arc-pass build",
   "outputDirectory": "artifacts/arc-pass/dist/public",
   "rewrites": [
     {

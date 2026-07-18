@@ -10,7 +10,7 @@ import { BuilderPassCard } from "@/components/builder-pass-card";
 import { PassStatusBadge } from "@/components/pass-status-badge";
 import { TierHistory } from "@/components/tier-history";
 import { EmptyState } from "@/components/empty-state";
-import { downloadNodeAsPng } from "@/lib/export-image";
+import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { formatPassNumber, formatNetworkLabel, formatDate, abbreviateAddress, explorerTxUrl } from "@/lib/format";
 import { founderOverallStatusMeta, builderOverallStatusMeta } from "@/lib/pass-status";
 
@@ -57,7 +57,7 @@ export default function PassDetailPage() {
           {type === "founder" && founderPass && <FounderPassCard ref={cardRef} data={founderPass} className="w-full" />}
           {type === "builder" && builderPass && <BuilderPassCard ref={cardRef} data={builderPass} className="w-full" />}
 
-          {(founderPass?.claimStatus === "minted" || builderPass?.claimStatus === "minted") && (
+          {(founderPass?.claimStatus === "claimed" || founderPass?.claimStatus === "minted" || builderPass?.claimStatus === "claimed" || builderPass?.claimStatus === "minted") && (
             <div className="mt-6 grid grid-cols-2 gap-3">
               <Button variant="secondary" className="flex-1" onClick={() => cardRef.current && downloadNodeAsPng(cardRef.current, downloadFilename)}>
                 <Download className="mr-2 h-4 w-4" /> Download
@@ -73,14 +73,8 @@ export default function PassDetailPage() {
                   </Button>
                 ) : null;
               })()}
-              <Button variant="outline" className="col-span-2" asChild>
-                <a
-                  href={`https://twitter.com/intent/tweet?${new URLSearchParams({ text: `View my ${type === "founder" ? "Founder Pass" : "Onchain Builder Pass"}, verified by Webcoin Labs.`, url: `${window.location.origin}/api/share/${type}/${passId}` }).toString()}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share public pass on X
-                </a>
+              <Button variant="outline" className="col-span-2" onClick={() => cardRef.current && void shareNodeOnX({ node: cardRef.current, passType: type, passId, minted: (founderPass ?? builderPass)?.claimStatus === "minted", returnTo: `/pass/${type}/${passId}` })}>
+                <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share public pass on X
               </Button>
             </div>
           )}

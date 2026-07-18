@@ -16,6 +16,7 @@ export const founderPassesTable = pgTable("founder_passes", {
   // Pre-signup invite matching — used to link this row to a user on first login.
   inviteHandle: text("invite_handle"),
   invitePlatform: text("invite_platform"), // 'x' | 'discord'
+  inviteDiscriminator: text("invite_discriminator"),
   invitedAt: timestamp("invited_at", { withTimezone: true }),
   invitedByUserId: integer("invited_by_user_id").references(() => usersTable.id),
 

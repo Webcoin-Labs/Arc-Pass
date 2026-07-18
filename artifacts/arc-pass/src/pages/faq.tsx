@@ -21,15 +21,15 @@ const FAQS = [
   },
   {
     q: "What GitHub account requirements apply?",
-    a: "The review baseline is a GitHub account that is at least 180 days old with approximately 50 or more contributions during the previous 12 months. GitHub proves development history and account ownership, while signed-wallet activity and qualifying deployments remain separate signals. Meeting the baseline does not guarantee a Founder invitation or Builder Pass.",
+    a: "Builder verification requires an authenticated GitHub account at least 180 days old with 10 or more qualifying contributions during the previous 180 days. A manually entered GitHub username never grants eligibility. Founder Pass remains invite-only and admin-controlled.",
   },
   {
     q: "What determines the Onchain Builder tier?",
-    a: "Your tier is calculated from indexed activity across ownership-verified wallets, including qualifying transactions and contract deployments. At least one qualifying deployment is required, and the GitHub baseline must also be satisfied during review. If the indexer is unavailable, verification pauses instead of guessing.",
+    a: "Your tier is calculated from real qualifying Arc transactions across ownership-verified wallets. Contract deployments are displayed as a separate verified proof signal. If the RPC or indexer is unavailable, verification pauses instead of guessing.",
   },
   {
-    q: "Why are the exact tier thresholds not public?",
-    a: "Exact thresholds are kept internal to protect verification integrity. The public criteria are verified identity, GitHub history, signed-wallet activity, qualifying transactions, contract deployments, and contribution quality.",
+    q: "What are the Builder tier thresholds?",
+    a: "Bronze requires 2 qualifying Arc transactions, Silver 10, Gold 50, Platinum 100, and Diamond 1,000. Re-verification can only move an existing credential upward.",
   },
   {
     q: "Can I upgrade my Onchain Builder tier?",
@@ -37,7 +37,7 @@ const FAQS = [
   },
   {
     q: "Is there a limit on Onchain Builder Passes?",
-    a: "The Builder Pass contract has no permanent supply cap. Claims open in controlled release phases; Phase 1 allows 2,499 original claims. Re-verification and tier upgrades update an existing pass and do not consume another phase allocation.",
+    a: "The Builder Pass contract has no permanent supply cap. Wave 1 permits 2,499 confirmed original onchain mints. Inventory claims do not consume the allocation; re-verification and tier upgrades update an existing pass without consuming another mint slot.",
   },
   {
     q: "What is the difference between Normal Founder and Premium Founder Pass?",
@@ -45,7 +45,7 @@ const FAQS = [
   },
   {
     q: "Which networks are supported?",
-    a: "Arc Pass credentials are issued on the Arc network, with Base also available as a supported destination. Additional ecosystem support is planned.",
+    a: "Arc Pass credentials are issued on the configured Arc network. The API fails closed when the Arc RPC, relayer, or deployed credential contracts are unavailable.",
   },
   {
     q: "Can I transfer my pass?",
@@ -74,7 +74,7 @@ export default function FaqPage() {
         {[
           { icon: ShieldCheck, label: "Founder Pass", value: "Invite verified" },
           { icon: Blocks, label: "Builder Pass", value: "Activity verified" },
-          { icon: Github, label: "GitHub baseline", value: "180 days · 50+ contributions" },
+          { icon: Github, label: "GitHub baseline", value: "180 days · 10+ contributions" },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -101,7 +101,7 @@ export default function FaqPage() {
           <BadgeCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
           <div>
             <p className="font-semibold">Need the technical rules?</p>
-            <p className="mt-1 text-sm leading-6 text-pretty text-muted-foreground">Read how identity, wallet signatures, supply phases, and pass upgrades work.</p>
+            <p className="mt-1 text-sm leading-6 text-pretty text-muted-foreground">Read how identity, wallet signatures, Wave 1 allocation, and pass upgrades work.</p>
           </div>
         </div>
         <Link href="/docs" className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-primary">

@@ -9,6 +9,11 @@ import { configuration } from "./lib/env";
 
 const app: Express = express();
 
+// Railway terminates TLS at a single trusted reverse proxy. Trusting that hop
+// makes req.ip useful for public abuse protection without trusting arbitrary
+// client-supplied forwarding headers in local development.
+if (configuration.isProduction) app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,

@@ -1,17 +1,14 @@
 import { db, pool, founderTiersTable, builderTiersTable } from "./index";
-import { eq, inArray } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 
-// Seeds the two tier-configuration tables with sensible starting values.
-// Safe to re-run — existing rows (matched by unique name/slug) are left
-// untouched. Admins can rename, re-order, or deactivate any of these from
-// the admin panel afterwards; nothing in the app hardcodes these names.
+// Seeds the fixed two-tier Founder catalog and the configurable Builder tiers.
+// Safe to re-run: Founder tier names, order, and active state remain policy.
 async function seed() {
   await db
     .insert(founderTiersTable)
     .values([
       { name: "Emerging Founder", rank: 1, description: "Early-stage founders building their first verified track record.", isActive: true },
-      { name: "Formal Founder", rank: 2, description: "Founders with a confirmed company and verified identity.", isActive: true },
-      { name: "Premier Founder", rank: 3, description: "Recognized founders with significant ecosystem contribution.", isActive: true },
+      { name: "Premier Founder", rank: 2, description: "Recognized founders with significant ecosystem contribution.", isActive: true },
     ])
     .onConflictDoNothing({ target: founderTiersTable.name });
 
@@ -21,7 +18,7 @@ async function seed() {
   await db
     .update(founderTiersTable)
     .set({ isActive: false })
-    .where(inArray(founderTiersTable.name, ["Verified Founder", "Growth Founder", "Network Founder"]));
+    .where(notInArray(founderTiersTable.name, ["Emerging Founder", "Premier Founder"]));
 
   await db
     .update(founderTiersTable)
@@ -30,20 +27,16 @@ async function seed() {
   await db
     .update(founderTiersTable)
     .set({ rank: 2, isActive: true })
-    .where(eq(founderTiersTable.name, "Formal Founder"));
-  await db
-    .update(founderTiersTable)
-    .set({ rank: 3, isActive: true })
     .where(eq(founderTiersTable.name, "Premier Founder"));
 
   await db
     .insert(builderTiersTable)
     .values([
-      { slug: "bronze", name: "Bronze", rank: 1, transactionThreshold: 10, contractThreshold: 2, description: "Early verified builder activity.", isActive: true, emblemUrl: "/tiers/bronze.png" },
-      { slug: "silver", name: "Silver", rank: 2, transactionThreshold: 50, contractThreshold: 10, description: "Consistent verified builder activity.", isActive: true, emblemUrl: "/tiers/silver.png" },
-      { slug: "gold", name: "Gold", rank: 3, transactionThreshold: 100, contractThreshold: 50, description: "Substantial verified builder activity.", isActive: true, emblemUrl: "/tiers/gold.png" },
-      { slug: "platinum", name: "Platinum", rank: 4, transactionThreshold: 500, contractThreshold: 100, description: "Extensive verified builder activity.", isActive: true, emblemUrl: "/tiers/platinum.png" },
-      { slug: "diamond", name: "Diamond", rank: 5, transactionThreshold: 1000, contractThreshold: 200, description: "The highest tier of verified builder activity.", isActive: true, emblemUrl: "/tiers/diamond.png" },
+      { slug: "bronze", name: "Bronze", rank: 1, transactionThreshold: 2, contractThreshold: 0, description: "2+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/bronze.png" },
+      { slug: "silver", name: "Silver", rank: 2, transactionThreshold: 10, contractThreshold: 0, description: "10+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/silver.png" },
+      { slug: "gold", name: "Gold", rank: 3, transactionThreshold: 50, contractThreshold: 0, description: "50+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/gold.png" },
+      { slug: "platinum", name: "Platinum", rank: 4, transactionThreshold: 100, contractThreshold: 0, description: "100+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/platinum.png" },
+      { slug: "diamond", name: "Diamond", rank: 5, transactionThreshold: 1000, contractThreshold: 0, description: "1,000+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/diamond.png" },
     ])
     .onConflictDoNothing({ target: builderTiersTable.slug });
 

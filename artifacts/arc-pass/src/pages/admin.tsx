@@ -32,7 +32,7 @@ export default function AdminPage() {
       <div className="mx-auto grid w-full max-w-7xl lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden flex-col justify-between border-r border-black bg-[#ff5a1f] p-14 lg:flex">
           <div>
-            <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-black hover:opacity-60">
+            <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-black hover:opacity-60">
               <ArrowLeft className="size-4" aria-hidden="true" /> Back to Arc Pass
             </Link>
             <p className="mt-14 font-mono text-xs font-semibold uppercase">Restricted Webcoin Labs system</p>
@@ -52,7 +52,7 @@ export default function AdminPage() {
           <div className="w-full max-w-md">
             <div className="mb-5 flex items-end justify-between lg:hidden">
               <div>
-                <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-black/55 hover:text-black"><ArrowLeft className="size-3.5" aria-hidden="true" /> Arc Pass</Link>
+                <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-black/55 hover:text-black"><ArrowLeft className="size-3.5" aria-hidden="true" /> Arc Pass</Link>
                 <h1 className="mt-3 text-3xl font-semibold text-balance">Admin Portal</h1>
               </div>
               <span className="size-3 bg-[#ff5a1f]" aria-hidden="true" />

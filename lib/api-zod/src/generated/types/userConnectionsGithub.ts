@@ -10,4 +10,12 @@ export type UserConnectionsGithub = {
   connected: boolean;
   /** @nullable */
   username?: string | null;
+  /** @nullable */
+  accountCreatedAt?: Date | null;
+  /** @nullable */
+  contributionCount?: number | null;
+  /** @nullable */
+  contributionWindowStartedAt?: Date | null;
+  /** @nullable */
+  contributionsUpdatedAt?: Date | null;
 };

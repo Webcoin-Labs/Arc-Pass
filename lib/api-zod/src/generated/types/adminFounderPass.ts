@@ -14,6 +14,8 @@ export type AdminFounderPass = FounderPass & ({
   /** @nullable */
   inviteHandle?: string | null;
   /** @nullable */
+  inviteDiscriminator?: string | null;
+  /** @nullable */
   invitePlatform?: AdminFounderPassInvitePlatform;
   /** @nullable */
   invitedAt?: Date | null;

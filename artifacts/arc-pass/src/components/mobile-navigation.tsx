@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowUpRight, LockKeyhole, Menu } from "lucide-react";
+import { ArrowUpRight, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -28,7 +28,7 @@ export function MobileNavigation({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("cursor-pointer lg:hidden", isLanding && "text-white hover:bg-white/10 hover:text-white")} aria-label="Open menu">
+        <Button variant="ghost" size="icon" className={cn("size-11 cursor-pointer lg:hidden", isLanding && "text-white hover:bg-white/10 hover:text-white")} aria-label="Open menu">
           <Menu className="size-5" aria-hidden="true" />
         </Button>
       </SheetTrigger>
@@ -50,10 +50,6 @@ export function MobileNavigation({
             <Link href="/#how-it-works" onClick={() => setOpen(false)} className={linkClass}>How it works <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             <Link href="/faq" onClick={() => setOpen(false)} className={linkClass}>FAQ <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             <Link href="/docs" onClick={() => setOpen(false)} className={linkClass}>Documentation <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
-            <Link href="/admin" onClick={() => setOpen(false)} className={linkClass}>
-              <span className="flex items-center gap-2"><LockKeyhole className="size-4" aria-hidden="true" /> Admin Portal</span>
-              <ArrowUpRight className="size-4" aria-hidden="true" />
-            </Link>
             {user && <Link href="/dashboard" onClick={() => setOpen(false)} className={linkClass}>My Passes <ArrowUpRight className="size-4" aria-hidden="true" /></Link>}
           </nav>
 

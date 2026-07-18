@@ -6,8 +6,9 @@ import {
   founderTiersTable,
   builderTiersTable,
   usersTable,
+  founderApplicationsTable,
 } from "@workspace/db";
-import { eq, and, or, ilike, count, desc, sql } from "drizzle-orm";
+import { eq, and, or, ilike, count, desc, sql, inArray, isNull } from "drizzle-orm";
 import {
   AdminListFounderPassesQueryParams,
   AdminCreateFounderInviteBody,
@@ -32,12 +33,18 @@ import {
   AdminListMintRecordsQueryParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/auth";
+import { normalizeXHandle, parseDiscordIdentity } from "../lib/identity";
 import { auditAdmin, type AdminRequest } from "../lib/admin-auth";
 import { serializeFounderPass, serializeFounderTier, serializeBuilderTier, buildBuilderPassDTO, builderPassClaimed, builderPassMinted } from "../lib/serializers";
 import { imageUpload, persistUploadedImage } from "../lib/uploads";
 import { REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
 import { chainAdapter } from "../lib/chain-adapter";
+import {
+  FOUNDER_TIER_CATALOG_ERROR,
+  FOUNDER_TIER_NAMES,
+  getFounderTierCatalogEntry,
+} from "../lib/founder-tier-catalog";
 
 const router: IRouter = Router();
 router.use("/admin", requireAdmin);
@@ -123,6 +130,36 @@ router.get("/admin/overview", requireAdmin, async (_req, res): Promise<void> => 
 });
 
 // ---------------------------------------------------------------------------
+// Founder application requests
+// ---------------------------------------------------------------------------
+
+router.get("/admin/founder-applications", async (_req, res): Promise<void> => {
+  const applications = await db
+    .select({
+      id: founderApplicationsTable.id,
+      xUsername: founderApplicationsTable.xUsername,
+      requestXUsername: founderApplicationsTable.requestXUsername,
+      description: founderApplicationsTable.description,
+      status: founderApplicationsTable.status,
+      submittedAt: founderApplicationsTable.submittedAt,
+    })
+    .from(founderApplicationsTable)
+    .where(eq(founderApplicationsTable.status, "under_review"))
+    .orderBy(desc(founderApplicationsTable.submittedAt))
+    .limit(100);
+
+  res.json({
+    items: applications.map((application) => ({
+      id: application.id,
+      xUsername: application.requestXUsername || application.xUsername || "unknown",
+      description: application.description || "No description provided.",
+      status: application.status,
+      submittedAt: application.submittedAt,
+    })),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Founder Passes
 // ---------------------------------------------------------------------------
 
@@ -175,7 +212,10 @@ router.post("/admin/founder-passes", requireAdmin, async (req, res): Promise<voi
     return;
   }
 
-  const normalizedHandle = parsed.data.inviteHandle.trim().toLowerCase().replace(/^@/, "");
+  const identity = parsed.data.invitePlatform === "x"
+    ? { username: normalizeXHandle(parsed.data.inviteHandle), discriminator: null }
+    : parseDiscordIdentity(parsed.data.inviteHandle, parsed.data.inviteDiscriminator);
+  const normalizedHandle = identity.username;
   const companyName = parsed.data.companyName.trim();
   if (!companyName) {
     res.status(400).json({ error: "Company name is required" });
@@ -185,14 +225,25 @@ router.post("/admin/founder-passes", requireAdmin, async (req, res): Promise<voi
   const [existingInvite] = await db
     .select()
     .from(founderPassesTable)
-    .where(and(eq(founderPassesTable.invitePlatform, parsed.data.invitePlatform), eq(founderPassesTable.inviteHandle, normalizedHandle)));
+    .where(and(
+      eq(founderPassesTable.invitePlatform, parsed.data.invitePlatform),
+      eq(founderPassesTable.inviteHandle, normalizedHandle),
+      identity.discriminator
+        ? eq(founderPassesTable.inviteDiscriminator, identity.discriminator)
+        : isNull(founderPassesTable.inviteDiscriminator),
+    ));
   if (existingInvite) {
     res.status(400).json({ error: "An invitation already exists for this handle" });
     return;
   }
 
   const usernameColumn = parsed.data.invitePlatform === "x" ? usersTable.xUsername : usersTable.discordUsername;
-  const [matchedUser] = await db.select().from(usersTable).where(eq(usernameColumn, normalizedHandle));
+  const [matchedUser] = await db.select().from(usersTable).where(and(
+    eq(usernameColumn, normalizedHandle),
+    parsed.data.invitePlatform === "discord" && identity.discriminator
+      ? eq(usersTable.discordDiscriminator, identity.discriminator)
+      : undefined,
+  ));
 
   if (matchedUser) {
     const [alreadyHasPass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, matchedUser.id));
@@ -207,6 +258,7 @@ router.post("/admin/founder-passes", requireAdmin, async (req, res): Promise<voi
     .values({
       userId: matchedUser?.id ?? null,
       inviteHandle: normalizedHandle,
+      inviteDiscriminator: identity.discriminator,
       invitePlatform: parsed.data.invitePlatform,
       invitedAt: new Date(),
       invitedByUserId: null,
@@ -224,6 +276,19 @@ router.post("/admin/founder-passes", requireAdmin, async (req, res): Promise<voi
       avatarUrl: matchedUser?.avatarUrl,
     })
     .returning();
+
+  // A Founder request is only a review queue item. Once an administrator
+  // creates the matching X invitation, close that request so it cannot linger
+  // in the queue as though it still needs a decision.
+  if (parsed.data.invitePlatform === "x") {
+    await db
+      .update(founderApplicationsTable)
+      .set({ status: "approved", reviewerId: admin.id, reviewedAt: new Date() })
+      .where(and(
+        eq(founderApplicationsTable.requestXUsername, normalizedHandle),
+        eq(founderApplicationsTable.status, "under_review"),
+      ));
+  }
 
   const tierMap = await founderTierMap();
   res.status(201).json(serializeFounderPass(created, created.founderTierId ? (tierMap.get(created.founderTierId) ?? null) : null, true));
@@ -492,6 +557,10 @@ router.post("/admin/builder-passes/:id/revoke", requireAdmin, async (req, res): 
     res.status(409).json({ error: "Pass is already revoked" });
     return;
   }
+  if (pass.waveMintReservedAt) {
+    res.status(409).json({ error: "This pass has an onchain mint in progress. Wait for it to finish before revoking." });
+    return;
+  }
   if (pass.claimStatus === "minted" && pass.tokenId) {
     if (!chainAdapter.mintingAvailable) {
       res.status(503).json({ error: "Onchain revocation is temporarily unavailable.", code: "minting_unavailable" });
@@ -510,7 +579,7 @@ router.post("/admin/builder-passes/:id/revoke", requireAdmin, async (req, res): 
   const [updated] = await db
     .update(builderPassesTable)
     .set({ isRevoked: true, revokedReason: body.success ? (body.data.reason ?? null) : null })
-    .where(eq(builderPassesTable.id, params.data.id))
+    .where(and(eq(builderPassesTable.id, params.data.id), eq(builderPassesTable.isRevoked, false)))
     .returning();
 
   res.json(await buildBuilderPassDTO(updated, true));
@@ -521,7 +590,11 @@ router.post("/admin/builder-passes/:id/revoke", requireAdmin, async (req, res): 
 // ---------------------------------------------------------------------------
 
 router.get("/admin/founder-tiers", requireAdmin, async (_req, res): Promise<void> => {
-  const tiers = await db.select().from(founderTiersTable).where(eq(founderTiersTable.isActive, true)).orderBy(founderTiersTable.rank);
+  const tiers = await db
+    .select()
+    .from(founderTiersTable)
+    .where(and(eq(founderTiersTable.isActive, true), inArray(founderTiersTable.name, FOUNDER_TIER_NAMES)))
+    .orderBy(founderTiersTable.rank);
   res.json(tiers.map((t) => serializeFounderTier(t)));
 });
 
@@ -532,6 +605,18 @@ router.post("/admin/founder-tiers", requireAdmin, async (req, res): Promise<void
     return;
   }
 
+  const catalogTier = getFounderTierCatalogEntry(parsed.data.name);
+  if (!catalogTier || parsed.data.rank !== catalogTier.rank || parsed.data.isActive === false) {
+    res.status(400).json({ error: FOUNDER_TIER_CATALOG_ERROR });
+    return;
+  }
+
+  const [existing] = await db.select({ id: founderTiersTable.id }).from(founderTiersTable).where(eq(founderTiersTable.name, catalogTier.name));
+  if (existing) {
+    res.status(409).json({ error: `${catalogTier.name} already exists.` });
+    return;
+  }
+
   const [created] = await db
     .insert(founderTiersTable)
     .values({
@@ -539,8 +624,8 @@ router.post("/admin/founder-tiers", requireAdmin, async (req, res): Promise<void
       emblemUrl: parsed.data.emblemUrl,
       description: parsed.data.description,
       visualConfig: parsed.data.accentColor ? { accent: parsed.data.accentColor } : undefined,
-      rank: parsed.data.rank,
-      isActive: parsed.data.isActive ?? true,
+      rank: catalogTier.rank,
+      isActive: true,
     })
     .returning();
 
@@ -562,10 +647,32 @@ router.patch("/admin/founder-tiers/:id", requireAdmin, async (req, res): Promise
     return;
   }
 
-  const { accentColor, ...rest } = body.data;
+  const catalogTier = getFounderTierCatalogEntry(existing.name);
+  if (!catalogTier) {
+    res.status(400).json({ error: FOUNDER_TIER_CATALOG_ERROR });
+    return;
+  }
+
+  if (
+    body.data.name !== catalogTier.name ||
+    body.data.rank !== catalogTier.rank ||
+    body.data.isActive === false
+  ) {
+    res.status(400).json({ error: FOUNDER_TIER_CATALOG_ERROR });
+    return;
+  }
+
+  const { accentColor } = body.data;
   const [updated] = await db
     .update(founderTiersTable)
-    .set({ ...rest, ...(accentColor !== undefined ? { visualConfig: { accent: accentColor } } : {}) })
+    .set({
+      name: catalogTier.name,
+      rank: catalogTier.rank,
+      isActive: true,
+      emblemUrl: body.data.emblemUrl,
+      description: body.data.description,
+      ...(accentColor !== undefined ? { visualConfig: { accent: accentColor } } : {}),
+    })
     .where(eq(founderTiersTable.id, params.data.id))
     .returning();
 
@@ -592,10 +699,24 @@ router.patch("/admin/builder-tiers/:id", requireAdmin, async (req, res): Promise
     return;
   }
 
-  const { accentColor, ...rest } = body.data;
+  const protectedChanges = [
+    body.data.name !== undefined && body.data.name !== existing.name,
+    body.data.transactionThreshold !== undefined && body.data.transactionThreshold !== existing.transactionThreshold,
+    body.data.contractThreshold !== undefined && body.data.contractThreshold !== 0,
+    body.data.isActive !== undefined && body.data.isActive !== true,
+  ];
+  if (protectedChanges.some(Boolean)) {
+    res.status(400).json({ error: "Builder tier names, thresholds, order, and active state are fixed product rules." });
+    return;
+  }
+
+  const presentation = {
+    ...(body.data.emblemUrl !== undefined ? { emblemUrl: body.data.emblemUrl } : {}),
+    ...(body.data.description !== undefined ? { description: body.data.description } : {}),
+  };
   const [updated] = await db
     .update(builderTiersTable)
-    .set({ ...rest, ...(accentColor !== undefined ? { visualConfig: { accent: accentColor } } : {}) })
+    .set({ ...presentation, ...(body.data.accentColor !== undefined ? { visualConfig: { accent: body.data.accentColor } } : {}) })
     .where(eq(builderTiersTable.id, params.data.id))
     .returning();
 

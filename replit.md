@@ -27,8 +27,8 @@ transactions when an integration is missing.
 - Wallets must sign a server nonce; only ownership-verified wallets can receive a pass.
 - Builder verification requires a real activity provider. Missing or failed indexer configuration returns `Verification is temporarily unavailable.`
 - Onchain minting uses viem and EIP-191 authorizations against the deployed contracts. Development chain mocks are opt-in only.
-- Builder phase allocation is controlled by `BUILDER_PHASE_CLAIM_LIMIT` (2,499 by default). The Solidity Builder contract has no permanent cap; revocation does not restore supply or identity history.
-- Founder variants are Normal and Premium. Founder tiers are Emerging, Formal, and Premier.
+- The Builder Wave 1 onchain mint allocation is controlled by the backward-compatible `BUILDER_PHASE_CLAIM_LIMIT` variable (2,499 by default). Inventory claims do not consume it. The Solidity Builder contract has no permanent cap; revocation does not restore mint supply or identity history.
+- Founder variants are Normal and Premium. The fixed Founder tier catalog contains exactly Emerging Founder and Premier Founder.
 - Discord membership is best-effort supporting evidence. `ARC_DISCORD_PRIMARY_ROLE_IDS` accepts up to two role IDs and the pass displays membership date plus whether each role is present.
 
 ## Important production configuration

@@ -27,7 +27,7 @@ test("GitHub code exchange verifies the account with the user access token", asy
     const url = String(input);
     calls.push({ url, init });
     if (url.endsWith("/login/oauth/access_token")) return Response.json({ access_token: "github-user-token" });
-    return Response.json({ id: 42, login: "arc-builder", name: "Arc Builder", avatar_url: "https://avatars.githubusercontent.com/u/42" });
+    return Response.json({ id: 42, login: "arc-builder", name: "Arc Builder", avatar_url: "https://avatars.githubusercontent.com/u/42", created_at: "2020-01-01T00:00:00Z" });
   }) as typeof fetch;
 
   const profile = await exchangeGithubCode("authorization-code", "pkce-verifier");
@@ -54,12 +54,13 @@ test("GitHub contribution snapshot uses the authenticated contribution calendar"
     const url = String(input);
     calls.push(url);
     if (url.endsWith("/login/oauth/access_token")) return Response.json({ access_token: "github-user-token" });
-    if (url.endsWith("/user")) return Response.json({ id: 42, login: "arc-builder", name: "Arc Builder", avatar_url: null });
+    if (url.endsWith("/user")) return Response.json({ id: 42, login: "arc-builder", name: "Arc Builder", avatar_url: null, created_at: "2020-01-01T00:00:00Z" });
     return Response.json({ data: { viewer: { contributionsCollection: { contributionCalendar: { totalContributions: 137 } } } } });
   }) as typeof fetch;
 
   const result = await exchangeGithubCodeWithContributions("authorization-code", "pkce-verifier");
   assert.equal(result.contributionCount, 137);
+  assert.equal(result.accountCreatedAt.toISOString(), "2020-01-01T00:00:00.000Z");
   assert.equal(calls.at(-1), "https://api.github.com/graphql");
 });
 
@@ -67,4 +68,23 @@ test("claim identity requires an ownership-verified GitHub link", async () => {
   const { hasVerifiedGithub } = await import("./auth");
   assert.equal(hasVerifiedGithub({ githubUserId: null }), false);
   assert.equal(hasVerifiedGithub({ githubUserId: "42" }), true);
+});
+
+test("Builder GitHub thresholds enforce the exact 180-day age and 10-contribution boundaries", async () => {
+  const { getGithubEligibilityFailure } = await import("./auth");
+  const now = new Date("2026-07-18T00:00:00Z");
+  const base = { githubUserId: "42", githubAccountCreatedAt: new Date("2026-01-19T00:00:00Z"), githubContributionCount: 10, githubContributionWindowStartedAt: new Date("2026-01-19T00:00:00Z"), githubContributionsUpdatedAt: now };
+  assert.equal(getGithubEligibilityFailure(base, now), null);
+  assert.equal(getGithubEligibilityFailure({ ...base, githubAccountCreatedAt: new Date("2026-01-19T00:00:01Z") }, now), "account_too_new");
+  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionCount: 9 }, now), "insufficient_contributions");
+  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionCount: null }, now), "provider_unavailable");
+  assert.equal(getGithubEligibilityFailure({ ...base, githubUserId: null }, now), "not_connected");
+});
+
+test("GitHub contributions outside the authenticated previous-180-day snapshot cannot qualify", async () => {
+  const { getGithubEligibilityFailure } = await import("./auth");
+  const now = new Date("2026-07-18T00:00:00Z");
+  const base = { githubUserId: "42", githubAccountCreatedAt: new Date("2020-01-01T00:00:00Z"), githubContributionCount: 10, githubContributionWindowStartedAt: new Date("2025-07-18T00:00:00Z"), githubContributionsUpdatedAt: now };
+  assert.equal(getGithubEligibilityFailure(base, now), "provider_unavailable");
+  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionWindowStartedAt: new Date("2026-01-19T00:00:00Z"), githubContributionsUpdatedAt: new Date("2026-07-10T23:59:59Z") }, now), "reconnect_required");
 });

@@ -6,6 +6,7 @@ import { createHash, randomBytes } from "crypto";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { configuration } from "../lib/env";
 import { isDevelopmentTestUser } from "../lib/dev-test-identities";
+import { displayDiscordIdentity } from "../lib/identity";
 
 const router: IRouter = Router();
 const MAX_WALLETS = 3;
@@ -57,8 +58,15 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
     createdAt: user.createdAt,
     connections: {
       x: { connected: testIdentity || !!user.xUserId, username: testIdentity ? "test" : user.xUsername },
-      discord: { connected: testIdentity || !!user.discordUserId, username: testIdentity ? "test" : user.discordUsername, avatarUrl: user.discordAvatarUrl },
-      github: { connected: testIdentity || !!user.githubUserId, username: testIdentity ? "test" : user.githubUsername },
+      discord: { connected: testIdentity || !!user.discordUserId, username: testIdentity ? "test" : user.discordUsername, discriminator: testIdentity ? null : user.discordDiscriminator, displayIdentity: testIdentity ? "test" : displayDiscordIdentity(user.discordUsername, user.discordDiscriminator), avatarUrl: user.discordAvatarUrl },
+      github: {
+        connected: testIdentity || !!user.githubUserId,
+        username: testIdentity ? "test" : user.githubUsername,
+        accountCreatedAt: testIdentity ? null : user.githubAccountCreatedAt,
+        contributionCount: testIdentity ? null : user.githubContributionCount,
+        contributionWindowStartedAt: testIdentity ? null : user.githubContributionWindowStartedAt,
+        contributionsUpdatedAt: testIdentity ? null : user.githubContributionsUpdatedAt,
+      },
     },
   });
 });

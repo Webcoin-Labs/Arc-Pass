@@ -4,19 +4,18 @@ import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shell } from '@/components/shell';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
-import { WalletProvider } from '@/lib/wallet-provider';
 import { toast } from 'sonner';
-import '@rainbow-me/rainbowkit/styles.css';
 
 // Route-level code splitting — the landing page (first paint for most
 // visitors) stays in the main bundle; everything else loads on navigation.
 import LandingPage from '@/pages/landing';
 const DashboardPage = lazy(() => import('@/pages/dashboard'));
-const ClaimFounderPage = lazy(() => import('@/pages/claim-founder'));
-const ClaimBuilderPage = lazy(() => import('@/pages/claim-builder'));
+const ClaimFounderPage = lazy(() => import('@/pages/claim-founder-route'));
+const ClaimBuilderPage = lazy(() => import('@/pages/claim-builder-route'));
 const PassDetailPage = lazy(() => import('@/pages/pass-detail'));
 const FaqPage = lazy(() => import('@/pages/faq'));
 const DocsPage = lazy(() => import('@/pages/docs'));
+const TiersPage = lazy(() => import('@/pages/tiers'));
 const AdminPage = lazy(() => import('@/pages/admin'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
@@ -66,6 +65,7 @@ function Router() {
           <Route path="/pass/:type/:id" component={PassDetailPage} />
           <Route path="/faq" component={FaqPage} />
           <Route path="/docs" component={DocsPage} />
+          <Route path="/tiers" component={TiersPage} />
           <Route path="/admin" component={AdminPage} />
           <Route component={NotFound} />
         </Switch>
@@ -78,12 +78,10 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="arc-pass-theme">
       <QueryClientProvider client={queryClient}>
-        <WalletProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <OAuthErrorNotice />
-            <Router />
-          </WouterRouter>
-        </WalletProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <OAuthErrorNotice />
+          <Router />
+        </WouterRouter>
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>

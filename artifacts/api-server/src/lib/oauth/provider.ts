@@ -13,17 +13,17 @@ const stateSecret = process.env.OAUTH_STATE_SIGNING_KEY
 
 const STATE_TTL_MINUTES = 10;
 
-export async function signOAuthState(params: { intent: OAuthIntent; linkUserId?: number; returnTo: string; codeVerifier?: string }): Promise<string> {
+export async function signOAuthState(params: { intent: OAuthIntent; linkUserId?: number; returnTo: string; codeVerifier?: string; shareDraftId?: string }): Promise<string> {
   const nonce = randomBytes(12).toString("hex");
   const expiresAt = new Date(Date.now() + STATE_TTL_MINUTES * 60_000);
   const payload: OAuthState = {
     intent: params.intent,
     linkUserId: params.linkUserId,
     returnTo: params.returnTo,
-    codeVerifier: params.codeVerifier,
+    shareDraftId: params.shareDraftId,
     nonce,
   };
-  await db.insert(oauthStatesTable).values({ nonceHash: createHash("sha256").update(nonce).digest("hex"), expiresAt });
+  await db.insert(oauthStatesTable).values({ nonceHash: createHash("sha256").update(nonce).digest("hex"), codeVerifier: params.codeVerifier, expiresAt });
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -41,7 +41,7 @@ export async function verifyOAuthState(state: string): Promise<OAuthState> {
     gt(oauthStatesTable.expiresAt, new Date()),
   )).returning();
   if (!consumed) throw new Error("OAuth state expired or already used");
-  return parsed;
+  return { ...parsed, codeVerifier: consumed.codeVerifier ?? parsed.codeVerifier };
 }
 
 /** PKCE code_verifier/code_challenge pair (S256), required by X's OAuth 2.0. */

@@ -8,7 +8,7 @@ import { builderTiersTable } from "./builderTiers";
 // succeeds. Re-verification and tier upgrades update this same row (same
 // `id`, same `passNumber`, same `tokenId` where technically possible); they
 // never create a second row for the same `userId`. The contract supply is
-// unlimited; the API reserves claims against the configured release phase.
+// unlimited; the API reserves confirmed original mints against the configured release wave.
 export const builderPassesTable = pgTable("builder_passes", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id).unique(),
@@ -35,6 +35,10 @@ export const builderPassesTable = pgTable("builder_passes", {
   contractAddress: text("contract_address"),
   destinationWallet: text("destination_wallet"),
   transactionHash: text("transaction_hash"),
+  // Fail-closed reservation used to serialize the Wave 1 mint boundary.
+  // It must not expire automatically while a chain transaction may be pending.
+  // Inventory claims do not consume Wave 1; only a confirmed original mint does.
+  waveMintReservedAt: timestamp("wave_mint_reserved_at", { withTimezone: true }),
 
   initiallyIssuedAt: timestamp("initially_issued_at", { withTimezone: true }),
   lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),

@@ -6,14 +6,14 @@ export function ArcMascot({ className, compact = false }: { className?: string; 
 
   return (
     <motion.div
-      className={cn("pointer-events-none relative isolate aspect-[3/4] shrink-0 select-none", compact ? "h-16" : "h-24", className)}
+      className={cn("pointer-events-none relative isolate aspect-square shrink-0 select-none", compact ? "h-16" : "h-24", className)}
       initial={reduceMotion ? false : { opacity: 0, y: -18, rotate: -3 }}
       animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: [0, -5, 0], rotate: [0, 1.5, 0] }}
       transition={reduceMotion ? { duration: 0.2 } : { opacity: { duration: 0.35 }, y: { duration: 3.8, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: 4.6, repeat: Infinity, ease: "easeInOut" } }}
       aria-hidden="true"
     >
       <div className="absolute inset-x-[13%] bottom-[3%] h-[16%] rounded-full bg-[#2455ff]/35 blur-xl" />
-      <img src="/mascot/arc-pet.webp" alt="" className="absolute inset-0 size-full object-contain drop-shadow-[0_10px_18px_rgba(32,83,255,.35)]" width={780} height={1040} />
+      <img src="/mascot/solrishuavatar.png" alt="" className="absolute inset-0 size-full rounded-2xl object-contain drop-shadow-[0_10px_18px_rgba(32,83,255,.35)]" width={384} height={384} />
       <motion.img
         src="/favicon.svg"
         alt=""

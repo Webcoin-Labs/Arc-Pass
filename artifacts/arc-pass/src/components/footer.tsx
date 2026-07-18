@@ -30,7 +30,7 @@ function ExternalFooterLink({ href, children }: { href: string; children: React.
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 text-sm text-white/60 transition-colors duration-150 hover:text-white"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 text-sm text-white/60 transition-colors duration-150 hover:text-white sm:justify-start"
     >
       {children}
       <ExternalLink className="size-3 opacity-0 transition-opacity duration-150 group-hover:opacity-60" aria-hidden="true" />
@@ -56,20 +56,20 @@ export function Footer() {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_2fr] lg:gap-16">
           <div>
-            <a href="https://webcoinlabs.com" target="_blank" rel="noopener noreferrer" aria-label="Webcoin Labs home" className="inline-flex">
+            <a href="https://webcoinlabs.com" target="_blank" rel="noopener noreferrer" aria-label="Webcoin Labs home" className="inline-flex min-h-11 items-center">
               <img src="/brand/webcoin-mono-white.webp" alt="Webcoin Labs" className="h-7 w-auto max-w-[220px] object-contain object-left" width={640} height={128} />
             </a>
             <p className="mt-4 max-w-xs text-sm leading-6 text-white/60 sm:mt-5">The operating system for founders.</p>
 
             <div className="mt-5 flex w-full max-w-[310px] items-center rounded-full border border-white/15 bg-white/[0.035] pl-3.5 pr-1.5 sm:mt-6 sm:pl-4">
-              <a href={`mailto:${CONTACT_EMAIL}`} className="min-w-0 flex-1 truncate py-2.5 text-[13px] font-semibold text-white/90 hover:text-white sm:text-sm">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="flex min-h-11 min-w-0 flex-1 items-center truncate py-2.5 text-[13px] font-semibold text-white/90 hover:text-white sm:text-sm">
                 {CONTACT_EMAIL}
               </a>
               <button
                 type="button"
                 onClick={copyEmail}
                 aria-label={copied ? "Email address copied" : "Copy email address"}
-                className="ml-2 grid size-8 shrink-0 cursor-pointer place-items-center rounded-full text-white/45 transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9b87ff]"
+                className="ml-2 grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-white/45 transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9b87ff]"
               >
                 {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
               </button>
@@ -97,7 +97,7 @@ export function Footer() {
                     {item.href.startsWith("http") ? (
                       <ExternalFooterLink href={item.href}>{item.label}</ExternalFooterLink>
                     ) : (
-                      <Link href={item.href} className="text-sm text-white/60 transition-colors duration-150 hover:text-white">
+                      <Link href={item.href} className="inline-flex min-h-11 items-center text-sm text-white/60 transition-colors duration-150 hover:text-white">
                         {item.label}
                       </Link>
                     )}
@@ -123,11 +123,11 @@ export function Footer() {
           <div className="flex flex-col gap-5 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="font-semibold text-white/90">&copy; {new Date().getFullYear()} Webcoin Labs. All rights reserved.</p>
             <nav className="flex flex-wrap gap-x-5 gap-y-3 text-white/55" aria-label="Footer utility links">
-              <Link href="/docs" className="hover:text-white">Docs</Link>
-              <Link href="/faq" className="hover:text-white">Help</Link>
-              <Link href="/docs#terms" className="hover:text-white">Terms</Link>
-              <Link href="/docs#privacy" className="hover:text-white">Privacy</Link>
-              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">Contact</a>
+              <Link href="/docs" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Docs</Link>
+              <Link href="/faq" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Help</Link>
+              <a href="https://www.webcoinlabs.com/docs/legal/terms" target="_blank" rel="noreferrer" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Terms</a>
+              <a href="https://www.webcoinlabs.com/docs/legal/privacy" target="_blank" rel="noreferrer" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Privacy</a>
+              <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Contact</a>
             </nav>
           </div>
 

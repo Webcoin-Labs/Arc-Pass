@@ -60,10 +60,10 @@ export function MintRecordsPanel() {
                 return (
                   <TableRow key={`${record.type}-${record.id}`}>
                     <TableCell className="capitalize">{record.type}</TableCell>
-                    <TableCell className="font-medium">{record.displayName ?? "—"}</TableCell>
+                    <TableCell className="font-medium">{record.displayName ?? "Name unavailable"}</TableCell>
                     <TableCell className="font-mono text-xs">{formatPassNumber(record.passNumber)}</TableCell>
-                    <TableCell className="capitalize">{record.network ?? "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{record.destinationWallet ? abbreviateAddress(record.destinationWallet) : "—"}</TableCell>
+                    <TableCell className="capitalize">{record.network ?? "Not minted"}</TableCell>
+                    <TableCell className="font-mono text-xs">{record.destinationWallet ? abbreviateAddress(record.destinationWallet) : "Not minted"}</TableCell>
                     <TableCell className="text-xs">{formatDate(record.issuedAt)}</TableCell>
                     <TableCell className="text-right">
                       {txUrl && (

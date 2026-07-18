@@ -30,7 +30,9 @@ export async function analyzeBuilderProfile(input: BuilderAnalysisInput): Promis
   try {
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = client.getGenerativeModel({
+      model: process.env.GEMINI_ANALYSIS_MODEL?.trim() || "gemini-2.5-flash",
+    });
 
     const prompt = [
       "You are assessing a Web3 builder's public GitHub profile for a credentialing platform.",

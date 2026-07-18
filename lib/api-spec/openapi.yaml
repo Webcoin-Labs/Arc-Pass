@@ -20,6 +20,10 @@ tags:
     description: User profile and wallet management
   - name: admin
     description: Admin operations
+  - name: founder-applications
+    description: Public Founder Pass requests
+  - name: support
+    description: Public, product-scoped support assistance
 
 paths:
   /healthz:
@@ -109,6 +113,80 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EligibilityResult"
+
+  /founder-applications:
+    post:
+      operationId: createFounderApplication
+      tags: [founder-applications]
+      summary: Submit a Founder Pass request
+      description: Public, rate-limited application request. A normalized X handle may submit only one request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FounderApplicationRequest"
+      responses:
+        "201":
+          description: Application submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderApplicationReceipt"
+        "400":
+          description: Invalid application
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: An application already exists for the X handle
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "429":
+          description: Too many requests from this network
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /support/chat:
+    post:
+      operationId: createSupportChatReply
+      tags: [support]
+      summary: Get a product-scoped Arc Pass support reply
+      description: >
+        Public FAQ and troubleshooting assistance only. The endpoint never
+        receives account, wallet, eligibility, claim, or mint data. It is
+        limited to five successful replies per privacy-preserving network
+        fingerprint in each rolling 24-hour period.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportChatRequest"
+      responses:
+        "200":
+          description: Support reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportChatReply"
+        "400":
+          description: Invalid support message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "429":
+          description: Daily support reply allowance reached
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportChatLimitResponse" }
+        "503":
+          description: Gemini support integration is unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /passes/me:
     get:
@@ -607,19 +685,6 @@ paths:
             image/svg+xml:
               schema: { type: string, format: binary }
 
-  /webhooks/typeform/founder-application:
-    post:
-      operationId: ingestFounderApplication
-      tags: [webhooks]
-      summary: Ingest a signature-verified Typeform founder application
-      responses:
-        "204": { description: Accepted or previously processed }
-        "401":
-          description: Invalid webhook signature
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ErrorResponse" }
-
   /admin/overview:
     get:
       operationId: adminGetOverview
@@ -644,6 +709,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/founder-applications:
+    get:
+      operationId: adminListFounderApplications
+      tags: [admin]
+      summary: Admin - list Founder Pass application requests
+      responses:
+        "200":
+          description: Founder application requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFounderApplicationList"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /admin/auth/login:
     post:
@@ -1376,6 +1464,11 @@ components:
               type: boolean
             username:
               type: ["string", "null"]
+            discriminator:
+              type: ["string", "null"]
+              description: Optional legacy four-digit Discord discriminator
+            displayIdentity:
+              type: ["string", "null"]
             avatarUrl:
               type: ["string", "null"]
         github:
@@ -1386,6 +1479,17 @@ components:
               type: boolean
             username:
               type: ["string", "null"]
+            accountCreatedAt:
+              type: ["string", "null"]
+              format: date-time
+            contributionCount:
+              type: ["integer", "null"]
+            contributionWindowStartedAt:
+              type: ["string", "null"]
+              format: date-time
+            contributionsUpdatedAt:
+              type: ["string", "null"]
+              format: date-time
 
     UserProfile:
       type: object
@@ -1484,6 +1588,9 @@ components:
         platform:
           type: string
           enum: [x, discord]
+        discriminator:
+          type: ["string", "null"]
+          description: Optional legacy Discord discriminator without the # prefix
 
     EligibilityResult:
       type: object
@@ -1681,6 +1788,8 @@ components:
               type: ["integer", "null"]
             inviteHandle:
               type: ["string", "null"]
+            inviteDiscriminator:
+              type: ["string", "null"]
             invitePlatform:
               type: ["string", "null"]
               enum: [x, discord, null]
@@ -1704,6 +1813,9 @@ components:
           enum: [x, discord]
         inviteHandle:
           type: string
+        inviteDiscriminator:
+          type: ["string", "null"]
+          pattern: '^\d{4}$'
         variant:
           type: string
           enum: [normal, premium_black]
@@ -1795,6 +1907,8 @@ components:
           type: ["string", "null"]
         discordUsername:
           type: ["string", "null"]
+        discordDiscriminator:
+          type: ["string", "null"]
         discordAvatarUrl:
           type: ["string", "null"]
         discordCommunityMember:
@@ -1816,8 +1930,14 @@ components:
           type: ["string", "null"]
         githubVerified:
           type: boolean
+        githubAccountCreatedAt:
+          type: ["string", "null"]
+          format: date-time
         githubContributionCount:
           type: ["integer", "null"]
+        githubContributionWindowStartedAt:
+          type: ["string", "null"]
+          format: date-time
         githubContributionsUpdatedAt:
           type: ["string", "null"]
           format: date-time
@@ -1955,7 +2075,7 @@ components:
           type: string
         network:
           type: string
-          enum: [arc, base]
+          enum: [arc]
           default: "arc"
 
     DownloadUrlResponse:
@@ -2048,6 +2168,72 @@ components:
           type: integer
         revokedPasses:
           type: integer
+
+    FounderApplicationRequest:
+      type: object
+      required: [xUsername, description]
+      properties:
+        xUsername:
+          type: string
+          description: X username. A leading @ is accepted and removed.
+          maxLength: 32
+        description:
+          type: string
+          description: Why the applicant believes they qualify. Maximum 500 words.
+          maxLength: 6000
+
+    FounderApplicationReceipt:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: integer }
+        status: { type: string, enum: [under_review] }
+
+    SupportChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1200
+          description: A product support question or non-sensitive feedback message.
+
+    SupportChatReply:
+      type: object
+      required: [answer, limit, remaining, resetsAt]
+      properties:
+        answer: { type: string }
+        limit: { type: integer, example: 5 }
+        remaining: { type: integer, minimum: 0, maximum: 5 }
+        resetsAt: { type: string, format: date-time }
+
+    SupportChatLimitResponse:
+      type: object
+      required: [error, limit, remaining, resetsAt]
+      properties:
+        error: { type: string }
+        limit: { type: integer, example: 5 }
+        remaining: { type: integer, example: 0 }
+        resetsAt: { type: string, format: date-time }
+
+    AdminFounderApplication:
+      type: object
+      required: [id, xUsername, description, status, submittedAt]
+      properties:
+        id: { type: integer }
+        xUsername: { type: string }
+        description: { type: string }
+        status: { type: string }
+        submittedAt: { type: string, format: date-time }
+
+    AdminFounderApplicationList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminFounderApplication" }
 
     AdminFounderPassList:
       type: object

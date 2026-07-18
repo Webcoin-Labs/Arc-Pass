@@ -28,7 +28,6 @@ const devEligibleDiscordHandles = commaSeparatedValues("DEV_ELIGIBLE_DISCORD_HAN
 const devAdminBootstrapEmail = process.env.DEV_ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase() ?? "";
 const builderPhaseName = process.env.BUILDER_PHASE_NAME?.trim() || "Wave 1";
 const builderPhaseClaimLimit = Number(process.env.BUILDER_PHASE_CLAIM_LIMIT || "2499");
-const discordPrimaryRoleIds = commaSeparatedValues("ARC_DISCORD_PRIMARY_ROLE_IDS").slice(0, 2);
 
 export function assertMockPolicy(nodeEnv: string | undefined, enabled: boolean): void {
   if (nodeEnv === "production" && enabled) throw new Error("ENABLE_DEV_MOCKS=true is forbidden in production");
@@ -82,18 +81,11 @@ export function validateEnvironment(): void {
       throw new Error("ARC_CHAIN_ID must be a positive integer");
     }
   }
-  if (commaSeparatedValues("ARC_DISCORD_PRIMARY_ROLE_IDS").length > 2) {
-    throw new Error("ARC_DISCORD_PRIMARY_ROLE_IDS may contain at most two role IDs");
-  }
-  if (discordPrimaryRoleIds.length > 0) {
-    warnIncompleteGroup("Discord primary roles", ["ARC_DISCORD_GUILD_ID", "DISCORD_BOT_TOKEN"]);
-  }
   warnIncompleteGroup("X OAuth", ["X_CLIENT_ID", "X_CLIENT_SECRET", "X_REDIRECT_URI"]);
   warnIncompleteGroup("Discord OAuth", ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI"]);
   warnIncompleteGroup("GitHub OAuth", ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_REDIRECT_URI"]);
   warnIncompleteGroup("chain minting", ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
   warnIncompleteGroup("activity provider", ["EXPLORER_API_URL", "EXPLORER_API_KEY"]);
-  warnIncompleteGroup("Typeform webhook", ["TYPEFORM_FORM_ID", "TYPEFORM_API_TOKEN", "TYPEFORM_WEBHOOK_SECRET"]);
   warnIncompleteGroup("Cloudflare R2", ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"]);
   if (isProduction) {
     for (const name of ["DATABASE_URL", "SESSION_SECRET", "APP_URL", "OAUTH_STATE_SIGNING_KEY", "MINT_SIGNING_KEY"]) {
@@ -132,7 +124,6 @@ export const configuration = {
   devAdminBootstrapEmail,
   builderPhaseName,
   builderPhaseClaimLimit,
-  discordPrimaryRoleIds,
   appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:5173",
   mintingConfigured: ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"].every(configured),
   activityProviderConfigured: ["EXPLORER_API_URL", "EXPLORER_API_KEY"].every(configured),

@@ -13,3 +13,5 @@ export * from "./founderApplications";
 export * from "./admin";
 export * from "./oauthStates";
 export * from "./sessions";
+export * from "./xShareDrafts";
+export * from "./supportAssistantUsage";

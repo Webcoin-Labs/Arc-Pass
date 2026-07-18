@@ -148,24 +148,24 @@
   --chart-4: 152 40% 40%;
   --chart-5: 32 70% 48%;
 
-  /* Founder Pass — Normal Founder material */
-  --material-founder-normal-from: 227 32% 15%;
-  --material-founder-normal-to: 227 28% 9%;
-  --material-founder-normal-border: 226 40% 40%;
-  --material-founder-normal-accent: 226 70% 62%;
+  /* Founder Pass — official Arc blue material shared by every Founder tier */
+  --material-founder-normal-from: 229 91% 14%;
+  --material-founder-normal-to: 221 79% 42%;
+  --material-founder-normal-border: 219 86% 64%;
+  --material-founder-normal-accent: 215 100% 68%;
   --material-founder-normal-text: 0 0% 98%;
 
-  /* Founder Pass — Premium Founder material */
-  --material-founder-black-from: 240 12% 8%;
-  --material-founder-black-to: 240 20% 2%;
-  --material-founder-black-border: 240 8% 30%;
-  --material-founder-black-accent: 262 30% 62%;
-  --material-founder-black-text: 220 15% 92%;
+  /* Premier Founder keeps the same official material; its badge carries the tier distinction. */
+  --material-founder-black-from: 229 91% 14%;
+  --material-founder-black-to: 221 79% 42%;
+  --material-founder-black-border: 219 86% 64%;
+  --material-founder-black-accent: 215 100% 68%;
+  --material-founder-black-text: 0 0% 98%;
 
   /* Builder Pass base material (tier accent layers on top) */
-  --material-builder-from: 226 26% 16%;
-  --material-builder-to: 226 30% 9%;
-  --material-builder-border: 226 20% 32%;
+  --material-builder-from: 220 10% 16%;
+  --material-builder-to: 220 9% 8%;
+  --material-builder-border: 220 10% 34%;
   --material-builder-text: 0 0% 98%;
 
   --app-font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -262,21 +262,21 @@
   --chart-4: 152 42% 48%;
   --chart-5: 36 82% 58%;
 
-  --material-founder-normal-from: 226 30% 13%;
-  --material-founder-normal-to: 226 32% 6%;
-  --material-founder-normal-border: 226 45% 34%;
-  --material-founder-normal-accent: 220 78% 66%;
+  --material-founder-normal-from: 229 91% 14%;
+  --material-founder-normal-to: 221 79% 42%;
+  --material-founder-normal-border: 219 86% 64%;
+  --material-founder-normal-accent: 215 100% 68%;
   --material-founder-normal-text: 0 0% 98%;
 
-  --material-founder-black-from: 240 14% 6%;
-  --material-founder-black-to: 240 30% 1.5%;
-  --material-founder-black-border: 240 10% 24%;
-  --material-founder-black-accent: 262 35% 68%;
-  --material-founder-black-text: 220 15% 94%;
+  --material-founder-black-from: 229 91% 14%;
+  --material-founder-black-to: 221 79% 42%;
+  --material-founder-black-border: 219 86% 64%;
+  --material-founder-black-accent: 215 100% 68%;
+  --material-founder-black-text: 0 0% 98%;
 
-  --material-builder-from: 226 22% 13%;
-  --material-builder-to: 226 26% 7%;
-  --material-builder-border: 226 18% 24%;
+  --material-builder-from: 220 10% 15%;
+  --material-builder-to: 220 9% 7%;
+  --material-builder-border: 220 10% 31%;
   --material-builder-text: 0 0% 98%;
 }
 
@@ -327,5 +327,28 @@
     background-image: linear-gradient(160deg, hsl(var(--material-builder-from)), hsl(var(--material-builder-to)));
     border-color: hsl(var(--material-builder-border) / 0.5);
     color: hsl(var(--material-builder-text));
+  }
+
+  /* Geo-Sync verification loader: a compact flipping square that replaces
+     circular spinners inside the eligibility scan experience. */
+  .ld-flip {
+    width: var(--flip-size, 32px);
+    height: var(--flip-size, 32px);
+    border-radius: calc(var(--flip-size, 32px) * 0.18);
+    background: var(--ink, currentColor);
+    transform-origin: center;
+    animation: geo-sync-flip 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes geo-sync-flip {
+  0% {
+    transform: perspective(120px) rotateX(0deg) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(120px) rotateX(-180deg) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(120px) rotateX(-180deg) rotateY(-180deg);
   }
 }

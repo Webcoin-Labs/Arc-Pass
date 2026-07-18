@@ -20,6 +20,8 @@ export interface BuilderPass {
   /** @nullable */
   discordUsername?: string | null;
   /** @nullable */
+  discordDiscriminator?: string | null;
+  /** @nullable */
   discordAvatarUrl?: string | null;
   /** @nullable */
   discordCommunityMember?: boolean | null;
@@ -33,7 +35,11 @@ export interface BuilderPass {
   primaryEcosystem?: string | null;
   githubVerified?: boolean;
   /** @nullable */
+  githubAccountCreatedAt?: Date | null;
+  /** @nullable */
   githubContributionCount?: number | null;
+  /** @nullable */
+  githubContributionWindowStartedAt?: Date | null;
   /** @nullable */
   githubContributionsUpdatedAt?: Date | null;
   verifiedWalletCount?: number;

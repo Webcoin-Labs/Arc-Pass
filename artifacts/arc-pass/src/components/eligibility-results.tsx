@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "motion/react";
 import { ArrowRight, Blocks, CircleCheck, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { FounderRequestDialog } from "@/components/founder-request-dialog";
 import type { EligibilityResult } from "@workspace/api-client-react";
 
 function ObscuredCredential({ kind, eligible = false }: { kind: "founder" | "builder"; eligible?: boolean }) {
@@ -68,11 +70,11 @@ const founderCopy: Record<string, { label: string; body: string }> = {
 
 export function EligibilityResults({ result, className, variant = "default" }: { result: EligibilityResult; className?: string; variant?: "default" | "immersive" }) {
   const [, setLocation] = useLocation();
+  const [requestOpen, setRequestOpen] = useState(false);
   const founder = founderCopy[result.founder.status];
   const founderEligible = result.founder.status === "eligible";
   const founderCanApply = result.founder.status === "ineligible" || result.founder.status === "unknown";
   const builderClaimed = result.builder.status === "claimed";
-  const formUrl = (import.meta.env.VITE_FOUNDER_APPLICATION_FORM_URL as string | undefined)?.trim();
   const immersive = variant === "immersive";
   const cardClass = cn(
     "flex flex-col p-5 sm:p-7",
@@ -88,16 +90,13 @@ export function EligibilityResults({ result, className, variant = "default" }: {
           {founderEligible && <p className="mt-5 text-lg font-semibold text-balance text-emerald-300">You’re eligible for the Founder Pass.</p>}
           <p className={cn(founderEligible ? "mt-2" : "mt-5", "min-h-10 text-sm leading-6 text-pretty", immersive ? "text-white/60" : "text-slate-600")}>{founder.body}</p>
           {founderCanApply && (
-            <p className={cn("mt-2 text-sm leading-6", immersive ? "text-white/60" : "text-slate-600")}>
-              You may still apply for a Founder Pass.{' '}
-              {formUrl ? (
-                <a className={cn("font-semibold underline underline-offset-4 transition-colors", immersive ? "text-white hover:text-[#8ea0ff]" : "text-[#3448e5] hover:text-[#2638bd]")} href={formUrl} target="_blank" rel="noreferrer">
-                  Click here
-                </a>
-              ) : (
-                <span className={immersive ? "text-white/40" : "text-slate-400"}>Application link coming soon.</span>
-              )}
-            </p>
+            <div className={cn("mt-5 rounded-2xl border p-4", immersive ? "border-white/10 bg-white/[0.035]" : "border-slate-200 bg-slate-50")}>
+              <p className={cn("text-sm font-semibold", immersive ? "text-white" : "text-slate-950")}>Founder Pass is exclusive and invite-only.</p>
+              <p className={cn("mt-1.5 text-sm leading-6", immersive ? "text-white/60" : "text-slate-600")}>Not eligible? Apply if you believe you qualify. Our team will review your application and contact you personally.</p>
+              <Button type="button" variant="outline" className={cn("mt-4 min-h-11", immersive ? "border-white/15 bg-white/[0.06] text-white hover:bg-white/[0.12] hover:text-white" : "border-slate-300 text-slate-950")} onClick={() => setRequestOpen(true)}>
+                Request Founder Pass <ArrowRight className="ml-2 size-4" aria-hidden="true" />
+              </Button>
+            </div>
           )}
           {result.founder.status === "eligible" || result.founder.status === "claimed" ? (
             <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]", founderEligible && "bg-emerald-400 text-emerald-950 hover:bg-emerald-300")} onClick={() => setLocation(result.founder.status === "claimed" ? "/dashboard" : "/claim/founder")}>{founderEligible ? "Log in to verify and claim" : "Log in to your dashboard"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Button>
@@ -107,13 +106,14 @@ export function EligibilityResults({ result, className, variant = "default" }: {
         <article className={cardClass}>
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><h3 className={cn("font-semibold", immersive ? "text-white" : "text-slate-950")}>Onchain Builder Pass</h3><Badge variant="secondary" className={cn(immersive && "border border-white/10 bg-white/10 text-white")}>{builderClaimed ? "Pass already claimed" : "Might be eligible"}</Badge></div>
           <ObscuredCredential kind="builder" />
-          <p className={cn("mt-5 min-h-10 text-sm leading-6 text-pretty", immersive ? "text-white/60" : "text-slate-600")}>{builderClaimed ? "This pass has already been claimed. Sign in to view your passes." : "You might be eligible for an Onchain Builder Pass. Log in, connect a wallet, and sign the ownership challenge to check."}</p>
+          <p className={cn("mt-5 min-h-10 text-sm leading-6 text-pretty", immersive ? "text-white/60" : "text-slate-600")}>{builderClaimed ? "This pass has already been claimed. Sign in to view your passes." : "Onchain Builder Pass verification is available after login. Connect GitHub, ownership-verify a wallet, and analyse real Arc activity to check."}</p>
           <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]")} onClick={() => setLocation(builderClaimed ? "/dashboard" : "/claim/builder")}>
             {builderClaimed ? "Log in to your dashboard" : "Log in and connect wallet"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
           </Button>
         </article>
       </div>
       <p className={cn("mt-5 flex items-center justify-center gap-2 text-center text-xs leading-5", immersive ? "text-white/45" : "text-slate-500")}><ShieldCheck className="h-4 w-4" aria-hidden="true" />This limited preview contains no personal, company, wallet, tier, or credential details.</p>
+      <FounderRequestDialog open={requestOpen} onOpenChange={setRequestOpen} />
     </motion.section>
   );
 }

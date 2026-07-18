@@ -45,7 +45,8 @@ export const LogoutResponse = zod.object({
  */
 export const CheckEligibilityBody = zod.object({
   "identifier": zod.string().describe('Username on the chosen platform (preview only, not an ownership proof)'),
-  "platform": zod.enum(['x', 'discord'])
+  "platform": zod.enum(['x', 'discord']),
+  "discriminator": zod.string().nullish().describe('Optional legacy Discord discriminator without the')
 })
 
 export const CheckEligibilityResponse = zod.object({
@@ -64,7 +65,8 @@ export const CheckEligibilityResponse = zod.object({
  */
 export const PreviewEligibilityBody = zod.object({
   "identifier": zod.string().describe('Username on the chosen platform (preview only, not an ownership proof)'),
-  "platform": zod.enum(['x', 'discord'])
+  "platform": zod.enum(['x', 'discord']),
+  "discriminator": zod.string().nullish().describe('Optional legacy Discord discriminator without the')
 })
 
 export const PreviewEligibilityResponse = zod.object({
@@ -74,6 +76,52 @@ export const PreviewEligibilityResponse = zod.object({
   "builder": zod.object({
   "status": zod.enum(['verification_required', 'claimed', 'unknown'])
 })
+})
+
+
+/**
+ * Public, rate-limited application request. A normalized X handle may submit only one request.
+ * @summary Submit a Founder Pass request
+ */
+export const createFounderApplicationBodyXUsernameMax = 32;
+
+export const createFounderApplicationBodyDescriptionMax = 6000;
+
+
+
+export const CreateFounderApplicationBody = zod.object({
+  "xUsername": zod.string().max(createFounderApplicationBodyXUsernameMax).describe('X username. A leading @ is accepted and removed.'),
+  "description": zod.string().max(createFounderApplicationBodyDescriptionMax).describe('Why the applicant believes they qualify. Maximum 500 words.')
+})
+
+export const CreateFounderApplicationResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.enum(['under_review'])
+})
+
+
+/**
+ * Public FAQ and troubleshooting assistance only. The endpoint never receives account, wallet, eligibility, claim, or mint data. It is limited to five successful replies per privacy-preserving network fingerprint in each rolling 24-hour period.
+ * @summary Get a product-scoped Arc Pass support reply
+ */
+export const createSupportChatReplyBodyMessageMax = 1200;
+
+
+
+export const CreateSupportChatReplyBody = zod.object({
+  "message": zod.string().min(1).max(createSupportChatReplyBodyMessageMax).describe('A product support question or non-sensitive feedback message.')
+})
+
+export const createSupportChatReplyResponseRemainingMin = 0;
+export const createSupportChatReplyResponseRemainingMax = 5;
+
+
+
+export const CreateSupportChatReplyResponse = zod.object({
+  "answer": zod.string(),
+  "limit": zod.number(),
+  "remaining": zod.number().min(createSupportChatReplyResponseRemainingMin).max(createSupportChatReplyResponseRemainingMax),
+  "resetsAt": zod.coerce.date()
 })
 
 
@@ -131,6 +179,7 @@ export const ListMyPassesResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -143,7 +192,9 @@ export const ListMyPassesResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -280,7 +331,7 @@ export const mintFounderPassBodyNetworkDefault = `arc`;
 export const MintFounderPassBody = zod.object({
   "mintMethod": zod.enum(['wallet_connect']),
   "walletAddress": zod.string().optional(),
-  "network": zod.enum(['arc', 'base']).default(mintFounderPassBodyNetworkDefault)
+  "network": zod.enum(['arc']).default(mintFounderPassBodyNetworkDefault)
 })
 
 export const MintFounderPassResponse = zod.object({
@@ -358,6 +409,7 @@ export const GetBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -370,7 +422,9 @@ export const GetBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -430,6 +484,7 @@ export const VerifyBuilderResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -442,7 +497,9 @@ export const VerifyBuilderResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -502,6 +559,7 @@ export const ReverifyBuilderResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -514,7 +572,9 @@ export const ReverifyBuilderResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -572,6 +632,7 @@ export const UpgradeBuilderTierResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -584,7 +645,9 @@ export const UpgradeBuilderTierResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -630,6 +693,7 @@ export const ClaimBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -642,7 +706,9 @@ export const ClaimBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -679,7 +745,7 @@ export const mintBuilderPassBodyNetworkDefault = `arc`;
 export const MintBuilderPassBody = zod.object({
   "mintMethod": zod.enum(['wallet_connect']),
   "walletAddress": zod.string().optional(),
-  "network": zod.enum(['arc', 'base']).default(mintBuilderPassBodyNetworkDefault)
+  "network": zod.enum(['arc']).default(mintBuilderPassBodyNetworkDefault)
 })
 
 export const MintBuilderPassResponse = zod.object({
@@ -696,6 +762,7 @@ export const MintBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -708,7 +775,9 @@ export const MintBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -791,6 +860,7 @@ export const GetDashboardStatsResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -803,7 +873,9 @@ export const GetDashboardStatsResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -863,11 +935,17 @@ export const GetUserProfileResponse = zod.object({
   "discord": zod.object({
   "connected": zod.boolean(),
   "username": zod.string().nullish(),
+  "discriminator": zod.string().nullish().describe('Optional legacy four-digit Discord discriminator'),
+  "displayIdentity": zod.string().nullish(),
   "avatarUrl": zod.string().nullish()
 }),
   "github": zod.object({
   "connected": zod.boolean(),
-  "username": zod.string().nullish()
+  "username": zod.string().nullish(),
+  "accountCreatedAt": zod.coerce.date().nullish(),
+  "contributionCount": zod.number().nullish(),
+  "contributionWindowStartedAt": zod.coerce.date().nullish(),
+  "contributionsUpdatedAt": zod.coerce.date().nullish()
 })
 })
 })
@@ -962,12 +1040,6 @@ export const GetShareImageResponse = zod.unknown()
 
 
 /**
- * @summary Ingest a signature-verified Typeform founder application
- */
-export const IngestFounderApplicationResponse = zod.void()
-
-
-/**
  * @summary Admin - dashboard overview counts
  */
 export const AdminGetOverviewResponse = zod.object({
@@ -986,6 +1058,20 @@ export const AdminGetOverviewResponse = zod.object({
   "pendingUpgrades": zod.number(),
   "suspendedPasses": zod.number(),
   "revokedPasses": zod.number()
+})
+
+
+/**
+ * @summary Admin - list Founder Pass application requests
+ */
+export const AdminListFounderApplicationsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "xUsername": zod.string(),
+  "description": zod.string(),
+  "status": zod.string(),
+  "submittedAt": zod.coerce.date()
+}))
 })
 
 
@@ -1069,6 +1155,7 @@ export const AdminListFounderPassesResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number().nullable(),
   "inviteHandle": zod.string().nullish(),
+  "inviteDiscriminator": zod.string().nullish(),
   "invitePlatform": zod.union([zod.literal('x'),zod.literal('discord'),zod.literal(null)]).nullish(),
   "invitedAt": zod.coerce.date().nullish(),
   "revokedAt": zod.coerce.date().nullish(),
@@ -1084,6 +1171,7 @@ export const AdminListFounderPassesResponse = zod.object({
 /**
  * @summary Admin - create a Founder invitation (pre or post signup)
  */
+export const adminCreateFounderInviteBodyInviteDiscriminatorRegExp = new RegExp('^\\d{4}$');
 export const adminCreateFounderInviteBodyCompanyNameMax = 120;
 
 
@@ -1091,6 +1179,7 @@ export const adminCreateFounderInviteBodyCompanyNameMax = 120;
 export const AdminCreateFounderInviteBody = zod.object({
   "invitePlatform": zod.enum(['x', 'discord']),
   "inviteHandle": zod.string(),
+  "inviteDiscriminator": zod.string().regex(adminCreateFounderInviteBodyInviteDiscriminatorRegExp).nullish(),
   "variant": zod.enum(['normal', 'premium_black']).optional(),
   "founderTierId": zod.number().optional(),
   "founderTitle": zod.string().optional(),
@@ -1138,6 +1227,7 @@ export const AdminCreateFounderInviteResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number().nullable(),
   "inviteHandle": zod.string().nullish(),
+  "inviteDiscriminator": zod.string().nullish(),
   "invitePlatform": zod.union([zod.literal('x'),zod.literal('discord'),zod.literal(null)]).nullish(),
   "invitedAt": zod.coerce.date().nullish(),
   "revokedAt": zod.coerce.date().nullish(),
@@ -1191,6 +1281,7 @@ export const AdminGetFounderPassResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number().nullable(),
   "inviteHandle": zod.string().nullish(),
+  "inviteDiscriminator": zod.string().nullish(),
   "invitePlatform": zod.union([zod.literal('x'),zod.literal('discord'),zod.literal(null)]).nullish(),
   "invitedAt": zod.coerce.date().nullish(),
   "revokedAt": zod.coerce.date().nullish(),
@@ -1261,6 +1352,7 @@ export const AdminUpdateFounderPassResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number().nullable(),
   "inviteHandle": zod.string().nullish(),
+  "inviteDiscriminator": zod.string().nullish(),
   "invitePlatform": zod.union([zod.literal('x'),zod.literal('discord'),zod.literal(null)]).nullish(),
   "invitedAt": zod.coerce.date().nullish(),
   "revokedAt": zod.coerce.date().nullish(),
@@ -1314,6 +1406,7 @@ export const AdminRevokeFounderInviteResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number().nullable(),
   "inviteHandle": zod.string().nullish(),
+  "inviteDiscriminator": zod.string().nullish(),
   "invitePlatform": zod.union([zod.literal('x'),zod.literal('discord'),zod.literal(null)]).nullish(),
   "invitedAt": zod.coerce.date().nullish(),
   "revokedAt": zod.coerce.date().nullish(),
@@ -1371,6 +1464,7 @@ export const AdminRevokeFounderPassResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number().nullable(),
   "inviteHandle": zod.string().nullish(),
+  "inviteDiscriminator": zod.string().nullish(),
   "invitePlatform": zod.union([zod.literal('x'),zod.literal('discord'),zod.literal(null)]).nullish(),
   "invitedAt": zod.coerce.date().nullish(),
   "revokedAt": zod.coerce.date().nullish(),
@@ -1408,6 +1502,7 @@ export const AdminListBuilderPassesResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -1420,7 +1515,9 @@ export const AdminListBuilderPassesResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -1480,6 +1577,7 @@ export const AdminGetBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -1492,7 +1590,9 @@ export const AdminGetBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -1553,6 +1653,7 @@ export const AdminUpdateBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -1565,7 +1666,9 @@ export const AdminUpdateBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -1625,6 +1728,7 @@ export const AdminSuspendBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -1637,7 +1741,9 @@ export const AdminSuspendBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -1693,6 +1799,7 @@ export const AdminUnsuspendBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -1705,7 +1812,9 @@ export const AdminUnsuspendBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
@@ -1765,6 +1874,7 @@ export const AdminRevokeBuilderPassResponse = zod.object({
 }),zod.null()]).optional(),
   "displayName": zod.string().nullish(),
   "discordUsername": zod.string().nullish(),
+  "discordDiscriminator": zod.string().nullish(),
   "discordAvatarUrl": zod.string().nullish(),
   "discordCommunityMember": zod.boolean().nullish(),
   "discordCommunityJoinedAt": zod.coerce.date().nullish(),
@@ -1777,7 +1887,9 @@ export const AdminRevokeBuilderPassResponse = zod.object({
   "builderRole": zod.string().nullish(),
   "primaryEcosystem": zod.string().nullish(),
   "githubVerified": zod.boolean().optional(),
+  "githubAccountCreatedAt": zod.coerce.date().nullish(),
   "githubContributionCount": zod.number().nullish(),
+  "githubContributionWindowStartedAt": zod.coerce.date().nullish(),
   "githubContributionsUpdatedAt": zod.coerce.date().nullish(),
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),

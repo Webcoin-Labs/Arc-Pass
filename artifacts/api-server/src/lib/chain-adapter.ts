@@ -293,6 +293,12 @@ function buildViemChainAdapter(): ChainAdapter | null {
   const publicClient = createPublicClient({ chain: arcChain, transport });
   const walletClient = createWalletClient({ account, chain: arcChain, transport });
 
+  async function waitForSuccessfulReceipt(hash: Hex) {
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== "success") throw new Error(`Onchain transaction reverted: ${hash}`);
+    return receipt;
+  }
+
   // Reconstructs the exact message hash each contract's `_recoverSigner`
   // expects, signs it with the relayer key, and splits the result into the
   // (v, r, s) triple the contract's `ecrecover` call takes. The relayer key
@@ -325,7 +331,7 @@ function buildViemChainAdapter(): ChainAdapter | null {
         args: [destinationWallet as Hex, identityHash as Hex, variantIndex, metadataUri, v, r, s],
         chain: arcChain,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForSuccessfulReceipt(hash);
       return {
         tokenId: readMintedTokenId(receipt.logs, [FOUNDER_PASS_MINT_EVENT]),
         transactionHash: hash,
@@ -348,7 +354,7 @@ function buildViemChainAdapter(): ChainAdapter | null {
         args: [destinationWallet as Hex, identityHash as Hex, tierRank, metadataUri, v, r, s],
         chain: arcChain,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForSuccessfulReceipt(hash);
       return {
         tokenId: readMintedTokenId(receipt.logs, [BUILDER_PASS_MINT_EVENT]),
         transactionHash: hash,
@@ -364,7 +370,7 @@ function buildViemChainAdapter(): ChainAdapter | null {
         args: [BigInt(tokenId), reason],
         chain: arcChain,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
+      await waitForSuccessfulReceipt(hash);
       return { transactionHash: hash };
     },
     async revokeBuilderPass({ tokenId, reason }) {
@@ -375,7 +381,7 @@ function buildViemChainAdapter(): ChainAdapter | null {
         args: [BigInt(tokenId), reason],
         chain: arcChain,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
+      await waitForSuccessfulReceipt(hash);
       return { transactionHash: hash };
     },
     async upgradeBuilderTier({ tokenId, tierSlug }) {
@@ -393,6 +399,7 @@ function buildViemChainAdapter(): ChainAdapter | null {
         args: [BigInt(tokenId), tierRank, v, r, s],
         chain: arcChain,
       });
+      await waitForSuccessfulReceipt(hash);
       return { transactionHash: hash };
     },
     async getBuilderOnchainActivity(walletAddresses) {

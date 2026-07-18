@@ -44,7 +44,7 @@ export function OverviewPanel() {
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <StatCard label="Issued" value={data.builderPassesIssued} />
           <StatCard label={`Claimed · ${data.builderPhaseName}`} value={`${data.builderPassesClaimed.toLocaleString()} / ${data.builderPhaseClaimLimit.toLocaleString()}`} />
-          <StatCard label="Phase claims remaining" value={data.builderClaimsRemaining} />
+          <StatCard label="Wave 1 mint slots remaining" value={data.builderClaimsRemaining} />
           <StatCard label="Suspended" value={data.suspendedPasses} />
         </div>
         {Object.keys(data.builderTierDistribution).length > 0 && (

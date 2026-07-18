@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, founderPassesTable, builderPassesTable, usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
+import { normalizeXHandle, parseDiscordIdentity } from "../lib/identity";
 
 const router: IRouter = Router();
 const previewAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -23,12 +24,24 @@ async function previewEligibility(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const handle = identifier.toLowerCase().replace(/^@/, "");
+  const identity = platform === "x"
+    ? { username: normalizeXHandle(identifier), discriminator: null }
+    : parseDiscordIdentity(identifier, typeof req.body?.discriminator === "string" ? req.body.discriminator : null);
+  const handle = identity.username;
   const usernameColumn = platform === "x" ? usersTable.xUsername : usersTable.discordUsername;
-  const [matchedUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usernameColumn, handle));
+  const [matchedUser] = await db.select({ id: usersTable.id }).from(usersTable).where(and(
+    eq(usernameColumn, handle),
+    platform === "discord" && identity.discriminator ? eq(usersTable.discordDiscriminator, identity.discriminator) : undefined,
+  ));
 
   let founder = await db.select().from(founderPassesTable)
-    .where(and(eq(founderPassesTable.invitePlatform, platform), eq(founderPassesTable.inviteHandle, handle))).limit(1);
+    .where(and(
+      eq(founderPassesTable.invitePlatform, platform),
+      eq(founderPassesTable.inviteHandle, handle),
+      platform === "discord" && identity.discriminator
+        ? eq(founderPassesTable.inviteDiscriminator, identity.discriminator)
+        : isNull(founderPassesTable.inviteDiscriminator),
+    )).limit(1);
   if (!founder[0] && matchedUser) {
     founder = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, matchedUser.id)).limit(1);
   }

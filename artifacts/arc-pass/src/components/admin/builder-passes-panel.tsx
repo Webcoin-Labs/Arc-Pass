@@ -105,9 +105,9 @@ export function BuilderPassesPanel() {
                 <TableRow key={pass.id} className="cursor-pointer" onClick={() => setSelectedId(pass.id)}>
                   <TableCell>
                     <div className="font-medium">{pass.displayName || "Unknown"}</div>
-                    <div className="text-xs text-muted-foreground">{pass.discordUsername ? `@${pass.discordUsername}` : "—"}</div>
+                    <div className="text-xs text-muted-foreground">{pass.discordUsername ? `@${pass.discordUsername}` : "Discord not connected"}</div>
                   </TableCell>
-                  <TableCell>{pass.currentTier ? <TierBadge tier={pass.currentTier} /> : "—"}</TableCell>
+                  <TableCell>{pass.currentTier ? <TierBadge tier={pass.currentTier} /> : "Not assigned"}</TableCell>
                   <TableCell>
                     <PassStatusBadge meta={builderOverallStatusMeta(pass)} />
                   </TableCell>
@@ -130,13 +130,13 @@ export function BuilderPassesPanel() {
             <div className="space-y-6">
               <div>
                 <p className="text-lg font-semibold">{selected.displayName}</p>
-                <p className="text-sm text-muted-foreground">Discord @{selected.discordUsername ?? "—"} · GitHub @{(selected as AdminBuilderPass).githubUsername ?? "—"}</p>
+                <p className="text-sm text-muted-foreground">Discord {selected.discordUsername ? `@${selected.discordUsername}` : "not connected"} · GitHub {(selected as AdminBuilderPass).githubUsername ? `@${(selected as AdminBuilderPass).githubUsername}` : "not connected"}</p>
               </div>
 
               <dl className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">Current tier</dt>
-                  <dd>{selected.currentTier?.name ?? "—"}</dd>
+                  <dd>{selected.currentTier?.name ?? "Not assigned"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Pass number</dt>
@@ -144,15 +144,15 @@ export function BuilderPassesPanel() {
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Qualifying transactions</dt>
-                  <dd>{selected.qualifyingTransactionCount ?? "—"}</dd>
+                  <dd>{selected.qualifyingTransactionCount ?? "Activity not checked"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Contracts deployed</dt>
-                  <dd>{selected.validContractCount ?? "—"}</dd>
+                  <dd>{selected.validContractCount ?? "Activity not checked"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">GitHub contributions</dt>
-                  <dd>{selected.githubContributionCount ?? "—"}</dd>
+                  <dd>{selected.githubContributionCount ?? "GitHub data unavailable"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Arc Discord</dt>
@@ -160,18 +160,7 @@ export function BuilderPassesPanel() {
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Member since</dt>
-                  <dd>{selected.discordCommunityJoinedAt ? formatDate(selected.discordCommunityJoinedAt) : "—"}</dd>
-                </div>
-                <div className="col-span-2">
-                  <dt className="text-xs text-muted-foreground">Primary Discord roles</dt>
-                  <dd className="mt-1 flex flex-wrap gap-2">
-                    {(selected.discordCommunityPrimaryRoles ?? []).slice(0, 2).map((role) => (
-                      <span key={role.id} className="rounded-full border px-2 py-1 text-xs">
-                        {role.name ?? role.id}: {role.hasRole === true ? "Yes" : role.hasRole === false ? "No" : "Unknown"}
-                      </span>
-                    ))}
-                    {(selected.discordCommunityPrimaryRoles ?? []).length === 0 && "—"}
-                  </dd>
+                  <dd>{selected.discordCommunityJoinedAt ? formatDate(selected.discordCommunityJoinedAt) : "Membership not checked"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Last verified</dt>

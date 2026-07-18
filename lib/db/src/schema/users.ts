@@ -24,11 +24,14 @@ export const usersTable = pgTable("users", {
   xUsername: text("x_username"),
   discordUserId: text("discord_user_id").unique(),
   discordUsername: text("discord_username"),
+  discordDiscriminator: text("discord_discriminator"),
   discordAvatarUrl: text("discord_avatar_url"),
   githubUserId: text("github_user_id").unique(),
   githubUsername: text("github_username"),
+  githubAccountCreatedAt: timestamp("github_account_created_at", { withTimezone: true }),
   /** Snapshot captured from GitHub's contribution calendar during OAuth linking. */
   githubContributionCount: integer("github_contribution_count"),
+  githubContributionWindowStartedAt: timestamp("github_contribution_window_started_at", { withTimezone: true }),
   githubContributionsUpdatedAt: timestamp("github_contributions_updated_at", { withTimezone: true }),
 
   /** Best-effort membership snapshot for the configured Arc Discord server. */

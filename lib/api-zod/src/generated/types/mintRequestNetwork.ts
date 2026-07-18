@@ -11,5 +11,4 @@ export type MintRequestNetwork = typeof MintRequestNetwork[keyof typeof MintRequ
 
 export const MintRequestNetwork = {
   arc: 'arc',
-  base: 'base',
 } as const;

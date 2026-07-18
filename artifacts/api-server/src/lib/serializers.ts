@@ -69,6 +69,7 @@ export function serializeFounderPass(pass: FounderPass, tier: FounderTier | null
     ...base,
     userId: pass.userId,
     inviteHandle: pass.inviteHandle,
+    inviteDiscriminator: pass.inviteDiscriminator,
     invitePlatform: pass.invitePlatform,
     invitedAt: pass.invitedAt,
     revokedAt: pass.revokedAt,
@@ -108,15 +109,16 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     currentTier: serializeBuilderTier(tier ?? null, includeAdminFields),
     displayName: user?.displayName ?? null,
     discordUsername: user?.discordUsername ?? null,
+    discordDiscriminator: user?.discordDiscriminator ?? null,
     discordAvatarUrl: user?.discordAvatarUrl ?? null,
     discordCommunityMember: user?.discordArcMember ?? null,
     discordCommunityJoinedAt: user?.discordArcJoinedAt ?? null,
-    discordCommunityRoles: user?.discordArcRoleNames ?? [],
-    discordCommunityPrimaryRoles: user?.discordArcPrimaryRoles ?? [],
     builderRole: pass.builderRole,
     primaryEcosystem: pass.primaryEcosystem,
     githubVerified: !!user?.githubUserId,
+    githubAccountCreatedAt: user?.githubAccountCreatedAt ?? null,
     githubContributionCount: user?.githubContributionCount ?? null,
+    githubContributionWindowStartedAt: user?.githubContributionWindowStartedAt ?? null,
     githubContributionsUpdatedAt: user?.githubContributionsUpdatedAt ?? null,
     verifiedWalletCount: wallets.length,
     qualifyingTransactionCount: latestSnapshot?.qualifyingTransactionCount ?? null,
@@ -151,26 +153,34 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
 }
 
 export function builderPassMinted() {
-  return eq(builderPassesTable.claimStatus, "minted");
+  return and(
+    eq(builderPassesTable.claimStatus, "minted"),
+    eq(builderPassesTable.isRevoked, false),
+  );
 }
 
 export function builderPassClaimed() {
-  return inArray(builderPassesTable.claimStatus, ["claimed", "minted"]);
+  return and(
+    inArray(builderPassesTable.claimStatus, ["claimed", "minted"]),
+    eq(builderPassesTable.isRevoked, false),
+  );
 }
 
 export async function getBuilderSupply() {
   const [{ value: totalClaimed }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassClaimed());
   const [{ value: totalMinted }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassMinted());
-  const [{ value: activeCount }] = await db.select({ value: count() }).from(builderPassesTable)
-    .where(and(eq(builderPassesTable.claimStatus, "minted"), eq(builderPassesTable.isRevoked, false)));
+  const [{ value: revokedCount }] = await db.select({ value: count() }).from(builderPassesTable)
+    .where(and(eq(builderPassesTable.claimStatus, "minted"), eq(builderPassesTable.isRevoked, true)));
   return {
     phaseName: configuration.builderPhaseName,
     phaseClaimLimit: configuration.builderPhaseClaimLimit,
     totalClaimed,
     totalMinted,
-    activeCount,
-    revokedCount: totalMinted - activeCount,
-    remainingClaims: Math.max(configuration.builderPhaseClaimLimit - totalClaimed, 0),
+    activeCount: totalMinted,
+    revokedCount,
+    // The release wave is an onchain mint allocation. Inventory claims remain
+    // usable after the wave fills and therefore never reduce this value.
+    remainingClaims: Math.max(configuration.builderPhaseClaimLimit - totalMinted, 0),
     contractSupplyCapped: false,
   };
 }

@@ -22,7 +22,7 @@ export function buildGithubAuthorizeUrl(state: string, codeChallenge: string): s
   return url.toString();
 }
 
-async function exchangeGithubCodeInternal(code: string, codeVerifier: string): Promise<{ profile: OAuthProfile; accessToken: string }> {
+async function exchangeGithubCodeInternal(code: string, codeVerifier: string): Promise<{ profile: OAuthProfile; accessToken: string; accountCreatedAt: Date }> {
   const config = readProviderEnv("GITHUB");
   if (!config) throw new Error("GitHub OAuth is not configured");
 
@@ -57,10 +57,13 @@ async function exchangeGithubCodeInternal(code: string, codeVerifier: string): P
     throw new Error(`GitHub profile fetch failed: ${profileResponse.status}`);
   }
 
-  const profile = (await profileResponse.json()) as { id: number; login: string; name?: string; avatar_url?: string };
+  const profile = (await profileResponse.json()) as { id: number; login: string; name?: string; avatar_url?: string; created_at?: string };
+  const accountCreatedAt = profile.created_at ? new Date(profile.created_at) : null;
+  if (!accountCreatedAt || Number.isNaN(accountCreatedAt.getTime())) throw new Error("GitHub profile did not include a valid account creation date");
 
   return {
     accessToken,
+    accountCreatedAt,
     profile: {
       providerUserId: String(profile.id),
       username: profile.login,
@@ -79,9 +82,10 @@ export async function exchangeGithubCode(code: string, codeVerifier: string): Pr
 }
 
 /** Exchanges OAuth and snapshots the authenticated user's real contribution count. */
-export async function exchangeGithubCodeWithContributions(code: string, codeVerifier: string): Promise<{ profile: OAuthProfile; contributionCount: number | null }> {
-  const { profile, accessToken } = await exchangeGithubCodeInternal(code, codeVerifier);
-  return { profile, contributionCount: await fetchGithubContributionCount(accessToken) };
+export async function exchangeGithubCodeWithContributions(code: string, codeVerifier: string): Promise<{ profile: OAuthProfile; contributionCount: number | null; accountCreatedAt: Date; contributionWindowStartedAt: Date }> {
+  const { profile, accessToken, accountCreatedAt } = await exchangeGithubCodeInternal(code, codeVerifier);
+  const contributionWindowStartedAt = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+  return { profile, accountCreatedAt, contributionWindowStartedAt, contributionCount: await fetchGithubContributionCount(accessToken, contributionWindowStartedAt, new Date()) };
 }
 
 /**
@@ -90,7 +94,7 @@ export async function exchangeGithubCodeWithContributions(code: string, codeVeri
  * counted by GitHub itself. A temporary provider failure returns null rather
  * than fabricating a value or blocking identity linking.
  */
-export async function fetchGithubContributionCount(accessToken: string): Promise<number | null> {
+export async function fetchGithubContributionCount(accessToken: string, from = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), to = new Date()): Promise<number | null> {
   const response = await fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: {
@@ -99,7 +103,8 @@ export async function fetchGithubContributionCount(accessToken: string): Promise
       "User-Agent": "arc-pass",
     },
     body: JSON.stringify({
-      query: "query { viewer { contributionsCollection { contributionCalendar { totalContributions } } } }",
+      query: "query ArcPassContributions($from: DateTime!, $to: DateTime!) { viewer { contributionsCollection(from: $from, to: $to) { contributionCalendar { totalContributions } } } }",
+      variables: { from: from.toISOString(), to: to.toISOString() },
     }),
   });
 

@@ -6,14 +6,6 @@ export interface BuilderActivityCounts {
   validContractCount: number;
 }
 
-/**
- * A builder must have at least one valid deployed contract to qualify for
- * any Builder tier — qualifying transactions alone are never enough. This
- * mirrors the product rule verbatim; do not remove it even if a huge tx
- * count would otherwise satisfy a tier's transactionThreshold.
- */
-export const MINIMUM_VALID_CONTRACTS_TO_QUALIFY = 1;
-
 export async function getActiveBuilderTiers(): Promise<BuilderTier[]> {
   return db
     .select()
@@ -23,24 +15,17 @@ export async function getActiveBuilderTiers(): Promise<BuilderTier[]> {
 }
 
 /**
- * Highest tier whose threshold is met by EITHER qualifying transactions OR
- * valid contracts deployed (not both required). Returns null if the
- * baseline contract requirement isn't met or no tier's thresholds are hit.
+ * Returns the highest tier whose published verified Arc transaction threshold
+ * is met. Deployed contracts remain a separate verified proof signal on the
+ * credential and never silently change the public transaction tier scale.
  */
 export function calculateBuilderTier(
   tiers: BuilderTier[],
   counts: BuilderActivityCounts,
 ): BuilderTier | null {
-  if (counts.validContractCount < MINIMUM_VALID_CONTRACTS_TO_QUALIFY) return null;
-
   const sorted = [...tiers].sort((a, b) => b.rank - a.rank);
   for (const tier of sorted) {
-    if (
-      counts.qualifyingTransactionCount >= tier.transactionThreshold ||
-      counts.validContractCount >= tier.contractThreshold
-    ) {
-      return tier;
-    }
+    if (counts.qualifyingTransactionCount >= tier.transactionThreshold) return tier;
   }
   return null;
 }

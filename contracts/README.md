@@ -23,7 +23,7 @@ real infrastructure exists.
    style): `pnpm add -D hardhat @nomicfoundation/hardhat-toolbox` inside a
    new `contracts` package, or use Foundry if preferred.
 2. Compile, deploy `FounderPass` and `BuilderPass` to your target network
-   (Arc mainnet/testnet, Base, etc.), passing a multisig or admin address
+   (Arc mainnet or testnet), passing a multisig or admin address
    and an `authorizedSigner` address (the address whose private key signs
    mint/upgrade authorizations — see below).
 3. Set these environment variables on the API server:
@@ -67,8 +67,8 @@ real EIP-191 authorizations with the relayer key before calling
   sign anything — so replay is rejected at both layers.
 - **No permanent Builder contract cap.** `totalSupply` records every original
   mint and never decreases. The backend atomically limits original claims by
-  release phase before authorizing a mint; the repository production template
-  currently configures Phase 1 as 2,499 claims.
+  release wave before authorizing a mint; the repository production template
+  currently configures Wave 1 as 2,499 confirmed original onchain mints.
 - **Tier only moves upward.** `authorizedUpgradeTier` reverts if
   `newTier <= currentTier`, enforced identically in the backend
   (`isUpgrade()` in `tier-config.ts`) before it ever requests a signature.

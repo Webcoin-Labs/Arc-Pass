@@ -36,6 +36,7 @@ export function FounderPassesPanel() {
   const [inviteForm, setInviteForm] = useState({
     invitePlatform: "x" as AdminFounderInviteInputInvitePlatform,
     inviteHandle: "",
+    inviteDiscriminator: "",
     variant: "normal" as AdminFounderInviteInputVariant,
     founderTierId: undefined as number | undefined,
     companyName: "",
@@ -49,6 +50,7 @@ export function FounderPassesPanel() {
         data: {
           invitePlatform: inviteForm.invitePlatform,
           inviteHandle: inviteForm.inviteHandle.trim(),
+          inviteDiscriminator: inviteForm.invitePlatform === "discord" && inviteForm.inviteDiscriminator ? inviteForm.inviteDiscriminator : undefined,
           variant: inviteForm.variant,
           founderTierId: inviteForm.founderTierId,
           companyName: inviteForm.companyName.trim(),
@@ -59,7 +61,7 @@ export function FounderPassesPanel() {
         onSuccess: () => {
           toast.success("Invitation created");
           setCreateOpen(false);
-          setInviteForm({ invitePlatform: "x", inviteHandle: "", variant: "normal", founderTierId: undefined, companyName: "", companyLogoUrl: null });
+          setInviteForm({ invitePlatform: "x", inviteHandle: "", inviteDiscriminator: "", variant: "normal", founderTierId: undefined, companyName: "", companyLogoUrl: null });
           setLogoUploading(false);
           invalidate();
         },
@@ -126,7 +128,7 @@ export function FounderPassesPanel() {
                 <TableRow key={pass.id} className="cursor-pointer" onClick={() => setSelected(pass)}>
                   <TableCell>
                     <div className="font-medium">{pass.displayName || pass.inviteHandle || "Unlinked invite"}</div>
-                    <div className="text-xs text-muted-foreground">{pass.username ? `@${pass.username}` : pass.invitePlatform}</div>
+                    <div className="text-xs text-muted-foreground">{pass.username ? `${pass.invitePlatform === "x" ? "@" : ""}${pass.username}` : pass.inviteHandle ? `${pass.inviteHandle}${pass.inviteDiscriminator ? `#${pass.inviteDiscriminator}` : ""} · ${pass.invitePlatform}` : pass.invitePlatform}</div>
                   </TableCell>
                   <TableCell>
                     <FounderPassVariantBadge variant={pass.variant} />
@@ -134,7 +136,7 @@ export function FounderPassesPanel() {
                   <TableCell>
                     <PassStatusBadge meta={founderEligibilityMeta(pass.eligibilityStatus)} />
                   </TableCell>
-                  <TableCell className="text-sm">{pass.companyName || "—"}</TableCell>
+                  <TableCell className="text-sm">{pass.companyName || "Company not provided"}</TableCell>
                   <TableCell className="font-mono text-xs">{formatPassNumber(pass.passNumber)}</TableCell>
                   <TableCell className="text-right text-sm capitalize">{pass.claimStatus}</TableCell>
                 </TableRow>
@@ -175,7 +177,17 @@ export function FounderPassesPanel() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="founder-invite-handle">Username</Label>
-                <Input id="founder-invite-handle" required value={inviteForm.inviteHandle} onChange={(e) => setInviteForm((f) => ({ ...f, inviteHandle: e.target.value }))} placeholder="username" />
+                <div className="flex gap-2">
+                  <Input id="founder-invite-handle" required value={inviteForm.inviteHandle} onChange={(e) => setInviteForm((f) => ({ ...f, inviteHandle: e.target.value.replace(/^@+/, "") }))} placeholder="username" />
+                  {inviteForm.invitePlatform === "discord" && (
+                    <div className="flex w-28 items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
+                      <span className="text-muted-foreground" aria-hidden="true">#</span>
+                      <label className="sr-only" htmlFor="founder-invite-discriminator">Legacy discriminator (optional)</label>
+                      <input id="founder-invite-discriminator" inputMode="numeric" maxLength={4} pattern="[0-9]{4}" value={inviteForm.inviteDiscriminator} onChange={(e) => setInviteForm((f) => ({ ...f, inviteDiscriminator: e.target.value.replace(/\D/g, "").slice(0, 4) }))} placeholder="1234" className="min-w-0 flex-1 bg-transparent px-1 py-2 outline-none" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{inviteForm.invitePlatform === "x" ? "Enter the X handle without @." : "The #1234 discriminator is optional for legacy Discord accounts."}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

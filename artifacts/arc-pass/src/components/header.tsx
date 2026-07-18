@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LockKeyhole } from "lucide-react";
 import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginModal } from "@/components/login-modal";
 import { AccountDropdown } from "@/components/account-dropdown";
 import { MobileNavigation } from "@/components/mobile-navigation";
-import { ArcMascot } from "@/components/arc-mascot";
 import { ArcGasIndicator } from "@/components/arc-gas-indicator";
 import { ArcPassBrand } from "@/components/arc-pass-brand";
+import { SupportAssistant } from "@/components/support-assistant";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -45,7 +44,7 @@ export function Header() {
       )}>
         <Link
           href="/"
-          className={cn("flex min-w-0 items-center", !isLanding && "rounded-lg bg-[#080a12] px-2.5 py-1.5")}
+          className={cn("flex min-h-11 min-w-0 items-center", !isLanding && "rounded-lg bg-[#080a12] px-2.5 py-1.5")}
           aria-label="Arc Pass by Webcoin Labs home"
         >
           <ArcPassBrand compact className="sm:hidden" />
@@ -53,18 +52,14 @@ export function Header() {
         </Link>
 
         <nav className={cn("hidden items-center lg:flex", isLanding ? "gap-1 rounded-full border border-white/10 bg-white/5 p-1" : "gap-6")} aria-label="Primary navigation">
-          <Link href="/#passes" className={cn("cursor-pointer text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 py-2 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Passes</Link>
-          <Link href="/#how-it-works" className={cn("cursor-pointer text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 py-2 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>How it works</Link>
-          <Link href="/faq" className={cn("cursor-pointer text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 py-2 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>FAQ</Link>
-          <Link href="/docs" className={cn("cursor-pointer text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 py-2 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Docs</Link>
-          <Link href="/admin" className={cn("flex cursor-pointer items-center gap-1.5 text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 py-2 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>
-            <LockKeyhole className="size-3.5" aria-hidden="true" /> Admin Portal
-          </Link>
+          <Link href="/#passes" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Passes</Link>
+          <Link href="/#how-it-works" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>How it works</Link>
+          <Link href="/faq" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>FAQ</Link>
+          <Link href="/docs" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Docs</Link>
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {isLanding && <div className="hidden sm:block"><ArcGasIndicator /></div>}
-          {isLanding && <ArcMascot compact className="hidden !h-12 sm:block md:!h-16" />}
+          {isLanding && <ArcGasIndicator />}
           {!isLanding && <div className="hidden sm:block"><ThemeToggle /></div>}
 
           {isLoading ? (
@@ -80,6 +75,7 @@ export function Header() {
             </Button>
           )}
 
+          <SupportAssistant isLanding={isLanding} />
           <MobileNavigation user={user} onLoginClick={() => setLoginOpen(true)} onLogout={handleLogout} isLanding={isLanding} />
         </div>
       </div>

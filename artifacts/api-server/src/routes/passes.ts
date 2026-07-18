@@ -10,7 +10,7 @@ import {
   walletsTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, count, desc, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   GetFounderPassParams,
   GetFounderPassDownloadUrlParams,
@@ -19,14 +19,27 @@ import {
   GetBuilderPassDownloadUrlParams,
   MintBuilderPassBody,
 } from "@workspace/api-zod";
-import { hasVerifiedGithub, requireAuth, type AuthedRequest } from "../lib/auth";
-import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply, builderPassClaimed, builderPassMinted } from "../lib/serializers";
+import { getGithubEligibilityFailure, hasVerifiedGithub, requireAuth, type AuthedRequest } from "../lib/auth";
+import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply } from "../lib/serializers";
 import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
 import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
 import { isDevelopmentTestUser } from "../lib/dev-test-identities";
+import { releaseBuilderWaveMintReservation, reserveBuilderWaveMint } from "../lib/wave-allocation";
 
 const router: IRouter = Router();
+
+function requireBuilderGithubSignals(user: typeof usersTable.$inferSelect, res: import("express").Response): boolean {
+  if (isDevelopmentTestUser(user)) return true;
+  const failure = getGithubEligibilityFailure(user);
+  if (!failure) return true;
+  if (failure === "not_connected") res.status(403).json({ error: "Connect and verify your GitHub account before continuing.", code: "github_verification_required" });
+  else if (failure === "provider_unavailable") res.status(503).json({ error: "GitHub eligibility signals are temporarily unavailable. Reconnect GitHub and try again.", code: "github_verification_unavailable" });
+  else if (failure === "reconnect_required") res.status(409).json({ error: "Reconnect GitHub to refresh the previous 180 days of contribution data.", code: "github_reconnect_required" });
+  else if (failure === "account_too_new") res.status(403).json({ error: "Builder eligibility requires a GitHub account at least 180 days old.", code: "github_account_too_new" });
+  else res.status(403).json({ error: "Builder eligibility requires at least 10 GitHub contributions during the previous 180 days.", code: "github_contributions_insufficient" });
+  return false;
+}
 
 async function getDashboardPasses(user: (typeof usersTable.$inferSelect)) {
   const [founderRow] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
@@ -102,7 +115,7 @@ router.get("/passes/founder/:id", async (req, res): Promise<void> => {
   }
 
   const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
-  if (!pass || pass.claimStatus !== "minted") {
+  if (!pass || pass.claimStatus === "locked") {
     res.status(404).json({ error: "Pass not found" });
     return;
   }
@@ -120,7 +133,7 @@ router.get("/passes/founder/:id/download-url", async (req, res): Promise<void> =
   }
 
   const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
-  if (!pass || pass.claimStatus !== "minted") {
+  if (!pass || pass.claimStatus === "locked") {
     res.status(404).json({ error: "Pass not found" });
     return;
   }
@@ -149,17 +162,36 @@ router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  const [updated] = await db
-    .update(founderPassesTable)
-    .set({
-      claimStatus: "claimed",
-      claimedAt: new Date(),
-      displayName: pass.displayName ?? user.displayName,
-      username: pass.username ?? user.xUsername ?? user.discordUsername ?? user.username,
-      avatarUrl: pass.avatarUrl ?? user.avatarUrl ?? user.discordAvatarUrl,
-    })
-    .where(eq(founderPassesTable.id, pass.id))
-    .returning();
+  const now = new Date();
+  const updated = await db.transaction(async (tx) => {
+    // Credential numbers are inventory identifiers, so allocate one when the
+    // pass is claimed rather than when it is later minted. Serializing this
+    // boundary prevents two concurrent Founder claims from receiving the same
+    // number. MAX also avoids colliding with an existing admin-assigned number.
+    await tx.execute(sql`select pg_advisory_xact_lock(1095781717)`);
+    const [{ nextPassNumber }] = await tx
+      .select({ nextPassNumber: sql<number>`coalesce(max(${founderPassesTable.passNumber}), 0)::int + 1` })
+      .from(founderPassesTable);
+
+    const [claimed] = await tx
+      .update(founderPassesTable)
+      .set({
+        claimStatus: "claimed",
+        passNumber: pass.passNumber ?? nextPassNumber,
+        claimedAt: now,
+        displayName: pass.displayName ?? user.displayName,
+        username: pass.username ?? user.xUsername ?? user.discordUsername ?? user.username,
+        avatarUrl: pass.avatarUrl ?? user.avatarUrl ?? user.discordAvatarUrl,
+      })
+      .where(and(eq(founderPassesTable.id, pass.id), eq(founderPassesTable.claimStatus, "locked")))
+      .returning();
+    return claimed ?? null;
+  });
+
+  if (!updated) {
+    res.status(409).json({ error: "This Founder Pass has already been claimed" });
+    return;
+  }
 
   const [tier] = updated.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, updated.founderTierId)) : [null];
   res.json(serializeFounderPass(updated, tier ?? null, false));
@@ -210,11 +242,6 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
   const metadataUri = `${configuration.appUrl.replace(/\/$/, "")}/api/metadata/founder/${pass.id}`;
   const mintResult = await chainAdapter.mintFounderPass({ identityHash, destinationWallet, network: network as Network, variant: pass.variant, metadataUri });
 
-  const [{ value: mintedCount }] = await db
-    .select({ value: count() })
-    .from(founderPassesTable)
-    .where(eq(founderPassesTable.claimStatus, "minted"));
-
   const now = new Date();
   const [updated] = await db
     .update(founderPassesTable)
@@ -225,7 +252,6 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
       contractAddress: mintResult.contractAddress,
       transactionHash: mintResult.transactionHash,
       network: mintResult.network,
-      passNumber: pass.passNumber ?? mintedCount + 1,
       issuedAt: pass.issuedAt ?? now,
       permanentlyLockedAt: now,
     })
@@ -303,10 +329,7 @@ router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<voi
     res.status(400).json({ error: "Connect and verify your Discord account before running Onchain Builder verification", code: "discord_verification_required" });
     return;
   }
-  if (!hasVerifiedGithub(user) && !isDevelopmentTestUser(user)) {
-    res.status(400).json({ error: "Connect and verify your GitHub account before running Onchain Builder verification", code: "github_verification_required" });
-    return;
-  }
+  if (!requireBuilderGithubSignals(user, res)) return;
 
   const [existing] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
   if (existing && existing.claimStatus !== "locked") {
@@ -375,6 +398,7 @@ router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<voi
 
 router.post("/passes/builder/reverify", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
+  if (!requireBuilderGithubSignals(user, res)) return;
   const [existing] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
 
   if (!existing || existing.claimStatus === "locked") {
@@ -487,10 +511,7 @@ router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void
     res.status(403).json({ error: "Connect and verify your Discord account before claiming an Onchain Builder Pass.", code: "discord_verification_required" });
     return;
   }
-  if (!hasVerifiedGithub(user) && !isDevelopmentTestUser(user)) {
-    res.status(403).json({ error: "Connect and verify your GitHub account before claiming an Onchain Builder Pass.", code: "github_verification_required" });
-    return;
-  }
+  if (!requireBuilderGithubSignals(user, res)) return;
   const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.userId, user.id));
 
   if (!pass) {
@@ -508,17 +529,15 @@ router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void
 
   const now = new Date();
   const updated = await db.transaction(async (tx) => {
-    // Serialize the short allocation section so simultaneous final-slot
-    // claims cannot push a release phase beyond its configured limit.
-    await tx.execute(sql`select pg_advisory_xact_lock(1095781715)`);
-    const [{ value: claimedCount }] = await tx.select({ value: count() }).from(builderPassesTable).where(builderPassClaimed());
-    if (claimedCount >= configuration.builderPhaseClaimLimit) return null;
-
+    await tx.execute(sql`select pg_advisory_xact_lock(1095781716)`);
+    const [{ nextPassNumber }] = await tx
+      .select({ nextPassNumber: sql<number>`coalesce(max(${builderPassesTable.passNumber}), 0)::int + 1` })
+      .from(builderPassesTable);
     const [claimed] = await tx
       .update(builderPassesTable)
       .set({
         claimStatus: "claimed",
-        passNumber: pass.passNumber ?? claimedCount + 1,
+        passNumber: pass.passNumber ?? nextPassNumber,
         initiallyIssuedAt: now,
         nextVerificationAt: new Date(now.getTime() + REVERIFICATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000),
       })
@@ -538,7 +557,7 @@ router.post("/passes/builder/claim", requireAuth, async (req, res): Promise<void
   });
 
   if (!updated) {
-    res.status(409).json({ error: `${configuration.builderPhaseName} Builder Pass claim allocation is complete` });
+    res.status(409).json({ error: "This Builder Pass has already been claimed" });
     return;
   }
 
@@ -568,7 +587,6 @@ router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void>
   }
 
   if (!chainAdapter.mintingAvailable) { res.status(503).json({ error: "Onchain minting is temporarily unavailable.", code: "minting_unavailable" }); return; }
-  const [{ value: mintedCount }] = await db.select({ value: count() }).from(builderPassesTable).where(builderPassMinted());
 
   const { walletAddress, network = "arc" } = bodyParsed.data;
   if (!walletAddress) {
@@ -594,9 +612,25 @@ router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void>
     return;
   }
 
+  const reservationTime = new Date();
+  // The external chain request stays outside the serialized reservation
+  // transaction so a slow provider cannot pin a database transaction open.
+  const reservation = await reserveBuilderWaveMint(pass.id, configuration.builderPhaseClaimLimit, reservationTime);
+
+  if (!reservation) {
+    res.status(409).json({ error: `${configuration.builderPhaseName} onchain mint allocation is complete or this mint is already in progress`, code: "wave_mint_unavailable" });
+    return;
+  }
+
   const identityHash = computeIdentityHash("builder", user.id);
   const metadataUri = `${configuration.appUrl.replace(/\/$/, "")}/api/metadata/builder/${pass.id}`;
-  const mintResult = await chainAdapter.mintBuilderPass({ identityHash, destinationWallet, network: network as Network, tierSlug: currentTier.slug, metadataUri });
+  let mintResult: Awaited<ReturnType<typeof chainAdapter.mintBuilderPass>>;
+  try {
+    mintResult = await chainAdapter.mintBuilderPass({ identityHash, destinationWallet, network: network as Network, tierSlug: currentTier.slug, metadataUri });
+  } catch (error) {
+    await releaseBuilderWaveMintReservation(pass.id, reservationTime);
+    throw error;
+  }
 
   const [updated] = await db
     .update(builderPassesTable)
@@ -607,10 +641,15 @@ router.post("/passes/builder/mint", requireAuth, async (req, res): Promise<void>
       contractAddress: mintResult.contractAddress,
       transactionHash: mintResult.transactionHash,
       network: mintResult.network,
-      passNumber: pass.passNumber ?? mintedCount + 1,
+      waveMintReservedAt: null,
     })
-    .where(eq(builderPassesTable.id, pass.id))
+    .where(and(eq(builderPassesTable.id, pass.id), eq(builderPassesTable.waveMintReservedAt, reservationTime)))
     .returning();
+
+  if (!updated) {
+    res.status(409).json({ error: "The mint completed but its reservation could not be finalized. Contact support with the transaction hash.", code: "mint_finalization_failed", transactionHash: mintResult.transactionHash });
+    return;
+  }
 
   res.json(await buildBuilderPassDTO(updated, false));
 });

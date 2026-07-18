@@ -9,10 +9,10 @@ Powered by [Webcoin Labs](https://webcoin.labs).
 | | Founder Pass | Builder Pass |
 |---|---|---|
 | Eligibility | Admin invite-only (X or Discord handle) | Verified onchain activity + GitHub contribution |
-| Supply | Uncapped, admin-controlled | No permanent cap; claims open in controlled phases (2,499 in Phase 1) |
+| Supply | Uncapped, admin-controlled | No permanent cap; Wave 1 permits 2,499 confirmed original onchain mints |
 | Benefits | Founder Sprint, review support, curated introductions, directory visibility | Verified builder proof, tier progression, ecosystem visibility, build opportunities |
 | Permanence | Permanent once minted — variant and tier locked forever | Upgrades in place; identity and pass number never change |
-| Variants / Tiers | Normal / Premium Black + configurable Founder tiers | Bronze → Silver → Gold → Platinum → Diamond |
+| Variants / Tiers | Normal Founder / Premium Founder + Emerging Founder / Premier Founder | Bronze → Silver → Gold → Platinum → Diamond |
 
 See [`ARC_PASS_OVERVIEW.md`](./ARC_PASS_OVERVIEW.md) for the full product and architecture writeup (credential rules, data model, what's real vs. mocked, current status).
 
@@ -30,7 +30,7 @@ See [`ARC_PASS_OVERVIEW.md`](./ARC_PASS_OVERVIEW.md) for the full product and ar
 ```bash
 pnpm install
 cp .env.example .env   # fill in what you have — see comments in the file
-pnpm --filter @workspace/db run push   # push schema to your Postgres/Neon database
+pnpm --filter @workspace/db run migrate # apply tracked SQL migrations to Postgres/Neon
 pnpm --filter @workspace/db run seed   # seed Founder/Builder tier configuration
 ```
 
@@ -49,7 +49,7 @@ pnpm run build                                               # typecheck + build
 pnpm --filter @workspace/api-spec run codegen                 # regenerate API hooks/schemas after an OpenAPI change
 ```
 
-Every external integration (OAuth, Gemini, onchain minting, activity indexing) has a documented env var set in [`.env.example`](./.env.example) and fails closed / falls back to a mock when unset — see `replit.md` for exactly what's mocked vs. real at any given time.
+Every external integration (OAuth, onchain minting, activity indexing, gas data, and uploads) has a documented env var set in [`.env.example`](./.env.example). Production fails closed when a verification provider is unavailable. Development fixtures require explicit flags and cannot be enabled in production.
 
 ## Cloudflare R2 uploads
 

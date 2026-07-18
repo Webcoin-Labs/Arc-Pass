@@ -60,6 +60,13 @@ export type UserConnectionsDiscord = {
   connected: boolean;
   /** @nullable */
   username?: string | null;
+  /**
+     * Optional legacy four-digit Discord discriminator
+     * @nullable
+     */
+  discriminator?: string | null;
+  /** @nullable */
+  displayIdentity?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
 };
@@ -68,6 +75,14 @@ export type UserConnectionsGithub = {
   connected: boolean;
   /** @nullable */
   username?: string | null;
+  /** @nullable */
+  accountCreatedAt?: string | null;
+  /** @nullable */
+  contributionCount?: number | null;
+  /** @nullable */
+  contributionWindowStartedAt?: string | null;
+  /** @nullable */
+  contributionsUpdatedAt?: string | null;
 };
 
 export interface UserConnections {
@@ -142,6 +157,11 @@ export interface EligibilityQuery {
   /** Username on the chosen platform (preview only, not an ownership proof) */
   identifier: string;
   platform: EligibilityQueryPlatform;
+  /**
+     * Optional legacy Discord discriminator without the
+     * @nullable
+     */
+  discriminator?: string | null;
 }
 
 export type EligibilityResultFounderStatus = typeof EligibilityResultFounderStatus[keyof typeof EligibilityResultFounderStatus];
@@ -354,6 +374,8 @@ export type AdminFounderPass = FounderPass & ({
   /** @nullable */
   inviteHandle?: string | null;
   /** @nullable */
+  inviteDiscriminator?: string | null;
+  /** @nullable */
   invitePlatform?: AdminFounderPassInvitePlatform;
   /** @nullable */
   invitedAt?: string | null;
@@ -384,6 +406,11 @@ export const AdminFounderInviteInputVariant = {
 export interface AdminFounderInviteInput {
   invitePlatform: AdminFounderInviteInputInvitePlatform;
   inviteHandle: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}$
+     */
+  inviteDiscriminator?: string | null;
   variant?: AdminFounderInviteInputVariant;
   founderTierId?: number;
   founderTitle?: string;
@@ -487,6 +514,8 @@ export interface BuilderPass {
   /** @nullable */
   discordUsername?: string | null;
   /** @nullable */
+  discordDiscriminator?: string | null;
+  /** @nullable */
   discordAvatarUrl?: string | null;
   /** @nullable */
   discordCommunityMember?: boolean | null;
@@ -500,7 +529,11 @@ export interface BuilderPass {
   primaryEcosystem?: string | null;
   githubVerified?: boolean;
   /** @nullable */
+  githubAccountCreatedAt?: string | null;
+  /** @nullable */
   githubContributionCount?: number | null;
+  /** @nullable */
+  githubContributionWindowStartedAt?: string | null;
   /** @nullable */
   githubContributionsUpdatedAt?: string | null;
   verifiedWalletCount?: number;
@@ -585,7 +618,6 @@ export type MintRequestNetwork = typeof MintRequestNetwork[keyof typeof MintRequ
 
 export const MintRequestNetwork = {
   arc: 'arc',
-  base: 'base',
 } as const;
 
 export interface MintRequest {
@@ -633,6 +665,70 @@ export interface AdminOverview {
   pendingUpgrades: number;
   suspendedPasses: number;
   revokedPasses: number;
+}
+
+export interface FounderApplicationRequest {
+  /**
+     * X username. A leading @ is accepted and removed.
+     * @maxLength 32
+     */
+  xUsername: string;
+  /**
+     * Why the applicant believes they qualify. Maximum 500 words.
+     * @maxLength 6000
+     */
+  description: string;
+}
+
+export type FounderApplicationReceiptStatus = typeof FounderApplicationReceiptStatus[keyof typeof FounderApplicationReceiptStatus];
+
+
+export const FounderApplicationReceiptStatus = {
+  under_review: 'under_review',
+} as const;
+
+export interface FounderApplicationReceipt {
+  id: number;
+  status: FounderApplicationReceiptStatus;
+}
+
+export interface SupportChatRequest {
+  /**
+     * A product support question or non-sensitive feedback message.
+     * @minLength 1
+     * @maxLength 1200
+     */
+  message: string;
+}
+
+export interface SupportChatReply {
+  answer: string;
+  limit: number;
+  /**
+     * @minimum 0
+     * @maximum 5
+     */
+  remaining: number;
+  resetsAt: string;
+}
+
+export interface SupportChatLimitResponse {
+  error: string;
+  limit: number;
+  remaining: number;
+  resetsAt: string;
+}
+
+export interface AdminFounderApplication {
+  id: number;
+  xUsername: string;
+  description: string;
+  status: string;
+  submittedAt: string;
+}
+
+export interface AdminFounderApplicationList {
+  items: AdminFounderApplication[];
 }
 
 export interface AdminFounderPassList {

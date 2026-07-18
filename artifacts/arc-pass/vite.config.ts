@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+import { shouldShowRuntimeError } from './vite.runtime-error-filter';
 
 const rawPort = process.env.PORT ?? '5173';
 
@@ -17,10 +18,13 @@ const basePath = process.env.BASE_PATH ?? '/';
 
 export default defineConfig({
   base: basePath,
+  // The monorepo keeps shared local configuration at the workspace root.
+  // Vercel still injects production variables normally.
+  envDir: path.resolve(import.meta.dirname, '..', '..'),
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
+    runtimeErrorOverlay({ filter: shouldShowRuntimeError }),
     ...(process.env.NODE_ENV !== 'production' &&
     process.env.REPL_ID !== undefined
       ? [

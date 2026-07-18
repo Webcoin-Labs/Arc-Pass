@@ -2,9 +2,9 @@ import { pgTable, text, serial, timestamp, integer, boolean, jsonb } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// Admin-configurable Founder tier (distinct from the Founder Pass variant —
-// a tier is a recognition label like "Formal Founder"; a variant is the
-// physical Normal/Premium Founder credential material).
+// Founder tier (distinct from the Founder Pass variant). The selectable catalog
+// is fixed to Emerging Founder and Premier Founder; admins may only customize
+// presentation fields. A variant is the Normal/Premium credential material.
 export const founderTiersTable = pgTable("founder_tiers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),

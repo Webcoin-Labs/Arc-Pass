@@ -28,7 +28,11 @@ const server = app.listen(port, () => {
 
 server.on("error", (error) => {
   logger.error({ error }, "API server failed");
-  process.exitCode = 1;
+  // A listening failure (for example an occupied Railway-assigned port) must
+  // not leave the database pool keeping a dead worker alive indefinitely.
+  void pool.end()
+    .catch((poolError) => logger.error({ error: poolError }, "Database pool cleanup after startup failure failed"))
+    .finally(() => process.exit(1));
 });
 
 let shuttingDown = false;

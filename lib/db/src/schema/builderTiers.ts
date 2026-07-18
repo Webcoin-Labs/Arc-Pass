@@ -2,19 +2,17 @@ import { pgTable, text, serial, timestamp, integer, boolean, jsonb } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// Admin-configurable Builder tier. `slug` is the stable programmatic key
-// (bronze/silver/gold/platinum/diamond) used by tier-calculation logic —
-// `name`/`emblemUrl`/`description` can be renamed by an admin without
-// breaking threshold lookups. Thresholds are OR'd against each other
-// (qualifying transactions OR valid contracts deployed), see
-// api-server/src/lib/tier-config.ts.
+// Builder tier catalog. Slug, name, rank, active state, and qualifying Arc
+// transaction thresholds are fixed product rules. Administrators may update
+// presentation fields (emblem, description, accent), but deployed-contract
+// counts remain evidence only and never affect tier calculation.
 export const builderTiersTable = pgTable("builder_tiers", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(), // 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
   name: text("name").notNull(),
   emblemUrl: text("emblem_url"),
   transactionThreshold: integer("transaction_threshold").notNull(),
-  contractThreshold: integer("contract_threshold").notNull(),
+  contractThreshold: integer("contract_threshold").notNull().default(0),
   description: text("description"),
   visualConfig: jsonb("visual_config").$type<{ accent?: string }>(),
   rank: integer("rank").notNull().unique(),

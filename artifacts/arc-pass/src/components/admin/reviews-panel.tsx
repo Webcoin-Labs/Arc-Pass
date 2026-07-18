@@ -1,15 +1,16 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, X, TrendingUp, RefreshCw } from "lucide-react";
+import { Check, X, TrendingUp, RefreshCw, Clipboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TierBadge } from "@/components/tier-badge";
 import { formatDate } from "@/lib/format";
-import { useAdminListFounderPasses, useAdminListBuilderPasses, useAdminUpdateFounderPass } from "@workspace/api-client-react";
+import { useAdminListFounderApplications, useAdminListFounderPasses, useAdminListBuilderPasses, useAdminUpdateFounderPass } from "@workspace/api-client-react";
 
 export function ReviewsPanel() {
   const queryClient = useQueryClient();
   const { data: underReview, isLoading: loadingFounders } = useAdminListFounderPasses({ status: "under_review", limit: 50 });
+  const { data: applications, isLoading: loadingApplications } = useAdminListFounderApplications();
   const { data: builders, isLoading: loadingBuilders } = useAdminListBuilderPasses({ limit: 100 });
   const updateFounder = useAdminUpdateFounderPass();
 
@@ -33,6 +34,33 @@ export function ReviewsPanel() {
 
   return (
     <div className="space-y-10">
+      <section>
+        <h3 className="mb-1 text-sm font-semibold text-muted-foreground">Founder Pass requests</h3>
+        <p className="mb-4 text-xs leading-5 text-muted-foreground">Requests arrive from the public form. Review the note, then create an invitation from Founder Passes if you approve.</p>
+        {loadingApplications ? (
+          <Skeleton className="h-24 w-full rounded-xl" />
+        ) : !applications?.items.length ? (
+          <p className="text-sm text-muted-foreground">No Founder Pass requests are waiting for review.</p>
+        ) : (
+          <ul className="space-y-3">
+            {applications.items.map((application) => (
+              <li key={application.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm font-semibold">@{application.xUsername}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Requested {formatDate(application.submittedAt)}</p>
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-2" onClick={() => void navigator.clipboard?.writeText(application.xUsername).then(() => toast.success("X username copied"), () => toast.error("Couldn't copy username"))}>
+                    <Clipboard className="size-3.5" aria-hidden="true" /> Copy handle
+                  </Button>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground/85">{application.description}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section>
         <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Founder eligibility reviews</h3>
         {loadingFounders ? (

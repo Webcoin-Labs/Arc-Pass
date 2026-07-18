@@ -4,10 +4,10 @@ const INTEGRATIONS = [
   { name: "X OAuth", vars: "X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI", fallback: "Required for X identity checks; no synthetic production identity is created when unset." },
   { name: "Discord OAuth", vars: "DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI", fallback: "Required for Discord identity checks; guild membership is supporting evidence only." },
   { name: "GitHub verification", vars: "GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI", fallback: "Active. A linked GitHub account is required before a pass can be claimed." },
-  { name: "Gemini analysis", vars: "GEMINI_API_KEY", fallback: "Optional enrichment only; missing AI configuration never grants eligibility." },
+  { name: "Gemini support and analysis", vars: "GEMINI_API_KEY, GEMINI_SUPPORT_MODEL / GEMINI_ANALYSIS_MODEL (optional)", fallback: "Optional qualitative enrichment and the public chat helper only. AI never grants eligibility, sets a tier, proves a wallet, claims, or mints." },
   { name: "Onchain minting", vars: "CHAIN_RPC_URL, ARC_CHAIN_ID, RELAYER_PRIVATE_KEY, FOUNDER_PASS_CONTRACT_ADDRESS, BUILDER_PASS_CONTRACT_ADDRESS", fallback: "Fails closed when configuration is incomplete." },
   { name: "Explorer / indexer", vars: "EXPLORER_API_URL, EXPLORER_API_KEY", fallback: "Verification is unavailable when configuration is incomplete." },
-  { name: "Discord guild + role check", vars: "ARC_DISCORD_GUILD_ID, DISCORD_BOT_TOKEN, ARC_DISCORD_PRIMARY_ROLE_IDS", fallback: "Shows member date and up to two configured roles; unavailable checks remain unknown." },
+  { name: "Discord guild membership", vars: "ARC_DISCORD_GUILD_ID", fallback: "Optional supporting signal only; shows member status and join date." },
   { name: "Production media storage", vars: "CLOUDFLARE_R2_ENDPOINT, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, CLOUDFLARE_R2_BUCKET, CLOUDFLARE_R2_PUBLIC_URL", fallback: "Required in production because local Railway disk is ephemeral." },
   { name: "Signed authorizations", vars: "MINT_SIGNING_KEY, OAUTH_STATE_SIGNING_KEY", fallback: "Uses an ephemeral key in dev; set a persistent key in production." },
 ];

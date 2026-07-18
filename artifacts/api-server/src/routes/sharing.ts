@@ -1,26 +1,87 @@
-import { Router, type IRouter } from "express";
-import { db, founderPassesTable, founderTiersTable, builderPassesTable, builderTiersTable, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { Router, type IRouter, type RequestHandler } from "express";
+import multer from "multer";
+import { randomBytes } from "crypto";
+import { db, founderPassesTable, founderTiersTable, builderPassesTable, builderTiersTable, usersTable, xShareDraftsTable } from "@workspace/db";
+import { and, eq, lt, ne } from "drizzle-orm";
 import { configuration } from "../lib/env";
+import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { createPkcePair, signOAuthState } from "../lib/oauth/provider";
+import { buildXAuthorizeUrl, isXOAuthConfigured } from "../lib/oauth/x";
 
 const router: IRouter = Router();
+const directShareUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+const DIRECT_SHARE_TTL_MS = 10 * 60 * 1000;
+const X_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+const acceptDirectShareImage: RequestHandler = (req, res, next) => {
+  directShareUpload.single("image")(req, res, (error: unknown) => {
+    if (!error) {
+      next();
+      return;
+    }
+    const tooLarge = error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE";
+    res.status(tooLarge ? 413 : 400).json({
+      error: tooLarge
+        ? "The pass image is larger than the 5 MB direct-sharing limit. Download it and use the X Web Intent fallback."
+        : "The pass image could not be accepted. Download it and use the X Web Intent fallback.",
+    });
+  });
+};
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 }
 
+router.post("/share/x/direct", requireAuth, acceptDirectShareImage, async (req, res): Promise<void> => {
+  if (!isXOAuthConfigured()) { res.status(503).json({ error: "Direct X posting is unavailable. Use the download and Web Intent fallback." }); return; }
+  const user = (req as AuthedRequest).user;
+  if (!user.xUserId) { res.status(409).json({ error: "Connect and verify X before authorizing direct posting. Use the download fallback in the meantime." }); return; }
+  const passType = req.body?.passType;
+  const passId = Number(req.body?.passId);
+  const minted = req.body?.minted === "true";
+  const image = req.file;
+  if ((passType !== "founder" && passType !== "builder") || !Number.isSafeInteger(passId) || !image || !X_IMAGE_TYPES.has(image.mimetype)) {
+    res.status(400).json({ error: "A valid claimed pass image is required." });
+    return;
+  }
+
+  const owned = passType === "founder"
+    ? (await db.select({ claimStatus: founderPassesTable.claimStatus }).from(founderPassesTable).where(and(eq(founderPassesTable.id, passId), eq(founderPassesTable.userId, user.id), ne(founderPassesTable.claimStatus, "locked"))).limit(1))[0]
+    : (await db.select({ claimStatus: builderPassesTable.claimStatus }).from(builderPassesTable).where(and(eq(builderPassesTable.id, passId), eq(builderPassesTable.userId, user.id), ne(builderPassesTable.claimStatus, "locked"))).limit(1))[0];
+  if (!owned) { res.status(404).json({ error: "Claim this pass before sharing it." }); return; }
+
+  const actualMinted = owned.claimStatus === "minted";
+  if (minted !== actualMinted) { res.status(409).json({ error: "Refresh the pass before sharing its latest state." }); return; }
+
+  const returnToInput = typeof req.body?.returnTo === "string" ? req.body.returnTo : "/dashboard";
+  const returnTo = returnToInput.startsWith("/") && !returnToInput.startsWith("//") ? returnToInput : "/dashboard";
+  const shareUrl = `${configuration.appUrl.replace(/\/$/, "")}/api/share/${passType}/${passId}`;
+  const credentialName = passType === "founder" ? "Founder" : "Builder";
+  const postText = `${actualMinted ? `I minted my Arc ${credentialName} Pass onchain.` : `I claimed my verified Arc ${credentialName} Pass.`}\n${shareUrl}`;
+  const draftId = randomBytes(24).toString("base64url");
+  const expiresAt = new Date(Date.now() + DIRECT_SHARE_TTL_MS);
+  await db.transaction(async (tx) => {
+    await tx.delete(xShareDraftsTable).where(lt(xShareDraftsTable.expiresAt, new Date()));
+    await tx.insert(xShareDraftsTable).values({ id: draftId, userId: user.id, passType, passId, mediaType: image.mimetype, mediaBase64: image.buffer.toString("base64"), postText, returnTo, expiresAt });
+  });
+
+  const { verifier, challenge } = createPkcePair();
+  const state = await signOAuthState({ intent: "share", linkUserId: user.id, returnTo, codeVerifier: verifier, shareDraftId: draftId });
+  res.status(201).json({ authorizationUrl: buildXAuthorizeUrl(state, challenge, { posting: true }) });
+});
+
 async function shareRecord(type: string, id: number) {
   if (type === "founder") {
     const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, id));
-    if (!pass || pass.claimStatus !== "minted") return null;
-    return { title: "Founder Pass", holder: pass.displayName || "Verified founder", detail: "Verified by Webcoin Labs" };
+    if (!pass || pass.claimStatus === "locked") return null;
+    return { title: "Founder Pass", holder: pass.displayName || "Verified founder", detail: pass.claimStatus === "minted" ? "Minted on Arc · Webcoin Labs" : "Claimed to Arc Pass inventory · Webcoin Labs" };
   }
   if (type === "builder") {
     const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, id));
-    if (!pass || pass.claimStatus !== "minted") return null;
+    if (!pass || pass.claimStatus === "locked") return null;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pass.userId));
     const [tier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
-    return { title: "Onchain Builder Pass", holder: user?.displayName || "Verified builder", detail: `${tier?.name || "Verified"} tier · Webcoin Labs` };
+    return { title: "Onchain Builder Pass", holder: user?.displayName || "Verified builder", detail: pass.claimStatus === "minted" ? `${tier?.name || "Verified"} tier · minted on Arc` : `${tier?.name || "Verified"} tier · claimed to inventory` };
   }
   return null;
 }

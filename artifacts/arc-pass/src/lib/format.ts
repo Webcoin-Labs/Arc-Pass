@@ -4,7 +4,7 @@ export function abbreviateAddress(address: string, chars = 4): string {
 }
 
 export function formatPassNumber(passNumber: number | null | undefined): string {
-  if (passNumber === null || passNumber === undefined) return "Pending";
+  if (passNumber === null || passNumber === undefined) return "Assigned after claim";
   return `#${String(passNumber).padStart(4, "0")}`;
 }
 

@@ -4,7 +4,13 @@ import { pool } from "@workspace/db";
 
 const router: IRouter = Router();
 
-router.get("/healthz", async (req, res): Promise<void> => {
+// Railway liveness: never couples process health to an optional provider or a
+// transient Neon wake-up. Readiness remains available separately for ops.
+router.get("/healthz", (_req, res): void => {
+  res.json(HealthCheckResponse.parse({ status: "ok" }));
+});
+
+router.get("/readyz", async (req, res): Promise<void> => {
   try {
     await pool.query("select 1");
     res.json(HealthCheckResponse.parse({ status: "ok" }));

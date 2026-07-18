@@ -60,3 +60,5 @@ artifacts/api-server/uploads/
 
 # Codex local verification artifacts
 .codex-run/
+.codex-remote-attachments/
+.railway-config-pull-*/

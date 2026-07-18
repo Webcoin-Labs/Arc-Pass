@@ -16,6 +16,12 @@ test("X authorization uses the current X host and required identity scopes", asy
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
 });
 
+test("direct X image posting requests explicit write and media scopes", async () => {
+  const { buildXAuthorizeUrl } = await import("./oauth/x");
+  const url = new URL(buildXAuthorizeUrl("signed-state", "pkce-challenge", { posting: true }));
+  assert.equal(url.searchParams.get("scope"), "tweet.read tweet.write users.read media.write");
+});
+
 test("X code exchange uses api.x.com and fetches the verified account with the user token", async (t) => {
   const { exchangeXCode } = await import("./oauth/x");
   const calls: Array<{ url: string; init?: RequestInit }> = [];
@@ -47,8 +53,27 @@ test("X code exchange uses api.x.com and fetches the verified account with the u
   assert.equal(new Headers(calls[1]?.init?.headers).get("Authorization"), "Bearer user-access-token");
   assert.deepEqual(profile, {
     providerUserId: "12345",
-    username: "SolRishu",
+    username: "solrishu",
     displayName: "Rishu",
     avatarUrl: "https://pbs.twimg.com/avatar_400x400.jpg",
   });
+});
+
+test("direct X posting uploads the image before creating the post", async (t) => {
+  const { postImageToX } = await import("./oauth/x");
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    calls.push({ url, init });
+    if (url.endsWith("/2/media/upload")) return Response.json({ data: { id: "123456789" } });
+    return Response.json({ data: { id: "987654321" } }, { status: 201 });
+  }) as typeof fetch;
+
+  const postId = await postImageToX("user-access-token", { mediaBase64: "aW1hZ2U=", mediaType: "image/png", text: "I claimed my verified Arc Builder Pass." });
+  assert.equal(postId, "987654321");
+  assert.equal(calls[0]?.url, "https://api.x.com/2/media/upload");
+  assert.equal(calls[1]?.url, "https://api.x.com/2/tweets");
+  assert.match(String(calls[1]?.init?.body), /"media_ids":\["123456789"\]/);
 });

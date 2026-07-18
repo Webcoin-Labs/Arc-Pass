@@ -24,7 +24,7 @@ export function AccountDropdown({ user, onLogout }: { user: User; onLogout: () =
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-9 gap-2 rounded-full px-2">
+        <Button variant="ghost" className="h-11 gap-2 rounded-full px-2">
           <Avatar className="h-7 w-7 border border-border">
             <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
             <AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback>

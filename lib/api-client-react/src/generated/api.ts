@@ -26,6 +26,7 @@ import type {
   AdminBuilderTier,
   AdminBuilderTierInput,
   AdminCredentials,
+  AdminFounderApplicationList,
   AdminFounderInviteInput,
   AdminFounderPass,
   AdminFounderPassList,
@@ -45,6 +46,8 @@ import type {
   EligibilityQuery,
   EligibilityResult,
   ErrorResponse,
+  FounderApplicationReceipt,
+  FounderApplicationRequest,
   FounderPass,
   FounderTier,
   FounderTierInput,
@@ -55,6 +58,9 @@ import type {
   MyPasses,
   ReasonInput,
   SuccessResponse,
+  SupportChatLimitResponse,
+  SupportChatReply,
+  SupportChatRequest,
   User,
   UserProfile,
   Wallet,
@@ -457,6 +463,150 @@ export const usePreviewEligibility = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPreviewEligibilityMutationOptions(options));
+    }
+
+export const getCreateFounderApplicationUrl = () => {
+
+
+
+
+  return `/api/founder-applications`
+}
+
+/**
+ * Public, rate-limited application request. A normalized X handle may submit only one request.
+ * @summary Submit a Founder Pass request
+ */
+export const createFounderApplication = async (founderApplicationRequest: FounderApplicationRequest, options?: RequestInit): Promise<FounderApplicationReceipt> => {
+
+  return customFetch<FounderApplicationReceipt>(getCreateFounderApplicationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(founderApplicationRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateFounderApplicationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFounderApplication>>, TError,{data: BodyType<FounderApplicationRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFounderApplication>>, TError,{data: BodyType<FounderApplicationRequest>}, TContext> => {
+
+const mutationKey = ['createFounderApplication'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFounderApplication>>, {data: BodyType<FounderApplicationRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFounderApplication(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFounderApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof createFounderApplication>>>
+    export type CreateFounderApplicationMutationBody = BodyType<FounderApplicationRequest>
+    export type CreateFounderApplicationMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Submit a Founder Pass request
+ */
+export const useCreateFounderApplication = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFounderApplication>>, TError,{data: BodyType<FounderApplicationRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFounderApplication>>,
+        TError,
+        {data: BodyType<FounderApplicationRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateFounderApplicationMutationOptions(options));
+    }
+
+export const getCreateSupportChatReplyUrl = () => {
+
+
+
+
+  return `/api/support/chat`
+}
+
+/**
+ * Public FAQ and troubleshooting assistance only. The endpoint never receives account, wallet, eligibility, claim, or mint data. It is limited to five successful replies per privacy-preserving network fingerprint in each rolling 24-hour period.
+ * @summary Get a product-scoped Arc Pass support reply
+ */
+export const createSupportChatReply = async (supportChatRequest: SupportChatRequest, options?: RequestInit): Promise<SupportChatReply> => {
+
+  return customFetch<SupportChatReply>(getCreateSupportChatReplyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supportChatRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateSupportChatReplyMutationOptions = <TError = ErrorType<ErrorResponse | SupportChatLimitResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupportChatReply>>, TError,{data: BodyType<SupportChatRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSupportChatReply>>, TError,{data: BodyType<SupportChatRequest>}, TContext> => {
+
+const mutationKey = ['createSupportChatReply'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSupportChatReply>>, {data: BodyType<SupportChatRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSupportChatReply(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSupportChatReplyMutationResult = NonNullable<Awaited<ReturnType<typeof createSupportChatReply>>>
+    export type CreateSupportChatReplyMutationBody = BodyType<SupportChatRequest>
+    export type CreateSupportChatReplyMutationError = ErrorType<ErrorResponse | SupportChatLimitResponse>
+
+    /**
+ * @summary Get a product-scoped Arc Pass support reply
+ */
+export const useCreateSupportChatReply = <TError = ErrorType<ErrorResponse | SupportChatLimitResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupportChatReply>>, TError,{data: BodyType<SupportChatRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSupportChatReply>>,
+        TError,
+        {data: BodyType<SupportChatRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateSupportChatReplyMutationOptions(options));
     }
 
 export const getListMyPassesUrl = () => {
@@ -2030,77 +2180,6 @@ export function useGetShareImage<TData = Awaited<ReturnType<typeof getShareImage
 
 
 
-export const getIngestFounderApplicationUrl = () => {
-
-
-
-
-  return `/api/webhooks/typeform/founder-application`
-}
-
-/**
- * @summary Ingest a signature-verified Typeform founder application
- */
-export const ingestFounderApplication = async ( options?: RequestInit): Promise<void> => {
-
-  return customFetch<void>(getIngestFounderApplicationUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getIngestFounderApplicationMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestFounderApplication>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof ingestFounderApplication>>, TError,void, TContext> => {
-
-const mutationKey = ['ingestFounderApplication'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestFounderApplication>>, void> = () => {
-
-
-          return  ingestFounderApplication(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type IngestFounderApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof ingestFounderApplication>>>
-
-    export type IngestFounderApplicationMutationError = ErrorType<ErrorResponse>
-
-    /**
- * @summary Ingest a signature-verified Typeform founder application
- */
-export const useIngestFounderApplication = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestFounderApplication>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof ingestFounderApplication>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getIngestFounderApplicationMutationOptions(options));
-    }
-
 export const getAdminGetOverviewUrl = () => {
 
 
@@ -2166,6 +2245,83 @@ export function useAdminGetOverview<TData = Awaited<ReturnType<typeof adminGetOv
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminGetOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminListFounderApplicationsUrl = () => {
+
+
+
+
+  return `/api/admin/founder-applications`
+}
+
+/**
+ * @summary Admin - list Founder Pass application requests
+ */
+export const adminListFounderApplications = async ( options?: RequestInit): Promise<AdminFounderApplicationList> => {
+
+  return customFetch<AdminFounderApplicationList>(getAdminListFounderApplicationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListFounderApplicationsQueryKey = () => {
+    return [
+    `/api/admin/founder-applications`
+    ] as const;
+    }
+
+
+export const getAdminListFounderApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof adminListFounderApplications>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListFounderApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListFounderApplicationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListFounderApplications>>> = ({ signal }) => adminListFounderApplications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListFounderApplications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListFounderApplicationsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListFounderApplications>>>
+export type AdminListFounderApplicationsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Admin - list Founder Pass application requests
+ */
+
+export function useAdminListFounderApplications<TData = Awaited<ReturnType<typeof adminListFounderApplications>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListFounderApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListFounderApplicationsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

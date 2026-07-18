@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TierEmblem } from "@/components/tier-badge";
 import {
   useAdminListFounderTiers,
-  useAdminCreateFounderTier,
   useAdminUpdateFounderTier,
   useAdminListBuilderTiers,
   useAdminUpdateBuilderTier,
@@ -39,10 +37,8 @@ export function TierConfigPanel() {
 function FounderTiersTab() {
   const queryClient = useQueryClient();
   const { data: tiers, isLoading } = useAdminListFounderTiers();
-  const createTier = useAdminCreateFounderTier();
   const updateTier = useAdminUpdateFounderTier();
   const [editing, setEditing] = useState<FounderTier | null>(null);
-  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", accentColor: "", rank: 1, isActive: true });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/admin/founder-tiers"] });
@@ -52,33 +48,23 @@ function FounderTiersTab() {
     setForm({ name: tier.name, description: tier.description ?? "", accentColor: tier.accentColor ?? "", rank: tier.rank, isActive: tier.isActive });
   };
 
-  const openCreate = () => {
-    setCreating(true);
-    setForm({ name: "", description: "", accentColor: "", rank: (tiers?.length ?? 0) + 1, isActive: true });
-  };
-
   const handleSave = () => {
-    if (editing) {
-      updateTier.mutate(
-        { id: editing.id, data: form },
-        { onSuccess: () => { toast.success("Tier updated"); invalidate(); setEditing(null); }, onError: () => toast.error("Update failed") },
-      );
-    } else {
-      createTier.mutate(
-        { data: form },
-        { onSuccess: () => { toast.success("Tier created"); invalidate(); setCreating(false); }, onError: () => toast.error("Creation failed") },
-      );
-    }
+    if (!editing) return;
+    updateTier.mutate(
+      { id: editing.id, data: form },
+      { onSuccess: () => { toast.success("Tier presentation updated"); invalidate(); setEditing(null); }, onError: () => toast.error("Update failed") },
+    );
   };
 
   if (isLoading) return <Skeleton className="h-48 w-full rounded-xl" />;
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button size="sm" className="gap-2" onClick={openCreate}>
-          <Plus className="h-4 w-4" /> New Tier
-        </Button>
+      <div className="mb-4 rounded-xl border border-primary/20 bg-primary/[0.05] px-4 py-3">
+        <p className="text-sm font-medium">Fixed Founder catalog</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Founder Pass has exactly two tiers: Emerging Founder and Premier Founder. Their names, order, and active status are locked.
+        </p>
       </div>
       <ul className="space-y-2">
         {tiers?.map((tier) => (
@@ -95,20 +81,12 @@ function FounderTiersTab() {
         ))}
       </ul>
 
-      <Dialog
-        open={!!editing || creating}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditing(null);
-            setCreating(false);
-          }
-        }}
-      >
+      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Founder Tier" : "New Founder Tier"}</DialogTitle>
+            <DialogTitle>Customize Founder Tier</DialogTitle>
           </DialogHeader>
-          <TierForm form={form} setForm={setForm} onSave={handleSave} saving={updateTier.isPending || createTier.isPending} />
+          <TierForm form={form} setForm={setForm} onSave={handleSave} saving={updateTier.isPending} />
         </DialogContent>
       </Dialog>
     </div>
@@ -120,19 +98,15 @@ function BuilderTiersTab() {
   const { data: tiers, isLoading } = useAdminListBuilderTiers();
   const updateTier = useAdminUpdateBuilderTier();
   const [editing, setEditing] = useState<AdminBuilderTier | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", accentColor: "", transactionThreshold: 0, contractThreshold: 0, isActive: true });
+  const [form, setForm] = useState({ description: "", accentColor: "" });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/admin/builder-tiers"] });
 
   const openEdit = (tier: AdminBuilderTier) => {
     setEditing(tier);
     setForm({
-      name: tier.name,
       description: tier.description ?? "",
       accentColor: tier.accentColor ?? "",
-      transactionThreshold: tier.transactionThreshold,
-      contractThreshold: tier.contractThreshold,
-      isActive: tier.isActive,
     });
   };
 
@@ -148,7 +122,7 @@ function BuilderTiersTab() {
 
   return (
     <div>
-      <p className="mb-4 text-xs text-muted-foreground">Thresholds are internal — they're never shown to users. Editing them changes tier calculation immediately.</p>
+      <p className="mb-4 text-xs text-muted-foreground">Tier names and qualifying Arc transaction thresholds are fixed product rules. Edit only the presentation below.</p>
       <ul className="space-y-2">
         {tiers?.map((tier) => (
           <li key={tier.id} className="flex cursor-pointer items-center justify-between rounded-xl border bg-card px-4 py-3" onClick={() => openEdit(tier)}>
@@ -157,11 +131,11 @@ function BuilderTiersTab() {
               <div>
                 <p className="text-sm font-medium">{tier.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {tier.transactionThreshold}+ tx OR {tier.contractThreshold}+ contracts
+                  {tier.transactionThreshold}+ qualifying Arc transactions
                 </p>
               </div>
             </div>
-            <span className={tier.isActive ? "text-xs text-success" : "text-xs text-muted-foreground"}>{tier.isActive ? "Active" : "Inactive"}</span>
+            <span className="text-xs text-success">Active</span>
           </li>
         ))}
       </ul>
@@ -172,19 +146,9 @@ function BuilderTiersTab() {
             <DialogTitle>Edit Builder Tier</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Transaction threshold</Label>
-                <Input type="number" value={form.transactionThreshold} onChange={(e) => setForm((f) => ({ ...f, transactionThreshold: Number(e.target.value) }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Contract threshold</Label>
-                <Input type="number" value={form.contractThreshold} onChange={(e) => setForm((f) => ({ ...f, contractThreshold: Number(e.target.value) }))} />
-              </div>
+            <div className="grid grid-cols-2 gap-4 rounded-xl border bg-muted/30 p-4 text-sm">
+              <div><p className="text-xs text-muted-foreground">Tier</p><p className="mt-1 font-semibold">{editing?.name}</p></div>
+              <div><p className="text-xs text-muted-foreground">Threshold</p><p className="mt-1 font-semibold">{editing?.transactionThreshold}+ transactions</p></div>
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
@@ -193,10 +157,6 @@ function BuilderTiersTab() {
             <div className="space-y-1.5">
               <Label>Accent color</Label>
               <Input value={form.accentColor} onChange={(e) => setForm((f) => ({ ...f, accentColor: e.target.value }))} placeholder="#6366f1" />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-              <Label htmlFor="builder-tier-active">Active</Label>
-              <Switch id="builder-tier-active" checked={form.isActive} onCheckedChange={(c) => setForm((f) => ({ ...f, isActive: c }))} />
             </div>
             <Button className="w-full" onClick={handleSave} disabled={updateTier.isPending}>
               {updateTier.isPending ? "Saving…" : "Save"}
@@ -219,29 +179,22 @@ interface TierFormState {
 function TierForm({ form, setForm, onSave, saving }: { form: TierFormState; setForm: (updater: (f: TierFormState) => TierFormState) => void; onSave: () => void; saving: boolean }) {
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label>Name</Label>
-        <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+      <div className="flex min-h-16 items-center justify-between gap-4 rounded-xl border bg-muted/35 px-4 py-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tier {String(form.rank).padStart(2, "0")}</p>
+          <p className="mt-1 font-medium">{form.name}</p>
+        </div>
+        <span className="rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-[11px] font-medium text-success">Active · fixed</span>
       </div>
       <div className="space-y-1.5">
         <Label>Description</Label>
         <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>Accent color</Label>
-          <Input value={form.accentColor} onChange={(e) => setForm((f) => ({ ...f, accentColor: e.target.value }))} placeholder="#6366f1" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Rank</Label>
-          <Input type="number" value={form.rank} onChange={(e) => setForm((f) => ({ ...f, rank: Number(e.target.value) }))} />
-        </div>
+      <div className="space-y-1.5">
+        <Label>Accent color</Label>
+        <Input value={form.accentColor} onChange={(e) => setForm((f) => ({ ...f, accentColor: e.target.value }))} placeholder="#6366f1" />
       </div>
-      <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-        <Label htmlFor="founder-tier-active">Active</Label>
-        <Switch id="founder-tier-active" checked={form.isActive} onCheckedChange={(c) => setForm((f) => ({ ...f, isActive: c }))} />
-      </div>
-      <Button className="w-full" onClick={onSave} disabled={saving || !form.name.trim()}>
+      <Button className="min-h-11 w-full" onClick={onSave} disabled={saving}>
         {saving ? "Saving…" : "Save"}
       </Button>
     </div>

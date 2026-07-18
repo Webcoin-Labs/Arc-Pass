@@ -11,4 +11,9 @@ export interface EligibilityQuery {
   /** Username on the chosen platform (preview only, not an ownership proof) */
   identifier: string;
   platform: EligibilityQueryPlatform;
+  /**
+     * Optional legacy Discord discriminator without the
+     * @nullable
+     */
+  discriminator?: string | null;
 }

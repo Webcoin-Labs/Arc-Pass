@@ -10,6 +10,13 @@ export type UserConnectionsDiscord = {
   connected: boolean;
   /** @nullable */
   username?: string | null;
+  /**
+     * Optional legacy four-digit Discord discriminator
+     * @nullable
+     */
+  discriminator?: string | null;
+  /** @nullable */
+  displayIdentity?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
 };

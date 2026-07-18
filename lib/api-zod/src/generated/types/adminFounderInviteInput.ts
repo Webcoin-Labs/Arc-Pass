@@ -11,6 +11,11 @@ import type { AdminFounderInviteInputVariant } from './adminFounderInviteInputVa
 export interface AdminFounderInviteInput {
   invitePlatform: AdminFounderInviteInputInvitePlatform;
   inviteHandle: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}$
+     */
+  inviteDiscriminator?: string | null;
   variant?: AdminFounderInviteInputVariant;
   founderTierId?: number;
   founderTitle?: string;
