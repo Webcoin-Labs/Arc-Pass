@@ -4,11 +4,11 @@ function configured(name: string): boolean {
   return Boolean(process.env[name]?.trim());
 }
 
-function assertCompleteGroup(label: string, names: string[]): void {
+function warnIncompleteGroup(label: string, names: string[]): void {
   const present = names.filter(configured);
   if (present.length > 0 && present.length !== names.length) {
     const missing = names.filter((name) => !configured(name));
-    throw new Error(`${label} configuration is incomplete. Missing: ${missing.join(", ")}`);
+    console.warn(`${label} configuration is incomplete and will be unavailable. Missing: ${missing.join(", ")}`);
   }
 }
 
@@ -72,28 +72,29 @@ export function validateEnvironment(): void {
   if (!Number.isSafeInteger(builderPhaseClaimLimit) || builderPhaseClaimLimit <= 0) {
     throw new Error("BUILDER_PHASE_CLAIM_LIMIT must be a positive integer");
   }
+  if (configured("DB_POOL_MAX")) {
+    const poolMax = Number(process.env.DB_POOL_MAX);
+    if (!Number.isSafeInteger(poolMax) || poolMax <= 0 || poolMax > 20) throw new Error("DB_POOL_MAX must be an integer between 1 and 20");
+  }
   if (configured("ARC_CHAIN_ID")) {
     const chainId = Number(process.env.ARC_CHAIN_ID);
     if (!Number.isSafeInteger(chainId) || chainId <= 0) {
       throw new Error("ARC_CHAIN_ID must be a positive integer");
     }
   }
-  assertCompleteGroup("X OAuth", ["X_CLIENT_ID", "X_CLIENT_SECRET", "X_REDIRECT_URI"]);
-  assertCompleteGroup("Discord OAuth", ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI"]);
   if (commaSeparatedValues("ARC_DISCORD_PRIMARY_ROLE_IDS").length > 2) {
     throw new Error("ARC_DISCORD_PRIMARY_ROLE_IDS may contain at most two role IDs");
   }
   if (discordPrimaryRoleIds.length > 0) {
-    assertCompleteGroup("Discord primary roles", ["ARC_DISCORD_GUILD_ID", "DISCORD_BOT_TOKEN"]);
+    warnIncompleteGroup("Discord primary roles", ["ARC_DISCORD_GUILD_ID", "DISCORD_BOT_TOKEN"]);
   }
-  assertCompleteGroup("GitHub OAuth", ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_REDIRECT_URI"]);
-  assertCompleteGroup("chain minting", ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
-  assertCompleteGroup("activity provider", ["EXPLORER_API_URL", "EXPLORER_API_KEY"]);
-  assertCompleteGroup("Typeform webhook", ["TYPEFORM_FORM_ID", "TYPEFORM_API_TOKEN", "TYPEFORM_WEBHOOK_SECRET"]);
-  assertCompleteGroup("Cloudflare R2", ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"]);
-  if (isProduction && !["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"].every(configured)) {
-    throw new Error("Cloudflare R2 is required in production; local upload storage is ephemeral");
-  }
+  warnIncompleteGroup("X OAuth", ["X_CLIENT_ID", "X_CLIENT_SECRET", "X_REDIRECT_URI"]);
+  warnIncompleteGroup("Discord OAuth", ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI"]);
+  warnIncompleteGroup("GitHub OAuth", ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_REDIRECT_URI"]);
+  warnIncompleteGroup("chain minting", ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
+  warnIncompleteGroup("activity provider", ["EXPLORER_API_URL", "EXPLORER_API_KEY"]);
+  warnIncompleteGroup("Typeform webhook", ["TYPEFORM_FORM_ID", "TYPEFORM_API_TOKEN", "TYPEFORM_WEBHOOK_SECRET"]);
+  warnIncompleteGroup("Cloudflare R2", ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"]);
   if (isProduction) {
     for (const name of ["DATABASE_URL", "SESSION_SECRET", "APP_URL", "OAUTH_STATE_SIGNING_KEY", "MINT_SIGNING_KEY"]) {
       if (!configured(name)) throw new Error(`${name} is required in production`);
@@ -110,11 +111,13 @@ export function validateEnvironment(): void {
       try { decoded = Buffer.from(process.env[name]!, "base64"); } catch { throw new Error(`${name} must be base64 in production`); }
       if (decoded.length < 32) throw new Error(`${name} must decode to at least 32 bytes in production`);
     }
-    try {
-      if (new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL!).protocol !== "https:") throw new Error("CLOUDFLARE_R2_PUBLIC_URL must use HTTPS in production");
-    } catch (error) {
-      if (error instanceof Error && error.message === "CLOUDFLARE_R2_PUBLIC_URL must use HTTPS in production") throw error;
-      throw new Error("CLOUDFLARE_R2_PUBLIC_URL must be a valid HTTPS URL in production");
+    if (configured("CLOUDFLARE_R2_PUBLIC_URL")) {
+      try {
+        if (new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL!).protocol !== "https:") throw new Error("CLOUDFLARE_R2_PUBLIC_URL must use HTTPS in production");
+      } catch (error) {
+        if (error instanceof Error && error.message === "CLOUDFLARE_R2_PUBLIC_URL must use HTTPS in production") throw error;
+        throw new Error("CLOUDFLARE_R2_PUBLIC_URL must be a valid HTTPS URL in production");
+      }
     }
   }
 }
