@@ -1,10 +1,10 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Activity, Code2, Github, Lock, MessageCircle, ShieldCheck, TrendingUp, UserRound, Wallet } from "lucide-react";
+import { Activity, Code2, Gauge, Github, Lock, MessageCircle, ShieldCheck, TrendingUp, Trophy, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TierEmblem } from "@/components/tier-badge";
-import { NetworkMark } from "@/components/network-mark";
-import { formatPassNumber, formatDate, formatNetworkLabel } from "@/lib/format";
+import { PassNetworkIdentity } from "@/components/pass-network-identity";
+import { formatPassNumber, formatDate } from "@/lib/format";
 
 export interface BuilderPassCardData {
   displayName?: string | null;
@@ -21,6 +21,10 @@ export interface BuilderPassCardData {
   verifiedWalletCount?: number;
   qualifyingTransactionCount?: number | null;
   validContractCount?: number | null;
+  builderLevel?: number | null;
+  activityScore?: number | null;
+  activityRank?: number | null;
+  activityRankTotal?: number | null;
   discordCommunityMember?: boolean | null;
   discordCommunityJoinedAt?: string | null;
   passNumber?: number | null;
@@ -38,6 +42,12 @@ interface BuilderPassCardProps {
   data: BuilderPassCardData;
   className?: string;
   interactive?: boolean;
+  concealed?: boolean;
+}
+
+interface BuilderPassRankProps {
+  data: BuilderPassCardData;
+  className?: string;
   concealed?: boolean;
 }
 
@@ -78,6 +88,32 @@ function getBuilderTierTheme(tier?: BuilderPassCardData["currentTier"]): Builder
   const key = normalizedName === "golden" ? "gold" : normalizedName;
   const base = key in BUILDER_TIER_THEMES ? BUILDER_TIER_THEMES[key as BuilderTierKey] : DEFAULT_BUILDER_TIER_THEME;
   return base;
+}
+
+export function BuilderPassRank({ data, className, concealed = false }: BuilderPassRankProps) {
+  const hasRank = typeof data.activityRank === "number" && typeof data.activityRankTotal === "number";
+
+  return (
+    <div
+      className={cn(
+        "mt-3 flex min-h-8 items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground sm:text-xs",
+        concealed && "invisible",
+        className,
+      )}
+      aria-live="polite"
+    >
+      <Trophy className="size-3.5 text-primary" aria-hidden="true" />
+      {hasRank ? (
+        <span>
+          You are ranked <strong className="font-semibold text-foreground">#{data.activityRank!.toLocaleString()}</strong>
+          <span className="mx-1 text-muted-foreground/55">/</span>
+          {data.activityRankTotal!.toLocaleString()}
+        </span>
+      ) : (
+        <span>Complete activity analysis to receive your rank</span>
+      )}
+    </div>
+  );
 }
 
 export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardProps>(function BuilderPassCard(
@@ -122,14 +158,24 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
       <div className="relative z-10 flex h-full flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-4">
           <img src="/brand/arc-pass-logo.webp" alt="Arc Pass by Webcoin Labs" className="h-7 w-auto max-w-[138px] object-contain object-left sm:max-w-[160px]" />
-          <div className="flex flex-col items-end gap-1.5">
-            <span
-              className="rounded-full border px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] sm:text-[9px]"
-              style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 55%, transparent)`, backgroundColor: `color-mix(in srgb, ${tierTheme.accent} 16%, transparent)`, color: tierTheme.accentStrong }}
+          <div className="flex items-start gap-2">
+            <div className="flex flex-col items-end gap-1.5">
+              <span
+                className="rounded-full border px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] sm:text-[9px]"
+                style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 55%, transparent)`, backgroundColor: `color-mix(in srgb, ${tierTheme.accent} 16%, transparent)`, color: tierTheme.accentStrong }}
+              >
+                Builder Pass
+              </span>
+              {!dimmed && <span className="inline-flex items-center gap-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-white/55 sm:text-[9px]"><ShieldCheck className="size-3" style={{ color: tierTheme.accentStrong }} aria-hidden="true" /> Work verified</span>}
+            </div>
+            <div
+              className="grid h-9 min-w-12 grid-cols-[auto_1fr] items-end gap-x-1 rounded-lg border px-2 py-1 shadow-[inset_0_1px_rgba(255,255,255,.08)]"
+              style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 55%, transparent)`, backgroundColor: `color-mix(in srgb, ${tierTheme.accent} 19%, transparent)` }}
+              aria-label={typeof data.builderLevel === "number" ? `Level ${data.builderLevel}` : "Level pending"}
             >
-              Builder Pass
-            </span>
-            {!dimmed && <span className="inline-flex items-center gap-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-white/55 sm:text-[9px]"><ShieldCheck className="size-3" style={{ color: tierTheme.accentStrong }} aria-hidden="true" /> Work verified</span>}
+              <span className="pb-0.5 font-mono text-[6px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:text-[7px]">LVL</span>
+              <span className="text-lg font-semibold leading-none tabular-nums sm:text-xl" style={{ color: tierTheme.accentStrong }}>{data.builderLevel ?? "--"}</span>
+            </div>
           </div>
         </div>
 
@@ -151,13 +197,12 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
               <div><p className="text-xs font-semibold sm:text-sm" style={{ color: tierTheme.accentStrong }}>{data.currentTier?.name || "Tier pending"}</p><p className="mt-0.5 text-[9px] text-white/45 sm:text-[10px]">Verified contribution</p></div>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[7px] text-white/55 sm:gap-x-2 sm:text-[8px]">
-              <span className="inline-flex items-center gap-1"><Wallet className="size-3" aria-hidden="true" />{typeof data.verifiedWalletCount === "number" && data.verifiedWalletCount > 0 ? `${data.verifiedWalletCount} verified` : "Wallet verification required"}</span>
               <span className="inline-flex items-center gap-1"><Activity className="size-3" aria-hidden="true" />{typeof data.qualifyingTransactionCount === "number" ? `${data.qualifyingTransactionCount} tx` : "Activity pending"}</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:gap-2">
           <div className="rounded-xl border border-white/10 bg-black/15 px-2.5 py-2" style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 22%, transparent)` }}>
             <p className="flex items-center gap-1 text-[7px] font-semibold uppercase tracking-[0.1em] text-white/40 sm:text-[8px]"><Code2 className="size-3" aria-hidden="true" /> Contracts deployed</p>
             <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">{data.validContractCount ?? "Not checked"}</p>
@@ -166,6 +211,19 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
             <p className="flex items-center gap-1 text-[7px] font-semibold uppercase tracking-[0.1em] text-white/40 sm:text-[8px]"><Github className="size-3" aria-hidden="true" /> GitHub contributions</p>
             <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">{data.githubContributionCount ?? "Not checked"}</p>
           </div>
+          <div className="rounded-xl border border-white/10 bg-black/15 px-2.5 py-2" style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 22%, transparent)` }}>
+            <p className="flex items-center gap-1 text-[7px] font-semibold uppercase tracking-[0.1em] text-white/40 sm:text-[8px]"><Gauge className="size-3" aria-hidden="true" /> Activity score</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">
+              {data.activityScore ?? "--"}<span className="ml-0.5 text-[8px] font-medium text-white/35 sm:text-[9px]">/100</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-white/10 pt-2 font-mono text-[7px] tabular-nums sm:grid-cols-4 sm:gap-2 sm:text-[8px]">
+          <div><p className="text-white/35">PASS</p><p className="mt-1 text-white/80">{formatPassNumber(data.passNumber)}</p></div>
+          <div><p className="text-white/35">NETWORK</p><p className="mt-1 flex min-h-3 items-center text-white/80"><PassNetworkIdentity network={data.network} className="h-2.5 sm:h-3" /></p></div>
+          <div><p className="text-white/35">ISSUE DATE</p><p className="mt-1 truncate text-white/80">{data.initiallyIssuedAt ? formatDate(data.initiallyIssuedAt) : "Assigned after claim"}</p></div>
+          <div><p className="text-white/35">ONCHAIN</p><p className="mt-1 text-white/80">{isMinted ? "Recorded" : "Pending"}</p></div>
         </div>
 
         <div className={cn("mt-2 min-w-0 rounded-xl border px-2.5 py-1.5 sm:px-3", communityTone)}>
@@ -176,13 +234,6 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
             </span>
             {data.discordCommunityJoinedAt && <span className="shrink-0 text-[9px] text-white/55">Since {formatDate(data.discordCommunityJoinedAt)}</span>}
           </div>
-        </div>
-
-        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-white/10 pt-2 font-mono text-[7px] tabular-nums sm:grid-cols-4 sm:gap-2 sm:text-[8px]">
-          <div><p className="text-white/35">PASS</p><p className="mt-1 text-white/80">{formatPassNumber(data.passNumber)}</p></div>
-          <div><p className="text-white/35">NETWORK</p><p className="mt-1 flex items-center gap-1 text-white/80"><NetworkMark network={data.network} className="size-2.5 shrink-0 rounded-full" />{formatNetworkLabel(data.network)}</p></div>
-          <div><p className="text-white/35">ISSUE DATE</p><p className="mt-1 truncate text-white/80">{data.initiallyIssuedAt ? formatDate(data.initiallyIssuedAt) : "Assigned after claim"}</p></div>
-          <div><p className="text-white/35">ONCHAIN</p><p className="mt-1 text-white/80">{isMinted ? "Recorded" : "Pending"}</p></div>
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/15 px-3 py-1.5 sm:px-4 sm:py-2">

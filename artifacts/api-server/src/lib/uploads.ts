@@ -1,6 +1,7 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import type { RequestHandler } from "express";
 import multer from "multer";
+import sharp from "sharp";
 import path from "path";
 import { promises as fs } from "fs";
 import os from "os";
@@ -58,6 +59,23 @@ function createObjectKey(extension: DetectedImage["extension"]): string {
   return `arc-pass/${now.getUTCFullYear()}/${month}/${randomBytes(20).toString("hex")}.${extension}`;
 }
 
+export async function optimizeUploadedImage(buffer: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(buffer, {
+      failOn: "error",
+      limitInputPixels: 40_000_000,
+    })
+      .rotate()
+      .resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82, alphaQuality: 90, effort: 4 })
+      .toBuffer();
+  } catch {
+    const error = new Error("The uploaded file could not be converted to WebP") as Error & { status?: number };
+    error.status = 400;
+    throw error;
+  }
+}
+
 export function uploadedImageKeyFromPath(requestPath: string): string | null {
   const withoutQuery = requestPath.split("?", 1)[0] ?? "";
   const candidate = withoutQuery.replace(/^\/+/, "").replace(/^uploads\//, "");
@@ -101,13 +119,14 @@ export async function persistUploadedImage(file: Express.Multer.File): Promise<s
     throw error;
   }
 
-  const objectKey = createObjectKey(detected.extension);
+  const optimizedBuffer = await optimizeUploadedImage(file.buffer);
+  const objectKey = createObjectKey("webp");
   if (cloudflareR2Configured) {
     await getR2Client().send(new PutObjectCommand({
       Bucket: r2Configuration.bucket,
       Key: objectKey,
-      Body: file.buffer,
-      ContentType: detected.contentType,
+      Body: optimizedBuffer,
+      ContentType: "image/webp",
       CacheControl: "public, max-age=31536000, immutable",
     }));
     return `${PUBLIC_PATH_PREFIX}/${objectKey}`;
@@ -115,7 +134,7 @@ export async function persistUploadedImage(file: Express.Multer.File): Promise<s
 
   const localPath = path.join(UPLOADS_DIR, ...objectKey.split("/"));
   await fs.mkdir(path.dirname(localPath), { recursive: true });
-  await fs.writeFile(localPath, file.buffer, { flag: "wx" });
+  await fs.writeFile(localPath, optimizedBuffer, { flag: "wx" });
   return `${PUBLIC_PATH_PREFIX}/${objectKey}`;
 }
 

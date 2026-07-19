@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FounderPassCard } from "@/components/founder-pass-card";
 import { CompanyLogoUploader } from "@/components/company-logo-uploader";
-import { useAdminListFounderTiers, useAdminUpdateFounderPass, useAdminRevokeFounderPass } from "@workspace/api-client-react";
+import { useAdminListFounderTiers, useAdminUpdateFounderPass, useAdminRevokeFounderPass, useAdminDeleteFounderPass } from "@workspace/api-client-react";
 import type { AdminFounderPass } from "@workspace/api-client-react";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
   const { data: tiers = [] } = useAdminListFounderTiers();
   const updatePass = useAdminUpdateFounderPass();
   const revokePass = useAdminRevokeFounderPass();
+  const deletePass = useAdminDeleteFounderPass();
 
   const [form, setForm] = useState({
     eligibilityStatus: pass.eligibilityStatus,
@@ -221,6 +222,23 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
             }}
           >
             {revokePass.isPending ? "Revoking…" : "Revoke Founder Pass"}
+          </Button>
+        )}
+        {pass.claimStatus !== "minted" && (
+          <Button
+            type="button"
+            variant="destructive"
+            className="mt-2 w-full"
+            disabled={deletePass.isPending}
+            onClick={() => {
+              if (!window.confirm("Permanently delete this Founder Pass invitation? This removes it entirely so the same X/Discord identity can be re-invited from scratch. This cannot be undone.")) return;
+              deletePass.mutate({ id: pass.id }, {
+                onSuccess: () => { toast.success("Invitation deleted"); onSaved(); },
+                onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Delete failed"),
+              });
+            }}
+          >
+            {deletePass.isPending ? "Deleting…" : "Delete Invitation"}
           </Button>
         )}
       </div>

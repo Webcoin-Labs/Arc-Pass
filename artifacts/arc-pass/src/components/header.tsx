@@ -1,5 +1,6 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { Link, useLocation } from "wouter";
+import { Droplet } from "lucide-react";
 import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -65,6 +66,9 @@ export function Header() {
           <Link href="/#how-it-works" onClick={handleLandingAnchorClick("how-it-works")} className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>How it works</Link>
           <Link href="/faq" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>FAQ</Link>
           <Link href="/docs" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Docs</Link>
+          <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className={cn("inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>
+            <Droplet className="size-3.5" aria-hidden="true" /> Faucet
+          </a>
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">

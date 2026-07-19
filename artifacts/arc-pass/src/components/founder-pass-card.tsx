@@ -5,7 +5,7 @@ import { SiX } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { CompanyLogo } from "@/components/company-logo";
 import { FounderPassVariantBadge } from "@/components/founder-pass-variant-badge";
-import { NetworkMark } from "@/components/network-mark";
+import { PassNetworkIdentity } from "@/components/pass-network-identity";
 import { formatDate } from "@/lib/format";
 
 export interface FounderPassCardData {
@@ -90,10 +90,10 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
             className="h-auto w-[30%] min-w-[100px] max-w-[170px] object-contain object-left sm:w-[27%] sm:min-w-[92px]"
           />
           <div className="flex flex-col items-end gap-1 sm:gap-1.5">
-            <span className="max-w-[150px] truncate font-mono text-[8px] font-semibold uppercase tracking-[0.16em] text-white/68 sm:text-[10px]">
+            <span className={cn("max-w-[150px] truncate font-mono text-[8px] font-semibold uppercase tracking-[0.16em] sm:text-[10px]", isPremium ? "text-[#f6d38a]" : "text-white/68")}>
               Founder Pass
             </span>
-            <FounderPassVariantBadge variant={data.variant} className="px-2.5 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-[11px]" />
+            <FounderPassVariantBadge variant={data.variant} className="px-3 py-1 text-[10px] sm:px-3.5 sm:py-1.5 sm:text-[13px]" />
           </div>
         </header>
 
@@ -124,7 +124,7 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
             </div>
           </section>
 
-          <section className="min-w-0 rounded-xl border border-[#9bb9ff]/28 bg-[#08266f]/55 p-3 shadow-[inset_0_1px_rgba(255,255,255,.08),0_12px_30px_rgba(0,12,58,.16)] backdrop-blur-md sm:rounded-2xl sm:p-[7%]" aria-label="Company">
+          <section className="min-w-0 rounded-xl border border-[#9bb9ff]/28 bg-transparent p-3 sm:rounded-2xl sm:p-[7%]" aria-label="Company">
             <div className="flex min-w-0 items-center gap-2.5 sm:gap-[7%]">
               {data.companyName ? (
                 <CompanyLogo
@@ -153,8 +153,8 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
           </div>
           <div className="min-w-0">
             <p className="font-mono text-[7px] uppercase tracking-[0.12em] text-white/35 sm:text-[8px]">Blockchain</p>
-            <p className="mt-0.5 flex items-center gap-1 text-[9px] font-semibold text-white/86 sm:gap-1.5 sm:text-[11px]">
-              <NetworkMark network={data.network} className="size-3 shrink-0 rounded-full sm:size-4" /> Arc
+            <p className="mt-0.5 flex min-h-4 items-center text-white/86">
+              <PassNetworkIdentity network={data.network} className="h-3 sm:h-4" />
             </p>
           </div>
           <div className="min-w-0">

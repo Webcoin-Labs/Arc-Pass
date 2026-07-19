@@ -10,6 +10,7 @@ out-tsc
 
 # dependencies
 node_modules
+.pnpm-store/
 
 # IDEs and editors
 /.idea
@@ -62,3 +63,6 @@ artifacts/api-server/uploads/
 .codex-run/
 .codex-remote-attachments/
 .railway-config-pull-*/
+
+# Per-machine assistant/tool settings
+.claude/settings.local.json

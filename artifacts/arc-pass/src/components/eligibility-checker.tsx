@@ -19,7 +19,7 @@ export function EligibilityChecker({
   variant?: "default" | "immersive";
 }) {
   const [platform, setPlatform] = useState<EligibilityQueryPlatform>("x");
-  const [identifier, setIdentifier] = useState(import.meta.env.DEV ? "test" : "");
+  const [identifier, setIdentifier] = useState("");
   const [discriminator, setDiscriminator] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {

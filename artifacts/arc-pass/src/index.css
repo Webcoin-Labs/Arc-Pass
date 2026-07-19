@@ -155,12 +155,12 @@
   --material-founder-normal-accent: 215 100% 68%;
   --material-founder-normal-text: 0 0% 98%;
 
-  /* Premier Founder keeps the same official material; its badge carries the tier distinction. */
-  --material-founder-black-from: 229 91% 14%;
-  --material-founder-black-to: 221 79% 42%;
-  --material-founder-black-border: 219 86% 64%;
-  --material-founder-black-accent: 215 100% 68%;
-  --material-founder-black-text: 0 0% 98%;
+  /* Premier Founder — black-and-gold premium material, distinct from Emerging's blue. */
+  --material-founder-black-from: 28 45% 6%;
+  --material-founder-black-to: 36 55% 16%;
+  --material-founder-black-border: 42 70% 58%;
+  --material-founder-black-accent: 43 85% 62%;
+  --material-founder-black-text: 42 45% 94%;
 
   /* Builder Pass base material (tier accent layers on top) */
   --material-builder-from: 220 10% 16%;
@@ -268,11 +268,11 @@
   --material-founder-normal-accent: 215 100% 68%;
   --material-founder-normal-text: 0 0% 98%;
 
-  --material-founder-black-from: 229 91% 14%;
-  --material-founder-black-to: 221 79% 42%;
-  --material-founder-black-border: 219 86% 64%;
-  --material-founder-black-accent: 215 100% 68%;
-  --material-founder-black-text: 0 0% 98%;
+  --material-founder-black-from: 28 45% 6%;
+  --material-founder-black-to: 36 55% 16%;
+  --material-founder-black-border: 42 70% 58%;
+  --material-founder-black-accent: 43 85% 62%;
+  --material-founder-black-text: 42 45% 94%;
 
   --material-builder-from: 220 10% 15%;
   --material-builder-to: 220 9% 7%;

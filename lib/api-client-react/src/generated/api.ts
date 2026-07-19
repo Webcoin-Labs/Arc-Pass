@@ -2845,6 +2845,77 @@ export const useAdminUpdateFounderPass = <TError = ErrorType<ErrorResponse>,
       return useMutation(getAdminUpdateFounderPassMutationOptions(options));
     }
 
+export const getAdminDeleteFounderPassUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/founder-passes/${id}`
+}
+
+/**
+ * @summary Admin - permanently delete a Founder Pass invitation (testing/cleanup only; blocked once minted)
+ */
+export const adminDeleteFounderPass = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteFounderPassUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteFounderPassMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteFounderPass>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteFounderPass>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminDeleteFounderPass'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteFounderPass>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteFounderPass(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteFounderPassMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteFounderPass>>>
+
+    export type AdminDeleteFounderPassMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Admin - permanently delete a Founder Pass invitation (testing/cleanup only; blocked once minted)
+ */
+export const useAdminDeleteFounderPass = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteFounderPass>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteFounderPass>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteFounderPassMutationOptions(options));
+    }
+
 export const getAdminRevokeFounderInviteUrl = (id: number,) => {
 
 

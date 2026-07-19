@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Wallet as WalletIcon, ArrowLeft, LockKeyhole, Loader2, TriangleAlert } from "lucide-react";
-import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { useAccount, useChainId, useDisconnect, useSwitchChain } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ export function MintModal({
   const chainId = useChainId();
   const { connectModalOpen, openConnectModal } = useConnectModal();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  const { disconnect } = useDisconnect();
   const automaticSwitchKey = useRef<string | null>(null);
 
   const connectedAddress = screen === "connect" && isConnected ? address ?? null : null;
@@ -112,7 +113,16 @@ export function MintModal({
             <div className="py-4">
               {connectedAddress ? (
                 <div className="space-y-4">
-                  <div className="rounded-lg border bg-muted/40 p-3 text-center font-mono text-sm tabular-nums">{connectedAddress}</div>
+                  <div className="space-y-1.5">
+                    <div className="rounded-lg border bg-muted/40 p-3 text-center font-mono text-sm tabular-nums">{connectedAddress}</div>
+                    <button
+                      type="button"
+                      onClick={() => { disconnect(); automaticSwitchKey.current = null; }}
+                      className="mx-auto block text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                    >
+                      Not this wallet? Disconnect and choose another
+                    </button>
+                  </div>
                   {!isArcTestnet ? (
                     <>
                       <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-muted-foreground">

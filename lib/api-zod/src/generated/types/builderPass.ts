@@ -47,6 +47,25 @@ export interface BuilderPass {
   qualifyingTransactionCount?: number | null;
   /** @nullable */
   validContractCount?: number | null;
+  /**
+     * @minimum 1
+     * @maximum 100
+     * @nullable
+     */
+  builderLevel?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  activityScore?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  activityRank?: number | null;
+  /** @minimum 1 */
+  activityRankTotal?: number;
   eligibilityStatus: BuilderPassEligibilityStatus;
   claimStatus: BuilderPassClaimStatus;
   upgradeAvailable?: boolean;

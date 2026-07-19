@@ -15,6 +15,7 @@ import {
   AdminGetFounderPassParams,
   AdminUpdateFounderPassParams,
   AdminUpdateFounderPassBody,
+  AdminDeleteFounderPassParams,
   AdminRevokeFounderInviteParams,
   AdminListBuilderPassesQueryParams,
   AdminGetBuilderPassParams,
@@ -339,6 +340,32 @@ router.patch("/admin/founder-passes/:id", requireAdmin, async (req, res): Promis
   const [updated] = await db.update(founderPassesTable).set(body.data).where(eq(founderPassesTable.id, params.data.id)).returning();
   const tierMap = await founderTierMap();
   res.json(serializeFounderPass(updated, updated.founderTierId ? (tierMap.get(updated.founderTierId) ?? null) : null, true));
+});
+
+// Hard delete, not a status change — exists so admins can clear a stuck test
+// invitation and re-invite the exact same X/Discord identity. Blocked once
+// minted since a minted credential's onchain record must stay traceable.
+router.delete("/admin/founder-passes/:id", requireAdmin, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = AdminDeleteFounderPassParams.safeParse({ id: parseInt(raw, 10) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid pass ID" });
+    return;
+  }
+
+  const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
+  if (!pass) {
+    res.status(404).json({ error: "Pass not found" });
+    return;
+  }
+  if (pass.claimStatus === "minted") {
+    res.status(409).json({ error: "This Founder Pass has already been minted and cannot be deleted" });
+    return;
+  }
+
+  await db.delete(founderPassesTable).where(eq(founderPassesTable.id, params.data.id));
+  req.log.info({ founderPassId: pass.id, admin: (req as AdminRequest).admin.id }, "Founder pass invitation deleted");
+  res.status(204).send();
 });
 
 router.post("/admin/founder-passes/:id/revoke-invite", requireAdmin, async (req, res): Promise<void> => {

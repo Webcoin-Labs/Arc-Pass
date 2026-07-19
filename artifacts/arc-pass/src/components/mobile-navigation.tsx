@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { Link } from "wouter";
-import { ArrowUpRight, Menu } from "lucide-react";
+import { ArrowUpRight, Droplet, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -60,6 +60,9 @@ export function MobileNavigation({
             <Link href="/#how-it-works" onClick={(event) => { setOpen(false); handleLandingAnchorClick(event, "how-it-works"); }} className={linkClass}>How it works <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             <Link href="/faq" onClick={() => setOpen(false)} className={linkClass}>FAQ <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             <Link href="/docs" onClick={() => setOpen(false)} className={linkClass}>Documentation <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
+            <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className={linkClass}>
+              <span className="inline-flex items-center gap-2"><Droplet className="size-4" aria-hidden="true" /> Faucet</span> <ArrowUpRight className="size-4" aria-hidden="true" />
+            </a>
             {user && <Link href="/dashboard" onClick={() => setOpen(false)} className={linkClass}>My Passes <ArrowUpRight className="size-4" aria-hidden="true" /></Link>}
           </nav>
 

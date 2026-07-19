@@ -28,6 +28,9 @@ export const builderVerificationSnapshotsTable = pgTable("builder_verification_s
   usdcSpent: text("usdc_spent"),
   eurcSpent: text("eurc_spent"),
   firstTransactionAt: timestamp("first_transaction_at", { withTimezone: true }),
+  lastTransactionAt: timestamp("last_transaction_at", { withTimezone: true }),
+  transactionsLast30Days: integer("transactions_last_30_days").notNull().default(0),
+  activeDaysLast30Days: integer("active_days_last_30_days").notNull().default(0),
 
   analysisTimestamp: timestamp("analysis_timestamp", { withTimezone: true }).notNull().defaultNow(),
   lastReviewedBlock: text("last_reviewed_block"),

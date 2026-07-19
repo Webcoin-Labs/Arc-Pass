@@ -19,6 +19,9 @@ export interface BlockscoutActivitySummary {
   validContractCount: number;
   lastReviewedBlock: string;
   firstTransactionAt?: string;
+  lastTransactionAt?: string;
+  transactionsLast30Days: number;
+  activeDaysLast30Days: number;
 }
 
 function normalizedAddress(value: unknown): string | null {
@@ -57,6 +60,7 @@ function isContractCreation(transaction: BlockscoutTransaction): boolean {
 export function summarizeBlockscoutTransactions(
   transactions: readonly BlockscoutTransaction[],
   walletAddresses: readonly string[],
+  analyzedAt = new Date(),
 ): BlockscoutActivitySummary {
   const wallets = new Set(walletAddresses.map(normalizedAddress).filter((value): value is string => value !== null));
   const seenHashes = new Set<string>();
@@ -64,6 +68,10 @@ export function summarizeBlockscoutTransactions(
   let validContractCount = 0;
   let lastReviewedBlock = 0;
   let firstTransactionAt: string | undefined;
+  let lastTransactionAt: string | undefined;
+  let transactionsLast30Days = 0;
+  const activeDaysLast30Days = new Set<string>();
+  const recentCutoff = analyzedAt.getTime() - 30 * 86_400_000;
 
   for (const transaction of transactions) {
     const hash = normalizedAddress(transaction.hash);
@@ -77,6 +85,14 @@ export function summarizeBlockscoutTransactions(
 
     const createdAt = timestamp(transaction.timestamp);
     if (createdAt && (!firstTransactionAt || createdAt < firstTransactionAt)) firstTransactionAt = createdAt;
+    if (createdAt && (!lastTransactionAt || createdAt > lastTransactionAt)) lastTransactionAt = createdAt;
+    if (createdAt) {
+      const createdAtMs = new Date(createdAt).getTime();
+      if (createdAtMs >= recentCutoff && createdAtMs <= analyzedAt.getTime()) {
+        transactionsLast30Days += 1;
+        activeDaysLast30Days.add(createdAt.slice(0, 10));
+      }
+    }
     if (isContractCreation(transaction)) validContractCount += 1;
   }
 
@@ -85,6 +101,9 @@ export function summarizeBlockscoutTransactions(
     validContractCount,
     lastReviewedBlock: String(lastReviewedBlock),
     ...(firstTransactionAt ? { firstTransactionAt } : {}),
+    ...(lastTransactionAt ? { lastTransactionAt } : {}),
+    transactionsLast30Days,
+    activeDaysLast30Days: activeDaysLast30Days.size,
   };
 }
 

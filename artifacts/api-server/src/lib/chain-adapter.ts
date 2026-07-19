@@ -42,6 +42,9 @@ export interface ChainActivityResult {
   usdcSpent?: string;
   eurcSpent?: string;
   firstTransactionAt?: string;
+  lastTransactionAt?: string;
+  transactionsLast30Days?: number;
+  activeDaysLast30Days?: number;
 }
 
 export interface ChainAdapter {
@@ -260,6 +263,9 @@ export const mockChainAdapter: ChainAdapter = {
       usdcSpent: (hashToInt(`usdc:${seedInput}`, 2_500_000) / 100).toFixed(2),
       eurcSpent: (hashToInt(`eurc:${seedInput}`, 900_000) / 100).toFixed(2),
       firstTransactionAt: new Date(Date.UTC(firstTxYear, hashToInt(`first-month:${seedInput}`, 12), 1 + hashToInt(`first-day:${seedInput}`, 28))).toISOString(),
+      lastTransactionAt: new Date(Date.now() - hashToInt(`last-tx:${seedInput}`, 12) * 86_400_000).toISOString(),
+      transactionsLast30Days: 1 + hashToInt(`recent-txs:${seedInput}`, 100),
+      activeDaysLast30Days: 1 + hashToInt(`active-days:${seedInput}`, 20),
     };
   },
 };
@@ -274,6 +280,10 @@ function optionalIsoDate(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+}
+
+function optionalNonNegativeInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 }
 
 async function getProviderActivity(walletAddresses: string[]): Promise<ChainActivityResult> {
@@ -303,6 +313,9 @@ async function getProviderActivity(walletAddresses: string[]): Promise<ChainActi
     const usdcSpent = optionalDecimalAmount(payload.usdcSpent);
     const eurcSpent = optionalDecimalAmount(payload.eurcSpent);
     const firstTransactionAt = optionalIsoDate(payload.firstTransactionAt);
+    const lastTransactionAt = optionalIsoDate(payload.lastTransactionAt);
+    const transactionsLast30Days = optionalNonNegativeInteger(payload.transactionsLast30Days);
+    const activeDaysLast30Days = optionalNonNegativeInteger(payload.activeDaysLast30Days);
     return {
       qualifyingTransactionCount,
       validContractCount,
@@ -310,6 +323,9 @@ async function getProviderActivity(walletAddresses: string[]): Promise<ChainActi
       ...(usdcSpent !== undefined ? { usdcSpent } : {}),
       ...(eurcSpent !== undefined ? { eurcSpent } : {}),
       ...(firstTransactionAt !== undefined ? { firstTransactionAt } : {}),
+      ...(lastTransactionAt !== undefined ? { lastTransactionAt } : {}),
+      ...(transactionsLast30Days !== undefined ? { transactionsLast30Days } : {}),
+      ...(activeDaysLast30Days !== undefined ? { activeDaysLast30Days } : {}),
     };
   } catch (error) {
     if (error instanceof VerificationUnavailableError) throw error;

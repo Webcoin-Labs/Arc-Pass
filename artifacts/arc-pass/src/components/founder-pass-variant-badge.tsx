@@ -1,4 +1,3 @@
-import { Crown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function founderVariantLabel(variant: "normal" | "premium_black"): string {
@@ -10,14 +9,19 @@ export function FounderPassVariantBadge({ variant, className }: { variant: "norm
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border font-semibold uppercase tracking-[0.12em]",
+        "inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-full border font-semibold uppercase tracking-[0.12em]",
         isPremium
-          ? "border-[#d7bc91]/55 bg-[#06174f]/75 text-[#f4e7d3] shadow-[inset_0_1px_rgba(255,255,255,.08)]"
+          ? "border-[#e0b768]/60 bg-[#150e08]/80 text-[#f6d38a] shadow-[inset_0_1px_rgba(255,255,255,.08)]"
           : "border-[#8fb2ff]/50 bg-[#09266e]/75 text-[#e4edff] shadow-[inset_0_1px_rgba(255,255,255,.08)]",
         className,
       )}
     >
-      {isPremium ? <Crown className="h-3 w-3" aria-hidden="true" /> : <Sparkles className="h-3 w-3" aria-hidden="true" />}
+      <img
+        src={isPremium ? "/logo/premierfounderpass.webp" : "/logo/emergingfounder.webp"}
+        alt=""
+        className="size-4 shrink-0 object-contain sm:size-5"
+        aria-hidden="true"
+      />
       {founderVariantLabel(variant)}
     </span>
   );

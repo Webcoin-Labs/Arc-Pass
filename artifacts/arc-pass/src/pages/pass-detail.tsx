@@ -1,12 +1,12 @@
 import { useRef } from "react";
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { Download, ExternalLink, ArrowLeft, Hash, Globe, Wallet, Calendar, Share2 } from "lucide-react";
 import { useGetFounderPass, useGetBuilderPass, getGetFounderPassQueryKey, getGetBuilderPassQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FounderPassCard } from "@/components/founder-pass-card";
-import { BuilderPassCard } from "@/components/builder-pass-card";
+import { BuilderPassCard, BuilderPassRank } from "@/components/builder-pass-card";
 import { PassStatusBadge } from "@/components/pass-status-badge";
 import { TierHistory } from "@/components/tier-history";
 import { EmptyState } from "@/components/empty-state";
@@ -56,7 +56,12 @@ export default function PassDetailPage() {
       <div className="flex flex-col items-start gap-12 lg:flex-row">
         <div className="mx-auto w-full max-w-xl lg:sticky lg:top-24 lg:mx-0">
           {type === "founder" && founderPass && <FounderPassCard ref={cardRef} data={founderPass} className="w-full" />}
-          {type === "builder" && builderPass && <BuilderPassCard ref={cardRef} data={builderPass} className="w-full" />}
+          {type === "builder" && builderPass && (
+            <>
+              <BuilderPassCard ref={cardRef} data={builderPass} className="w-full" />
+              <BuilderPassRank data={builderPass} />
+            </>
+          )}
 
           {(founderPass?.claimStatus === "claimed" || founderPass?.claimStatus === "minted" || builderPass?.claimStatus === "claimed" || builderPass?.claimStatus === "minted") && (
             <div className="mt-6 grid grid-cols-2 gap-3">
@@ -74,9 +79,17 @@ export default function PassDetailPage() {
                   </Button>
                 ) : null;
               })()}
-              <Button variant="outline" className="col-span-2" onClick={() => cardRef.current && void shareNodeOnX({ node: cardRef.current, passType: type, passId, minted: (founderPass ?? builderPass)?.claimStatus === "minted", returnTo: `/pass/${type}/${passId}` })}>
-                <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share public pass on X
-              </Button>
+              {(founderPass ?? builderPass)?.claimStatus === "minted" ? (
+                <Button variant="outline" className="col-span-2" onClick={() => cardRef.current && void shareNodeOnX({ node: cardRef.current, passType: type, passId, minted: true, returnTo: `/pass/${type}/${passId}` })}>
+                  <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share public pass on X
+                </Button>
+              ) : (
+                <Button className="col-span-2" asChild>
+                  <Link href={`/claim/${type}`}>
+                    <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" /> Mint Onchain to share on X
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
         </div>

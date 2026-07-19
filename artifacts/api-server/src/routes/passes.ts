@@ -404,6 +404,9 @@ router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<voi
     usdcSpent: activity.usdcSpent ?? null,
     eurcSpent: activity.eurcSpent ?? null,
     firstTransactionAt: activity.firstTransactionAt ? new Date(activity.firstTransactionAt) : null,
+    lastTransactionAt: activity.lastTransactionAt ? new Date(activity.lastTransactionAt) : null,
+    transactionsLast30Days: activity.transactionsLast30Days ?? 0,
+    activeDaysLast30Days: activity.activeDaysLast30Days ?? 0,
   });
 
   const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, builderPassId));
@@ -455,6 +458,9 @@ router.post("/passes/builder/reverify", requireAuth, async (req, res): Promise<v
       usdcSpent: activity.usdcSpent ?? null,
       eurcSpent: activity.eurcSpent ?? null,
       firstTransactionAt: activity.firstTransactionAt ? new Date(activity.firstTransactionAt) : null,
+      lastTransactionAt: activity.lastTransactionAt ? new Date(activity.lastTransactionAt) : null,
+      transactionsLast30Days: activity.transactionsLast30Days ?? 0,
+      activeDaysLast30Days: activity.activeDaysLast30Days ?? 0,
     })
     .returning();
 

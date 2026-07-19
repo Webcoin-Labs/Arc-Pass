@@ -3,6 +3,7 @@ import type { FounderPass, BuilderPass, FounderTier, BuilderTier } from "@worksp
 import { eq, desc, asc, and, count, isNotNull, inArray } from "drizzle-orm";
 import { configuration } from "./env";
 import { normalizeUploadedImageUrl } from "./uploads";
+import { calculateBuilderActivity } from "./builder-activity-score";
 import { builderPassesTable } from "@workspace/db";
 
 export function serializeFounderTier(tier: FounderTier | null | undefined) {
@@ -105,6 +106,18 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     transactionHash: h.transactionHash,
   }));
 
+  const activity = calculateBuilderActivity({
+    tierName: tier?.name,
+    qualifyingTransactionCount: latestSnapshot?.qualifyingTransactionCount,
+    validContractCount: latestSnapshot?.validContractCount,
+    githubContributionCount: user?.githubContributionCount,
+    transactionsLast30Days: latestSnapshot?.transactionsLast30Days,
+    activeDaysLast30Days: latestSnapshot?.activeDaysLast30Days,
+    lastTransactionAt: latestSnapshot?.lastTransactionAt,
+    analysisTimestamp: latestSnapshot?.analysisTimestamp,
+    rankTotal: configuration.builderPhaseClaimLimit,
+  });
+
   const base = {
     id: pass.id,
     currentTier: serializeBuilderTier(tier ?? null, includeAdminFields),
@@ -124,6 +137,10 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     verifiedWalletCount: wallets.length,
     qualifyingTransactionCount: latestSnapshot?.qualifyingTransactionCount ?? null,
     validContractCount: latestSnapshot?.validContractCount ?? null,
+    builderLevel: activity.level,
+    activityScore: activity.score,
+    activityRank: activity.rank,
+    activityRankTotal: activity.rankTotal,
     usdcSpent: latestSnapshot?.usdcSpent ?? null,
     eurcSpent: latestSnapshot?.eurcSpent ?? null,
     firstTransactionAt: latestSnapshot?.firstTransactionAt ?? null,

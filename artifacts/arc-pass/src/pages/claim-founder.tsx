@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ArrowRight, Download, ExternalLink, Eye, FastForward, ShieldAlert, LayoutDashboard, Lock, Share2 } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, Eye, FastForward, ShieldAlert, LayoutDashboard, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useGetUserProfile, useListMyPasses, useClaimFounderPass, useMintFounderPass, getGetMeQueryKey, getGetUserProfileQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
@@ -16,6 +16,7 @@ import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FounderRequestDialog } from "@/components/founder-request-dialog";
 import { IdentityVerificationGate } from "@/components/identity-verification-gate";
+import { ConfettiBurst } from "@/components/confetti-burst";
 import { pendingIdentityMatches, readPendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
 export default function ClaimFounderPage() {
@@ -30,9 +31,16 @@ export default function ClaimFounderPage() {
   const [mintOpen, setMintOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [revealState, setRevealState] = useState<"idle" | "ready" | "revealing" | "revealed">("idle");
+  const [confettiBurst, setConfettiBurst] = useState(0);
   const reduceMotion = useReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
   const pendingIdentity = readPendingEligibilityIdentity();
+
+  useEffect(() => {
+    if (!confettiBurst) return;
+    const timer = window.setTimeout(() => setConfettiBurst(0), 3200);
+    return () => window.clearTimeout(timer);
+  }, [confettiBurst]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/passes/me"] });
 
@@ -75,6 +83,7 @@ export default function ClaimFounderPage() {
     claimPass.mutate(undefined, {
       onSuccess: () => {
         setRevealState("ready");
+        setConfettiBurst((value) => value + 1);
         void invalidate();
       },
       onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Couldn't claim your pass"),
@@ -88,6 +97,7 @@ export default function ClaimFounderPage() {
         onSuccess: () => {
           invalidate();
           setMintOpen(false);
+          setConfettiBurst((value) => value + 1);
         },
         onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Minting failed"),
       },
@@ -126,6 +136,7 @@ export default function ClaimFounderPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-3 py-10 sm:px-6 sm:py-14">
+      <ConfettiBurst burst={confettiBurst} reduceMotion={reduceMotion} />
       <AnimatePresence mode="wait">
         {founderPass.claimStatus === "minted" ? (
           <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-start">
@@ -172,10 +183,7 @@ export default function ClaimFounderPage() {
                 ) : revealState === "revealing" ? (
                   <Button variant="outline" size="lg" className="h-12" onClick={skipReveal}><FastForward className="mr-2 h-4 w-4" /> Skip reveal</Button>
                 ) : (
-                  <>
-                    <Button variant="outline" size="lg" className="h-12" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share on X</Button>
-                    <Button size="lg" className="h-12" onClick={() => setMintOpen(true)}>Mint Onchain <ExternalLink className="ml-2 h-4 w-4" /></Button>
-                  </>
+                  <Button size="lg" className="h-12" onClick={() => setMintOpen(true)}>Mint Onchain <ExternalLink className="ml-2 h-4 w-4" /></Button>
                 )}
               </div>
               {founderPass.claimStatus !== "locked" && revealState !== "ready" && revealState !== "revealing" && (

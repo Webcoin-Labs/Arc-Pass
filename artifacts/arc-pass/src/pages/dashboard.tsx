@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FounderPassCard } from "@/components/founder-pass-card";
-import { BuilderPassCard } from "@/components/builder-pass-card";
+import { BuilderPassCard, BuilderPassRank } from "@/components/builder-pass-card";
 import { PassStatusBadge } from "@/components/pass-status-badge";
 import { ReverificationStatus } from "@/components/reverification-status";
 import { PassComparison } from "@/components/pass-comparison";
@@ -275,11 +275,14 @@ export default function DashboardPage() {
                 />
               ) : (
                 <>
-                  <BuilderPassCard
-                    ref={builderCardRef}
-                    data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username }}
-                    className="mb-6 max-w-[560px]"
-                  />
+                  <div className="mb-6 flex w-full flex-col items-center">
+                    <BuilderPassCard
+                      ref={builderCardRef}
+                      data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username }}
+                      className="max-w-[560px]"
+                    />
+                    <BuilderPassRank data={builderPass} />
+                  </div>
                   <dl className="mb-6 grid w-full grid-cols-2 gap-3 text-xs">
                     <div>
                       <dt className="text-muted-foreground">Last verified</dt>

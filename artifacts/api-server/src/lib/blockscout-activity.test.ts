@@ -54,11 +54,14 @@ test("summarizes successful outgoing activity and contract deployments", () => {
     },
   ];
 
-  assert.deepEqual(summarizeBlockscoutTransactions(transactions, [wallet]), {
+  assert.deepEqual(summarizeBlockscoutTransactions(transactions, [wallet], new Date("2026-07-20T00:00:00.000Z")), {
     qualifyingTransactionCount: 2,
     validContractCount: 1,
     lastReviewedBlock: "18",
     firstTransactionAt: "2026-07-01T10:00:00.000Z",
+    lastTransactionAt: "2026-07-02T10:00:00.000Z",
+    transactionsLast30Days: 2,
+    activeDaysLast30Days: 2,
   });
 });
 

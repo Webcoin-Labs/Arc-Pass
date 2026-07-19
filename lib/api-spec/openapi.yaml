@@ -920,6 +920,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: adminDeleteFounderPass
+      tags: [admin]
+      summary: Admin - permanently delete a Founder Pass invitation (testing/cleanup only; blocked once minted)
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already minted; cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/founder-passes/{id}/revoke-invite:
     post:
@@ -1947,6 +1966,20 @@ components:
           type: ["integer", "null"]
         validContractCount:
           type: ["integer", "null"]
+        builderLevel:
+          type: ["integer", "null"]
+          minimum: 1
+          maximum: 100
+        activityScore:
+          type: ["integer", "null"]
+          minimum: 0
+          maximum: 100
+        activityRank:
+          type: ["integer", "null"]
+          minimum: 1
+        activityRankTotal:
+          type: integer
+          minimum: 1
         eligibilityStatus:
           type: string
           enum: [eligible, ineligible, verification_required, analysis_in_progress]

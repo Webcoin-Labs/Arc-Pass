@@ -128,6 +128,15 @@ export const CreateSupportChatReplyResponse = zod.object({
 /**
  * @summary Get the current user's Founder and Builder passes
  */
+export const listMyPassesResponseBuilderOneBuilderLevelMax = 100;
+
+export const listMyPassesResponseBuilderOneActivityScoreMin = 0;
+export const listMyPassesResponseBuilderOneActivityScoreMax = 100;
+
+
+
+
+
 export const ListMyPassesResponse = zod.object({
   "founder": zod.union([zod.object({
   "id": zod.number(),
@@ -199,6 +208,10 @@ export const ListMyPassesResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(listMyPassesResponseBuilderOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(listMyPassesResponseBuilderOneActivityScoreMin).max(listMyPassesResponseBuilderOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -395,6 +408,15 @@ export const GetBuilderPassParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getBuilderPassResponseBuilderLevelMax = 100;
+
+export const getBuilderPassResponseActivityScoreMin = 0;
+export const getBuilderPassResponseActivityScoreMax = 100;
+
+
+
+
+
 export const GetBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -429,6 +451,10 @@ export const GetBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(getBuilderPassResponseBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(getBuilderPassResponseActivityScoreMin).max(getBuilderPassResponseActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -469,6 +495,15 @@ export const GetBuilderPassDownloadUrlResponse = zod.object({
  * Requires Discord connected (required), GitHub connected (required), and at least one wallet added. Analyzes activity returned by the configured indexer plus qualitative GitHub signal and assigns the highest qualifying tier. If the indexer is unavailable, verification fails closed. Requires at least one valid deployed contract to qualify for any tier.
  * @summary Run initial Builder verification using connected accounts and wallets
  */
+export const verifyBuilderResponseBuilderPassBuilderLevelMax = 100;
+
+export const verifyBuilderResponseBuilderPassActivityScoreMin = 0;
+export const verifyBuilderResponseBuilderPassActivityScoreMax = 100;
+
+
+
+
+
 export const VerifyBuilderResponse = zod.object({
   "builderPass": zod.object({
   "id": zod.number(),
@@ -504,6 +539,10 @@ export const VerifyBuilderResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(verifyBuilderResponseBuilderPassBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(verifyBuilderResponseBuilderPassActivityScoreMin).max(verifyBuilderResponseBuilderPassActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -544,6 +583,15 @@ export const VerifyBuilderResponse = zod.object({
  * Enforces a 7-day cooldown since the last verification. Computes a proposed tier but does not apply it — call POST /passes/builder/upgrade to confirm and apply.
  * @summary Re-run Builder verification to check for a tier upgrade
  */
+export const reverifyBuilderResponseBuilderPassBuilderLevelMax = 100;
+
+export const reverifyBuilderResponseBuilderPassActivityScoreMin = 0;
+export const reverifyBuilderResponseBuilderPassActivityScoreMax = 100;
+
+
+
+
+
 export const ReverifyBuilderResponse = zod.object({
   "builderPass": zod.object({
   "id": zod.number(),
@@ -579,6 +627,10 @@ export const ReverifyBuilderResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(reverifyBuilderResponseBuilderPassBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(reverifyBuilderResponseBuilderPassActivityScoreMin).max(reverifyBuilderResponseBuilderPassActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -618,6 +670,15 @@ export const ReverifyBuilderResponse = zod.object({
 /**
  * @summary Confirm and apply the most recently proposed tier upgrade
  */
+export const upgradeBuilderTierResponseBuilderLevelMax = 100;
+
+export const upgradeBuilderTierResponseActivityScoreMin = 0;
+export const upgradeBuilderTierResponseActivityScoreMax = 100;
+
+
+
+
+
 export const UpgradeBuilderTierResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -652,6 +713,10 @@ export const UpgradeBuilderTierResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(upgradeBuilderTierResponseBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(upgradeBuilderTierResponseActivityScoreMin).max(upgradeBuilderTierResponseActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -679,6 +744,15 @@ export const UpgradeBuilderTierResponse = zod.object({
 /**
  * @summary Claim the current user's verified Builder Pass
  */
+export const claimBuilderPassResponseBuilderLevelMax = 100;
+
+export const claimBuilderPassResponseActivityScoreMin = 0;
+export const claimBuilderPassResponseActivityScoreMax = 100;
+
+
+
+
+
 export const ClaimBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -713,6 +787,10 @@ export const ClaimBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(claimBuilderPassResponseBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(claimBuilderPassResponseActivityScoreMin).max(claimBuilderPassResponseActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -748,6 +826,15 @@ export const MintBuilderPassBody = zod.object({
   "network": zod.enum(['arc']).default(mintBuilderPassBodyNetworkDefault)
 })
 
+export const mintBuilderPassResponseBuilderLevelMax = 100;
+
+export const mintBuilderPassResponseActivityScoreMin = 0;
+export const mintBuilderPassResponseActivityScoreMax = 100;
+
+
+
+
+
 export const MintBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -782,6 +869,10 @@ export const MintBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(mintBuilderPassResponseBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(mintBuilderPassResponseActivityScoreMin).max(mintBuilderPassResponseActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -809,6 +900,15 @@ export const MintBuilderPassResponse = zod.object({
 /**
  * @summary Get dashboard summary stats for the current user
  */
+export const getDashboardStatsResponseBuilderOneBuilderLevelMax = 100;
+
+export const getDashboardStatsResponseBuilderOneActivityScoreMin = 0;
+export const getDashboardStatsResponseBuilderOneActivityScoreMax = 100;
+
+
+
+
+
 export const GetDashboardStatsResponse = zod.object({
   "founder": zod.union([zod.object({
   "id": zod.number(),
@@ -880,6 +980,10 @@ export const GetDashboardStatsResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(getDashboardStatsResponseBuilderOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(getDashboardStatsResponseBuilderOneActivityScoreMin).max(getDashboardStatsResponseBuilderOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -1362,6 +1466,16 @@ export const AdminUpdateFounderPassResponse = zod.object({
 
 
 /**
+ * @summary Admin - permanently delete a Founder Pass invitation (testing/cleanup only; blocked once minted)
+ */
+export const AdminDeleteFounderPassParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteFounderPassResponse = zod.void()
+
+
+/**
  * @summary Admin - revoke a Founder invitation before mint
  */
 export const AdminRevokeFounderInviteParams = zod.object({
@@ -1487,6 +1601,15 @@ export const AdminListBuilderPassesQueryParams = zod.object({
   "limit": zod.coerce.number().default(adminListBuilderPassesQueryLimitDefault)
 })
 
+export const adminListBuilderPassesResponseItemsItemOneBuilderLevelMax = 100;
+
+export const adminListBuilderPassesResponseItemsItemOneActivityScoreMin = 0;
+export const adminListBuilderPassesResponseItemsItemOneActivityScoreMax = 100;
+
+
+
+
+
 export const AdminListBuilderPassesResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
@@ -1522,6 +1645,10 @@ export const AdminListBuilderPassesResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(adminListBuilderPassesResponseItemsItemOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(adminListBuilderPassesResponseItemsItemOneActivityScoreMin).max(adminListBuilderPassesResponseItemsItemOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -1563,6 +1690,15 @@ export const AdminGetBuilderPassParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminGetBuilderPassResponseOneBuilderLevelMax = 100;
+
+export const adminGetBuilderPassResponseOneActivityScoreMin = 0;
+export const adminGetBuilderPassResponseOneActivityScoreMax = 100;
+
+
+
+
+
 export const AdminGetBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -1597,6 +1733,10 @@ export const AdminGetBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(adminGetBuilderPassResponseOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(adminGetBuilderPassResponseOneActivityScoreMin).max(adminGetBuilderPassResponseOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -1639,6 +1779,15 @@ export const AdminUpdateBuilderPassBody = zod.object({
   "primaryEcosystem": zod.string().optional()
 })
 
+export const adminUpdateBuilderPassResponseOneBuilderLevelMax = 100;
+
+export const adminUpdateBuilderPassResponseOneActivityScoreMin = 0;
+export const adminUpdateBuilderPassResponseOneActivityScoreMax = 100;
+
+
+
+
+
 export const AdminUpdateBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -1673,6 +1822,10 @@ export const AdminUpdateBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(adminUpdateBuilderPassResponseOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(adminUpdateBuilderPassResponseOneActivityScoreMin).max(adminUpdateBuilderPassResponseOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -1714,6 +1867,15 @@ export const AdminSuspendBuilderPassBody = zod.object({
   "reason": zod.string().optional()
 })
 
+export const adminSuspendBuilderPassResponseOneBuilderLevelMax = 100;
+
+export const adminSuspendBuilderPassResponseOneActivityScoreMin = 0;
+export const adminSuspendBuilderPassResponseOneActivityScoreMax = 100;
+
+
+
+
+
 export const AdminSuspendBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -1748,6 +1910,10 @@ export const AdminSuspendBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(adminSuspendBuilderPassResponseOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(adminSuspendBuilderPassResponseOneActivityScoreMin).max(adminSuspendBuilderPassResponseOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -1785,6 +1951,15 @@ export const AdminUnsuspendBuilderPassParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminUnsuspendBuilderPassResponseOneBuilderLevelMax = 100;
+
+export const adminUnsuspendBuilderPassResponseOneActivityScoreMin = 0;
+export const adminUnsuspendBuilderPassResponseOneActivityScoreMax = 100;
+
+
+
+
+
 export const AdminUnsuspendBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -1819,6 +1994,10 @@ export const AdminUnsuspendBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(adminUnsuspendBuilderPassResponseOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(adminUnsuspendBuilderPassResponseOneActivityScoreMin).max(adminUnsuspendBuilderPassResponseOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
@@ -1860,6 +2039,15 @@ export const AdminRevokeBuilderPassBody = zod.object({
   "reason": zod.string().optional()
 })
 
+export const adminRevokeBuilderPassResponseOneBuilderLevelMax = 100;
+
+export const adminRevokeBuilderPassResponseOneActivityScoreMin = 0;
+export const adminRevokeBuilderPassResponseOneActivityScoreMax = 100;
+
+
+
+
+
 export const AdminRevokeBuilderPassResponse = zod.object({
   "id": zod.number(),
   "currentTier": zod.union([zod.object({
@@ -1894,6 +2082,10 @@ export const AdminRevokeBuilderPassResponse = zod.object({
   "verifiedWalletCount": zod.number().optional(),
   "qualifyingTransactionCount": zod.number().nullish(),
   "validContractCount": zod.number().nullish(),
+  "builderLevel": zod.number().min(1).max(adminRevokeBuilderPassResponseOneBuilderLevelMax).nullish(),
+  "activityScore": zod.number().min(adminRevokeBuilderPassResponseOneActivityScoreMin).max(adminRevokeBuilderPassResponseOneActivityScoreMax).nullish(),
+  "activityRank": zod.number().min(1).nullish(),
+  "activityRankTotal": zod.number().min(1).optional(),
   "eligibilityStatus": zod.enum(['eligible', 'ineligible', 'verification_required', 'analysis_in_progress']),
   "claimStatus": zod.enum(['locked', 'claimed', 'minted']),
   "upgradeAvailable": zod.boolean().optional(),
