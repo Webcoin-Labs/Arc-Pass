@@ -30,6 +30,8 @@ const queryClient = new QueryClient({
 
 const authErrorMessages: Record<string, string> = {
   x: 'X sign-in could not be completed. Check the X developer app access and try again.',
+  x_api_access: 'X authorized your account, but Arc Pass does not currently have X API User Read access. Enable X API access and credits, then try again.',
+  x_rate_limited: 'X verification is temporarily rate-limited. Please wait a few minutes and try again.',
   x_unavailable: 'X sign-in is temporarily unavailable.',
   discord: 'Discord sign-in could not be completed. Check the Discord OAuth redirect and try again.',
   discord_unavailable: 'Discord sign-in is temporarily unavailable.',

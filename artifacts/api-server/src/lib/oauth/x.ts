@@ -6,6 +6,48 @@ const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_PROFILE_URL = "https://api.x.com/2/users/me?user.fields=profile_image_url";
 
+export type XOAuthErrorCode = "x" | "x_api_access" | "x_rate_limited";
+
+export class XOAuthError extends Error {
+  constructor(
+    message: string,
+    public readonly code: XOAuthErrorCode,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "XOAuthError";
+  }
+}
+
+function classifyXOAuthError(status: number): XOAuthErrorCode {
+  if (status === 403) return "x_api_access";
+  if (status === 429) return "x_rate_limited";
+  return "x";
+}
+
+async function xOAuthResponseError(operation: "token exchange" | "profile fetch", response: Response): Promise<XOAuthError> {
+  let problem: string | null = null;
+  try {
+    const payload = await response.json() as { type?: unknown; reason?: unknown };
+    const rawProblem = typeof payload.type === "string" ? payload.type : typeof payload.reason === "string" ? payload.reason : null;
+    const label = rawProblem?.split(/[\/#]/).pop() ?? null;
+    if (label && /^[a-z0-9._-]{1,80}$/i.test(label)) problem = label;
+  } catch {
+    // X does not guarantee a JSON error body. The status remains actionable.
+  }
+
+  const problemSuffix = problem ? ` (${problem})` : "";
+  return new XOAuthError(
+    `X ${operation} failed: ${response.status}${problemSuffix}`,
+    classifyXOAuthError(response.status),
+    response.status,
+  );
+}
+
+export function getXOAuthErrorCode(error: unknown): XOAuthErrorCode {
+  return error instanceof XOAuthError ? error.code : "x";
+}
+
 export function isXOAuthConfigured(): boolean {
   return readProviderEnv("X") !== null;
 }
@@ -46,7 +88,7 @@ export async function exchangeXCodeWithAccessToken(code: string, codeVerifier: s
   });
 
   if (!tokenResponse.ok) {
-    throw new Error(`X token exchange failed: ${tokenResponse.status}`);
+    throw await xOAuthResponseError("token exchange", tokenResponse);
   }
 
   const { access_token: accessToken } = (await tokenResponse.json()) as { access_token: string };
@@ -56,7 +98,7 @@ export async function exchangeXCodeWithAccessToken(code: string, codeVerifier: s
   });
 
   if (!profileResponse.ok) {
-    throw new Error(`X profile fetch failed: ${profileResponse.status}`);
+    throw await xOAuthResponseError("profile fetch", profileResponse);
   }
 
   const { data } = (await profileResponse.json()) as {

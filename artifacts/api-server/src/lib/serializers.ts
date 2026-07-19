@@ -2,6 +2,7 @@ import { db, builderTiersTable, builderVerificationSnapshotsTable, builderTierHi
 import type { FounderPass, BuilderPass, FounderTier, BuilderTier } from "@workspace/db";
 import { eq, desc, asc, and, count, isNotNull, inArray } from "drizzle-orm";
 import { configuration } from "./env";
+import { normalizeUploadedImageUrl } from "./uploads";
 import { builderPassesTable } from "@workspace/db";
 
 export function serializeFounderTier(tier: FounderTier | null | undefined) {
@@ -46,7 +47,7 @@ export function serializeFounderPass(pass: FounderPass, tier: FounderTier | null
     founderTitle: pass.founderTitle,
     companyName: pass.companyName,
     companyIndustry: pass.companyIndustry,
-    companyLogoUrl: pass.companyLogoUrl,
+    companyLogoUrl: normalizeUploadedImageUrl(pass.companyLogoUrl),
     companyWebsite: pass.companyWebsite,
     companyLocation: pass.companyLocation,
     startupStage: pass.startupStage,

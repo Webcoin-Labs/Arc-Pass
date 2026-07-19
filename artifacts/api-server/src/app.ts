@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { uploadsStaticDir, uploadsPublicPathPrefix } from "./lib/uploads";
+import { serveUploadedImage, uploadsStaticDir, uploadsPublicPathPrefix } from "./lib/uploads";
 import { configuration } from "./lib/env";
 import { fingerprintRateLimitKey, reserveRateLimit, setRateLimitHeaders } from "./lib/rate-limit";
 
@@ -97,7 +97,7 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: "64kb", parameterLimit: 100 }));
 app.use(cookieParser());
 
-app.use(uploadsPublicPathPrefix, express.static(uploadsStaticDir));
+app.use(uploadsPublicPathPrefix, serveUploadedImage, express.static(uploadsStaticDir));
 app.use("/api", async (req, res, next) => {
   if (req.path === "/healthz") {
     next();

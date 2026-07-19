@@ -1,4 +1,5 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import type { RequestHandler } from "express";
 import multer from "multer";
 import path from "path";
 import { promises as fs } from "fs";
@@ -9,6 +10,7 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR?.trim() || path.join(os.tmpdir(), "a
 const PUBLIC_PATH_PREFIX = "/uploads";
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/webp", "image/jpeg"]);
+const GENERATED_IMAGE_KEY = /^arc-pass\/\d{4}\/\d{2}\/[a-f0-9]{40}\.(?:png|webp|jpg)$/;
 
 const r2Configuration = {
   endpoint: process.env.CLOUDFLARE_R2_ENDPOINT?.trim() ?? "",
@@ -56,6 +58,27 @@ function createObjectKey(extension: DetectedImage["extension"]): string {
   return `arc-pass/${now.getUTCFullYear()}/${month}/${randomBytes(20).toString("hex")}.${extension}`;
 }
 
+export function uploadedImageKeyFromPath(requestPath: string): string | null {
+  const withoutQuery = requestPath.split("?", 1)[0] ?? "";
+  const candidate = withoutQuery.replace(/^\/+/, "").replace(/^uploads\//, "");
+  return GENERATED_IMAGE_KEY.test(candidate) ? candidate : null;
+}
+
+export function normalizeUploadedImageUrl(value: string | null | undefined, publicUrl = r2Configuration.publicUrl): string | null | undefined {
+  if (!value || value.startsWith(`${PUBLIC_PATH_PREFIX}/`) || !publicUrl) return value;
+
+  try {
+    const configuredBase = new URL(`${publicUrl.replace(/\/+$/, "")}/`);
+    const candidate = new URL(value);
+    if (candidate.origin !== configuredBase.origin || !candidate.pathname.startsWith(configuredBase.pathname)) return value;
+
+    const objectKey = uploadedImageKeyFromPath(candidate.pathname.slice(configuredBase.pathname.length));
+    return objectKey ? `${PUBLIC_PATH_PREFIX}/${objectKey}` : value;
+  } catch {
+    return value;
+  }
+}
+
 export const imageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 },
@@ -87,7 +110,7 @@ export async function persistUploadedImage(file: Express.Multer.File): Promise<s
       ContentType: detected.contentType,
       CacheControl: "public, max-age=31536000, immutable",
     }));
-    return `${r2Configuration.publicUrl}/${objectKey}`;
+    return `${PUBLIC_PATH_PREFIX}/${objectKey}`;
   }
 
   const localPath = path.join(UPLOADS_DIR, ...objectKey.split("/"));
@@ -95,6 +118,44 @@ export async function persistUploadedImage(file: Express.Multer.File): Promise<s
   await fs.writeFile(localPath, file.buffer, { flag: "wx" });
   return `${PUBLIC_PATH_PREFIX}/${objectKey}`;
 }
+
+export const serveUploadedImage: RequestHandler = async (req, res, next) => {
+  if (!cloudflareR2Configured) {
+    next();
+    return;
+  }
+
+  const objectKey = uploadedImageKeyFromPath(req.path);
+  if (!objectKey) {
+    next();
+    return;
+  }
+
+  try {
+    const object = await getR2Client().send(new GetObjectCommand({
+      Bucket: r2Configuration.bucket,
+      Key: objectKey,
+    }));
+    if (!object.Body) {
+      res.sendStatus(404);
+      return;
+    }
+
+    const body = Buffer.from(await object.Body.transformToByteArray());
+    res.setHeader("Content-Type", object.ContentType ?? "application/octet-stream");
+    res.setHeader("Cache-Control", object.CacheControl ?? "public, max-age=31536000, immutable");
+    if (object.ETag) res.setHeader("ETag", object.ETag);
+    if (object.LastModified) res.setHeader("Last-Modified", object.LastModified.toUTCString());
+    res.send(body);
+  } catch (error) {
+    const storageError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (storageError.name === "NoSuchKey" || storageError.$metadata?.httpStatusCode === 404) {
+      res.sendStatus(404);
+      return;
+    }
+    next(error);
+  }
+};
 
 export const uploadsStaticDir = UPLOADS_DIR;
 export const uploadsPublicPathPrefix = PUBLIC_PATH_PREFIX;

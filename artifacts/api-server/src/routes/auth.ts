@@ -4,7 +4,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { getUserFromSession, createSession, deleteSession, linkPendingFounderInvite } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { signOAuthState, verifyOAuthState, createPkcePair } from "../lib/oauth/provider";
-import { isXOAuthConfigured, buildXAuthorizeUrl, exchangeXCode, exchangeXCodeWithAccessToken, postImageToX } from "../lib/oauth/x";
+import { isXOAuthConfigured, buildXAuthorizeUrl, exchangeXCode, exchangeXCodeWithAccessToken, getXOAuthErrorCode, postImageToX } from "../lib/oauth/x";
 import { isDiscordOAuthConfigured, buildDiscordAuthorizeUrl, exchangeDiscordCode, getArcGuildMembership, type ArcGuildMembershipSnapshot } from "../lib/oauth/discord";
 import { isGithubOAuthConfigured, buildGithubAuthorizeUrl, exchangeGithubCodeWithContributions } from "../lib/oauth/github";
 import type { OAuthIntent, OAuthProfile } from "../lib/oauth/types";
@@ -312,7 +312,8 @@ router.get("/auth/x/callback", async (req, res): Promise<void> => {
       res.redirect(frontendUrl(`${shareReturnTo}${separator}shareError=x_posting`));
       return;
     }
-    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, "x") : frontendUrl("/?authError=x"));
+    const authError = getXOAuthErrorCode(err);
+    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, authError) : frontendUrl(`/?authError=${authError}`));
   }
 });
 

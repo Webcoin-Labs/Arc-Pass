@@ -125,8 +125,7 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
           </section>
 
           <section className="min-w-0 rounded-xl border border-[#9bb9ff]/28 bg-[#08266f]/55 p-3 shadow-[inset_0_1px_rgba(255,255,255,.08),0_12px_30px_rgba(0,12,58,.16)] backdrop-blur-md sm:rounded-2xl sm:p-[7%]" aria-label="Company">
-            <p className="font-mono text-[7px] font-semibold uppercase tracking-[0.16em] text-[#b7caff]/80 sm:text-[9px]">Company</p>
-            <div className="mt-2.5 flex min-w-0 items-center gap-2.5 sm:mt-[7%] sm:gap-[7%]">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-[7%]">
               {data.companyName ? (
                 <CompanyLogo
                   logoUrl={data.companyLogoUrl}

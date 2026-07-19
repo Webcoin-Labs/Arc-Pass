@@ -59,6 +59,41 @@ test("X code exchange uses api.x.com and fetches the verified account with the u
   });
 });
 
+test("X profile access failures are classified without exposing OAuth credentials", async (t) => {
+  const { exchangeXCode } = await import("./oauth/x");
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith("/2/oauth2/token")) {
+      return Response.json({ access_token: "secret-user-access-token" });
+    }
+    return Response.json(
+      {
+        type: "https://api.x.com/2/problems/client-forbidden",
+        title: "Client Forbidden",
+        detail: "This client is not permitted to access this endpoint.",
+      },
+      { status: 403 },
+    );
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => exchangeXCode("authorization-code", "pkce-verifier"),
+    (error: unknown) => {
+      const oauthError = error as { code?: string; status?: number; message?: string };
+      assert.equal(oauthError.code, "x_api_access");
+      assert.equal(oauthError.status, 403);
+      assert.match(oauthError.message ?? "", /client-forbidden/);
+      assert.doesNotMatch(oauthError.message ?? "", /secret-user-access-token/);
+      return true;
+    },
+  );
+});
+
 test("direct X posting uploads the image before creating the post", async (t) => {
   const { postImageToX } = await import("./oauth/x");
   const calls: Array<{ url: string; init?: RequestInit }> = [];
