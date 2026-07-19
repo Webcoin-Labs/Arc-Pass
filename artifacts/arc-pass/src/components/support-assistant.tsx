@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { Loader2, Send, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 import { ApiError, useCreateSupportChatReply } from "@workspace/api-client-react";
 import { ArcMascot } from "@/components/arc-mascot";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ function errorMessage(error: unknown): string {
   return "Chat support is temporarily unavailable. Please try again later or email contact@webcoinlabs.com.";
 }
 
-export function SupportAssistant({ isLanding = false }: { isLanding?: boolean }) {
+export function SupportAssistant({ isLanding = false, floating = false }: { isLanding?: boolean; floating?: boolean }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
@@ -107,8 +107,10 @@ export function SupportAssistant({ isLanding = false }: { isLanding?: boolean })
         aria-label="Open Arc Pass chat support"
         aria-expanded={open}
         className={cn(
-          "group relative size-10 shrink-0 overflow-visible rounded-full border p-0 transition-transform hover:scale-[1.03] focus-visible:scale-[1.03] sm:size-11",
-          isLanding
+          "group relative size-11 shrink-0 overflow-visible rounded-full border p-0 shadow-[0_12px_36px_rgba(0,0,0,.28)] transition-transform hover:scale-[1.03] focus-visible:scale-[1.03]",
+          floating
+            ? "border-white/15 bg-[#0a1025]/92 text-white hover:bg-[#111a3a] hover:text-white"
+            : isLanding
             ? "border-white/15 bg-white/[0.055] text-white hover:bg-white/10 hover:text-white"
             : "border-border bg-background text-foreground hover:bg-accent",
         )}
@@ -117,12 +119,12 @@ export function SupportAssistant({ isLanding = false }: { isLanding?: boolean })
           aria-hidden="true"
           className={cn(
             "pointer-events-none absolute right-[calc(100%+0.45rem)] top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-lg xl:inline-flex",
-            isLanding ? "border-white/15 bg-[#0a1025]/90 text-white/90" : "border-border bg-background text-foreground",
+            floating || isLanding ? "border-white/15 bg-[#0a1025]/95 text-white/90" : "border-border bg-background text-foreground",
           )}
         >
           How can I help you?
         </span>
-        <ArcMascot compact className="!h-10 sm:!h-11" />
+        <ArcMascot compact variant="helpbot" className="!h-10 sm:!h-11" />
         <span className="sr-only">Chat support</span>
       </Button>
 
@@ -132,12 +134,12 @@ export function SupportAssistant({ isLanding = false }: { isLanding?: boolean })
       >
         <SheetHeader className="border-b border-white/[0.09] bg-[radial-gradient(circle_at_82%_0%,rgba(54,87,255,.25),transparent_48%)] px-5 pb-5 pt-7 text-left sm:px-6">
           <div className="flex items-start gap-3 pr-8">
-            <div className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#7892ff]/35 bg-[#4766ff]/15 text-[#afbcff]">
-              <Bot className="size-5" aria-hidden="true" />
+            <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[#7892ff]/35 bg-[#4766ff]/15">
+              <img src="/logo/helpbot.webp" alt="" className="size-full object-contain" />
             </div>
             <div>
               <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-white">
-                Arc Support <Sparkles className="size-3.5 text-[#a7b6ff]" aria-hidden="true" />
+                <img src="/logo/Arc_Logo_White.svg" alt="" className="h-4 w-auto" /> Support <Sparkles className="size-3.5 text-[#a7b6ff]" aria-hidden="true" />
               </SheetTitle>
               <SheetDescription className="mt-1.5 text-sm leading-5 text-white/58">
                 Product help, verification guidance, and troubleshooting.

@@ -10,6 +10,7 @@ import { BuilderPassCard } from "@/components/builder-pass-card";
 import { PassStatusBadge } from "@/components/pass-status-badge";
 import { TierHistory } from "@/components/tier-history";
 import { EmptyState } from "@/components/empty-state";
+import { NetworkMark } from "@/components/network-mark";
 import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { formatPassNumber, formatNetworkLabel, formatDate, abbreviateAddress, explorerTxUrl } from "@/lib/format";
 import { founderOverallStatusMeta, builderOverallStatusMeta } from "@/lib/pass-status";
@@ -105,7 +106,7 @@ export default function PassDetailPage() {
                 <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
                   <Globe className="h-3.5 w-3.5" /> Network
                 </div>
-                <div className="text-xl font-semibold">{formatNetworkLabel((founderPass ?? builderPass)?.network)}</div>
+                <div className="flex items-center gap-1.5 text-xl font-semibold"><NetworkMark network={(founderPass ?? builderPass)?.network} className="size-4 shrink-0 rounded-full" />{formatNetworkLabel((founderPass ?? builderPass)?.network)}</div>
               </CardContent>
             </Card>
             <Card className="bg-card/50 sm:col-span-2">

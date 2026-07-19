@@ -19,13 +19,14 @@ import {
   GetBuilderPassDownloadUrlParams,
   MintBuilderPassBody,
 } from "@workspace/api-zod";
-import { getGithubEligibilityFailure, hasVerifiedGithub, requireAuth, type AuthedRequest } from "../lib/auth";
+import { getGithubEligibilityFailure, requireAuth, type AuthedRequest } from "../lib/auth";
 import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply } from "../lib/serializers";
 import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
 import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
 import { isDevelopmentTestUser } from "../lib/dev-test-identities";
 import { releaseBuilderWaveMintReservation, reserveBuilderWaveMint } from "../lib/wave-allocation";
+import { releaseFounderMintReservation, reserveFounderMint } from "../lib/founder-mint-lock";
 
 const router: IRouter = Router();
 
@@ -143,10 +144,6 @@ router.get("/passes/founder/:id/download-url", async (req, res): Promise<void> =
 
 router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void> => {
   const user = (req as AuthedRequest).user;
-  if (!hasVerifiedGithub(user) && !isDevelopmentTestUser(user)) {
-    res.status(403).json({ error: "Connect and verify your GitHub account before claiming a Founder Pass.", code: "github_verification_required" });
-    return;
-  }
   const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.userId, user.id));
 
   if (!pass) {
@@ -238,9 +235,24 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
     return;
   }
 
+  const reservationTime = new Date();
+  // The external chain request stays outside the serialized reservation
+  // transaction so a slow provider cannot pin a database transaction open.
+  const reservation = await reserveFounderMint(pass.id, reservationTime);
+  if (!reservation) {
+    res.status(409).json({ error: "This mint is already in progress or has already completed", code: "founder_mint_unavailable" });
+    return;
+  }
+
   const identityHash = computeIdentityHash("founder", user.id);
   const metadataUri = `${configuration.appUrl.replace(/\/$/, "")}/api/metadata/founder/${pass.id}`;
-  const mintResult = await chainAdapter.mintFounderPass({ identityHash, destinationWallet, network: network as Network, variant: pass.variant, metadataUri });
+  let mintResult: Awaited<ReturnType<typeof chainAdapter.mintFounderPass>>;
+  try {
+    mintResult = await chainAdapter.mintFounderPass({ identityHash, destinationWallet, network: network as Network, variant: pass.variant, metadataUri });
+  } catch (error) {
+    await releaseFounderMintReservation(pass.id, reservationTime);
+    throw error;
+  }
 
   const now = new Date();
   const [updated] = await db
@@ -254,9 +266,15 @@ router.post("/passes/founder/mint", requireAuth, async (req, res): Promise<void>
       network: mintResult.network,
       issuedAt: pass.issuedAt ?? now,
       permanentlyLockedAt: now,
+      mintReservedAt: null,
     })
-    .where(eq(founderPassesTable.id, pass.id))
+    .where(and(eq(founderPassesTable.id, pass.id), eq(founderPassesTable.mintReservedAt, reservationTime)))
     .returning();
+
+  if (!updated) {
+    res.status(409).json({ error: "The mint completed but its reservation could not be finalized. Contact support with the transaction hash.", code: "mint_finalization_failed", transactionHash: mintResult.transactionHash });
+    return;
+  }
 
   const [tier] = updated.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, updated.founderTierId)) : [null];
   res.json(serializeFounderPass(updated, tier ?? null, false));
@@ -383,6 +401,9 @@ router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<voi
     calculatedTierId: tier?.id ?? null,
     lastReviewedBlock: activity.lastReviewedBlock,
     internalRiskFlags: qualitative.riskFlags,
+    usdcSpent: activity.usdcSpent ?? null,
+    eurcSpent: activity.eurcSpent ?? null,
+    firstTransactionAt: activity.firstTransactionAt ? new Date(activity.firstTransactionAt) : null,
   });
 
   const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, builderPassId));
@@ -431,6 +452,9 @@ router.post("/passes/builder/reverify", requireAuth, async (req, res): Promise<v
       calculatedTierId: candidateTier?.id ?? null,
       lastReviewedBlock: activity.lastReviewedBlock,
       internalRiskFlags: qualitative.riskFlags,
+      usdcSpent: activity.usdcSpent ?? null,
+      eurcSpent: activity.eurcSpent ?? null,
+      firstTransactionAt: activity.firstTransactionAt ? new Date(activity.firstTransactionAt) : null,
     })
     .returning();
 

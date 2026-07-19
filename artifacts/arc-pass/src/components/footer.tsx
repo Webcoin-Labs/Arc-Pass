@@ -52,16 +52,16 @@ export function Footer() {
   };
 
   return (
-    <footer className="border-t border-white/10 bg-[#0f0d26] px-4 pb-7 pt-10 text-white sm:px-6 sm:pb-8 sm:pt-12 lg:px-8 lg:pt-16">
+    <footer className="border-t border-white/10 bg-[#0f0d26] px-4 pb-6 pt-8 text-white sm:px-6 sm:pb-6 sm:pt-10 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_2fr] lg:gap-16">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_2fr] lg:gap-12">
           <div>
             <a href="https://webcoinlabs.com" target="_blank" rel="noopener noreferrer" aria-label="Webcoin Labs home" className="inline-flex min-h-11 items-center">
               <img src="/brand/webcoin-mono-white.webp" alt="Webcoin Labs" className="h-7 w-auto max-w-[220px] object-contain object-left" width={640} height={128} />
             </a>
-            <p className="mt-4 max-w-xs text-sm leading-6 text-white/60 sm:mt-5">The operating system for founders.</p>
+            <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">The operating system for founders.</p>
 
-            <div className="mt-5 flex w-full max-w-[310px] items-center rounded-full border border-white/15 bg-white/[0.035] pl-3.5 pr-1.5 sm:mt-6 sm:pl-4">
+            <div className="mt-4 flex w-full max-w-[310px] items-center rounded-full border border-white/15 bg-white/[0.035] pl-3.5 pr-1.5">
               <a href={`mailto:${CONTACT_EMAIL}`} className="flex min-h-11 min-w-0 flex-1 items-center truncate py-2.5 text-[13px] font-semibold text-white/90 hover:text-white sm:text-sm">
                 {CONTACT_EMAIL}
               </a>
@@ -76,10 +76,10 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 sm:gap-x-8 lg:gap-x-12">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 sm:gap-x-8 lg:gap-x-10">
             <nav aria-label="Build links">
               <FooterHeading>Build</FooterHeading>
-              <ul className="mt-4 space-y-3.5 sm:mt-5 sm:space-y-4">
+              <ul className="mt-3 space-y-2.5">
                 {buildLinks.map((label) => (
                   <li key={label} className="flex flex-wrap items-center gap-1.5 text-sm text-white/60">
                     <span>{label}</span>
@@ -91,7 +91,7 @@ export function Footer() {
 
             <nav aria-label="Explore links">
               <FooterHeading>Explore</FooterHeading>
-              <ul className="mt-4 space-y-3.5 sm:mt-5 sm:space-y-4">
+              <ul className="mt-3 space-y-2.5">
                 {exploreLinks.map((item) => (
                   <li key={item.label} className="group">
                     {item.href.startsWith("http") ? (
@@ -108,7 +108,7 @@ export function Footer() {
 
             <nav aria-label="Connect links" className="col-span-2 sm:col-span-1">
               <FooterHeading>Connect</FooterHeading>
-              <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-3.5 sm:mt-5 sm:block sm:space-y-4">
+              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2.5 sm:block sm:space-y-2.5">
                 {connectLinks.map((item) => (
                   <li key={item.label} className="group">
                     <ExternalFooterLink href={item.href}>{item.label}</ExternalFooterLink>
@@ -119,10 +119,10 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 sm:mt-12 sm:pt-7 lg:mt-16 lg:pt-8">
-          <div className="flex flex-col gap-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-6 border-t border-white/10 pt-5 sm:mt-8 sm:pt-6">
+          <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="font-semibold text-white/90">&copy; {new Date().getFullYear()} Webcoin Labs. All rights reserved.</p>
-            <nav className="flex flex-wrap gap-x-5 gap-y-3 text-white/55" aria-label="Footer utility links">
+            <nav className="flex flex-wrap gap-x-5 gap-y-2 text-white/55" aria-label="Footer utility links">
               <Link href="/docs" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Docs</Link>
               <Link href="/faq" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Help</Link>
               <a href="https://www.webcoinlabs.com/docs/legal/terms" target="_blank" rel="noreferrer" className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-white">Terms</a>
@@ -131,11 +131,9 @@ export function Footer() {
             </nav>
           </div>
 
-          <div className="mt-6 max-w-6xl space-y-2 text-[11px] leading-5 text-white/35 sm:mt-8 sm:space-y-3 sm:text-xs sm:leading-6">
-            <p>Arc Pass is an early-access identity credential for founders and onchain builders. Access, verification, and claim eligibility depend on fit, review, and availability.</p>
-            <p>Credentials are non-transferable identity records and have no monetary, token, or airdrop value.</p>
-            <p>Nothing on this site is investment, legal, tax, or financial advice.</p>
-          </div>
+          <p className="mt-3 max-w-6xl text-[11px] leading-5 text-white/35 sm:text-xs">
+            Arc Pass is an early-access identity credential for founders and onchain builders. Access, verification, and claim eligibility depend on fit, review, and availability. Credentials are non-transferable identity records and have no monetary, token, or airdrop value. Nothing on this site is investment, legal, tax, or financial advice.
+          </p>
         </div>
       </div>
     </footer>

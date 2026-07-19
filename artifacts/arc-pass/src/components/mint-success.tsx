@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { abbreviateAddress, formatDate, formatNetworkLabel, explorerTxUrl } from "@/lib/format";
+import { NetworkMark } from "@/components/network-mark";
 
 export function MintSuccess({
   tokenId,
@@ -64,7 +65,7 @@ export function MintSuccess({
         </div>
         <div>
           <dt className="text-xs font-sans text-muted-foreground">Network</dt>
-          <dd className="mt-0.5 font-sans">{formatNetworkLabel(network)}</dd>
+          <dd className="mt-0.5 flex items-center gap-1 font-sans"><NetworkMark network={network} className="size-3 shrink-0 rounded-full" />{formatNetworkLabel(network)}</dd>
         </div>
         <div className="col-span-2">
           <dt className="text-xs font-sans text-muted-foreground">Destination wallet</dt>

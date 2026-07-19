@@ -51,6 +51,11 @@ export const founderPassesTable = pgTable("founder_passes", {
 
   claimedAt: timestamp("claimed_at", { withTimezone: true }),
   issuedAt: timestamp("issued_at", { withTimezone: true }),
+  // Single-flight lock held for the duration of one mint attempt — set just
+  // before the onchain call, cleared on failure, superseded by
+  // `permanentlyLockedAt` on success. Prevents a double-click or retried
+  // request from triggering two real onchain mints for the same pass.
+  mintReservedAt: timestamp("mint_reserved_at", { withTimezone: true }),
   permanentlyLockedAt: timestamp("permanently_locked_at", { withTimezone: true }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
   revokedReason: text("revoked_reason"),

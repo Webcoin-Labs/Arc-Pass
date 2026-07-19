@@ -56,7 +56,7 @@ export function ArcGasIndicator() {
         {unavailable ? <RotateCcw className="size-3.5" /> : <><span className="absolute size-1.5 animate-pulse rounded-full bg-[#65f6b4] motion-reduce:animate-none" /><Gauge className="size-3.5 opacity-70" /></>}
       </span>
       <span className="leading-none">
-        <span className="hidden text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40 sm:block">Arc gas</span>
+        <span className="hidden items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40 sm:flex"><img src="/logo/Arc_Logo_White.svg" alt="" className="h-2.5 w-auto shrink-0" /> gas</span>
         <span className="block whitespace-nowrap text-[9px] font-semibold tabular-nums text-white sm:mt-1 sm:text-xs">{label}</span>
       </span>
     </>

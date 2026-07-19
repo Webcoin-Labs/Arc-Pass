@@ -91,6 +91,13 @@ test("Both mint routes require an ownership-verified destination wallet", async 
   assert.equal(source.match(/A non-transferable pass can only be minted to a wallet you have ownership-verified\./g)?.length, 2);
 });
 
+test("Founder claims use the verified invitation identity and do not require GitHub", async () => {
+  const source = await readFile(path.join(workspace, "artifacts/api-server/src/routes/passes.ts"), "utf8");
+  const founderClaim = source.match(/router\.post\("\/passes\/founder\/claim"[\s\S]*?router\.post\("\/passes\/founder\/mint"/)?.[0] ?? "";
+  assert.doesNotMatch(founderClaim, /hasVerifiedGithub|github_verification_required|Connect and verify your GitHub/);
+  assert.match(founderClaim, /eligibilityStatus !== "eligible"/);
+});
+
 test("inventory claims allocate stable credential numbers before onchain minting", async () => {
   const source = await readFile(path.join(workspace, "artifacts/api-server/src/routes/passes.ts"), "utf8");
   const founderClaim = source.match(/router\.post\("\/passes\/founder\/claim"[\s\S]*?router\.post\("\/passes\/founder\/mint"/)?.[0] ?? "";

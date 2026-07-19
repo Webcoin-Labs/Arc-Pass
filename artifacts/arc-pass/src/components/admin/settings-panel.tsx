@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const INTEGRATIONS = [
   { name: "X OAuth", vars: "X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI", fallback: "Required for X identity checks; no synthetic production identity is created when unset." },
   { name: "Discord OAuth", vars: "DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI", fallback: "Required for Discord identity checks; guild membership is supporting evidence only." },
-  { name: "GitHub verification", vars: "GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI", fallback: "Active. A linked GitHub account is required before a pass can be claimed." },
+  { name: "GitHub verification", vars: "GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI", fallback: "Active for Builder verification. Founder claims remain invite-only and do not require GitHub." },
   { name: "Gemini support and analysis", vars: "GEMINI_API_KEY, GEMINI_SUPPORT_MODEL / GEMINI_ANALYSIS_MODEL (optional)", fallback: "Optional qualitative enrichment and the public chat helper only. AI never grants eligibility, sets a tier, proves a wallet, claims, or mints." },
   { name: "Onchain minting", vars: "CHAIN_RPC_URL, ARC_CHAIN_ID, RELAYER_PRIVATE_KEY, FOUNDER_PASS_CONTRACT_ADDRESS, BUILDER_PASS_CONTRACT_ADDRESS", fallback: "Fails closed when configuration is incomplete." },
   { name: "Explorer / indexer", vars: "EXPLORER_API_URL, EXPLORER_API_KEY", fallback: "Verification is unavailable when configuration is incomplete." },

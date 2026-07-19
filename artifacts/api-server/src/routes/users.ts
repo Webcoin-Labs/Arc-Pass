@@ -58,7 +58,7 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
     createdAt: user.createdAt,
     connections: {
       x: { connected: testIdentity || !!user.xUserId, username: testIdentity ? "test" : user.xUsername },
-      discord: { connected: testIdentity || !!user.discordUserId, username: testIdentity ? "test" : user.discordUsername, discriminator: testIdentity ? null : user.discordDiscriminator, displayIdentity: testIdentity ? "test" : displayDiscordIdentity(user.discordUsername, user.discordDiscriminator), avatarUrl: user.discordAvatarUrl },
+      discord: { connected: testIdentity || !!user.discordUserId, username: testIdentity ? "test" : user.discordUsername, discriminator: testIdentity ? null : user.discordDiscriminator, displayIdentity: testIdentity ? "test" : displayDiscordIdentity(user.discordUsername, user.discordDiscriminator), avatarUrl: user.discordAvatarUrl, arcMember: testIdentity ? null : user.discordArcMember ?? null, arcJoinedAt: testIdentity ? null : user.discordArcJoinedAt ?? null },
       github: {
         connected: testIdentity || !!user.githubUserId,
         username: testIdentity ? "test" : user.githubUsername,

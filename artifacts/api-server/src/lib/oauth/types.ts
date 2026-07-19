@@ -21,4 +21,10 @@ export interface OAuthState {
   codeVerifier?: string;
   /** One-shot X media draft; present only for explicit share authorization. */
   shareDraftId?: string;
+  /** Optional public lookup identity that the verified OAuth account must match. */
+  expectedIdentity?: {
+    provider: "x" | "discord";
+    username: string;
+    discriminator: string | null;
+  };
 }

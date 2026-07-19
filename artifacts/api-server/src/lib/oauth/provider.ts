@@ -3,6 +3,7 @@ import { randomBytes, createHash } from "crypto";
 import type { OAuthIntent, OAuthState } from "./types";
 import { db, oauthStatesTable } from "@workspace/db";
 import { and, eq, gt, isNull } from "drizzle-orm";
+import type { ExpectedOAuthIdentity } from "./routing";
 
 // Ephemeral fallback so local dev works without a persistent secret — see
 // the same tradeoff noted in signed-claims.ts (production must set
@@ -13,7 +14,7 @@ const stateSecret = process.env.OAUTH_STATE_SIGNING_KEY
 
 const STATE_TTL_MINUTES = 10;
 
-export async function signOAuthState(params: { intent: OAuthIntent; linkUserId?: number; returnTo: string; codeVerifier?: string; shareDraftId?: string }): Promise<string> {
+export async function signOAuthState(params: { intent: OAuthIntent; linkUserId?: number; returnTo: string; codeVerifier?: string; shareDraftId?: string; expectedIdentity?: ExpectedOAuthIdentity | null }): Promise<string> {
   const nonce = randomBytes(12).toString("hex");
   const expiresAt = new Date(Date.now() + STATE_TTL_MINUTES * 60_000);
   const payload: OAuthState = {
@@ -21,6 +22,7 @@ export async function signOAuthState(params: { intent: OAuthIntent; linkUserId?:
     linkUserId: params.linkUserId,
     returnTo: params.returnTo,
     shareDraftId: params.shareDraftId,
+    expectedIdentity: params.expectedIdentity ?? undefined,
     nonce,
   };
   await db.insert(oauthStatesTable).values({ nonceHash: createHash("sha256").update(nonce).digest("hex"), codeVerifier: params.codeVerifier, expiresAt });

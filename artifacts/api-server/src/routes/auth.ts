@@ -11,6 +11,13 @@ import type { OAuthIntent, OAuthProfile } from "../lib/oauth/types";
 import { configuration } from "../lib/env";
 import { grantDevelopmentTestEntitlements } from "../lib/dev-test-identities";
 import { normalizeXHandle, parseDiscordIdentity } from "../lib/identity";
+import {
+  appendReturnToQuery,
+  expectedIdentityMatches,
+  normalizeExpectedIdentity,
+  sanitizeReturnTo,
+  type ExpectedOAuthProvider,
+} from "../lib/oauth/routing";
 
 const router: IRouter = Router();
 
@@ -20,8 +27,15 @@ function frontendUrl(path = "/"): string {
 }
 
 function safeReturnTo(req: import("express").Request): string {
-  const value = typeof req.query.returnTo === "string" ? req.query.returnTo : "/dashboard";
-  return value.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
+  return sanitizeReturnTo(req.query.returnTo);
+}
+
+function expectedIdentity(req: import("express").Request, provider: ExpectedOAuthProvider) {
+  return normalizeExpectedIdentity(provider, req.query.expectedUsername, req.query.expectedDiscriminator);
+}
+
+function oauthErrorUrl(returnTo: string, error: string): string {
+  return frontendUrl(appendReturnToQuery(returnTo, "authError", error));
 }
 
 type Provider = "x" | "discord" | "github";
@@ -176,7 +190,7 @@ async function mockOAuth(provider: Provider, req: import("express").Request, res
     return;
   }
 
-  res.redirect(frontendUrl());
+  res.redirect(frontendUrl(safeReturnTo(req)));
 }
 
 // ---- X ----
@@ -218,6 +232,7 @@ router.get("/auth/dev-test/:provider", async (req, res): Promise<void> => {
 });
 
 router.get("/auth/x", async (req, res): Promise<void> => {
+  const returnTo = safeReturnTo(req);
   try {
     const currentUser = await getUserFromSession(req);
 
@@ -225,31 +240,34 @@ router.get("/auth/x", async (req, res): Promise<void> => {
       await mockOAuth("x", req, res);
       return;
     }
-    if (!isXOAuthConfigured()) { res.redirect(frontendUrl("/?authError=x_unavailable")); return; }
+    if (!isXOAuthConfigured()) { res.redirect(oauthErrorUrl(returnTo, "x_unavailable")); return; }
 
     const { verifier, challenge } = createPkcePair();
     const state = await signOAuthState({
       intent: currentUser ? "link" : "login",
       linkUserId: currentUser?.id,
-      returnTo: safeReturnTo(req),
+      returnTo,
       codeVerifier: verifier,
+      expectedIdentity: expectedIdentity(req, "x"),
     });
     res.redirect(buildXAuthorizeUrl(state, challenge));
   } catch (err) {
     req.log.error({ err }, "X OAuth redirect error");
-    res.redirect(frontendUrl("/?authError=x"));
+    res.redirect(oauthErrorUrl(returnTo, "x"));
   }
 });
 
 router.get("/auth/x/callback", async (req, res): Promise<void> => {
   let shareReturnTo: string | null = null;
   let shareDraftId: string | null = null;
+  let callbackReturnTo: string | null = null;
   try {
     const code = req.query.code as string | undefined;
     const stateParam = req.query.state as string | undefined;
     if (!code || !stateParam) throw new Error("Missing code or state");
 
     const oauthState = await verifyOAuthState(stateParam);
+    callbackReturnTo = oauthState.returnTo;
     if (oauthState.intent === "share") {
       shareReturnTo = oauthState.returnTo;
       shareDraftId = oauthState.shareDraftId ?? null;
@@ -266,6 +284,10 @@ router.get("/auth/x/callback", async (req, res): Promise<void> => {
       return;
     }
     const profile = await exchangeXCode(code, oauthState.codeVerifier ?? "");
+    if (!expectedIdentityMatches(oauthState.expectedIdentity, profile)) {
+      res.redirect(oauthErrorUrl(oauthState.returnTo, "identity_mismatch"));
+      return;
+    }
     const currentUser = await getUserFromSession(req);
 
     const result = await completeOAuth({
@@ -278,7 +300,7 @@ router.get("/auth/x/callback", async (req, res): Promise<void> => {
     });
 
     if (!result.ok) {
-      res.redirect(frontendUrl(`${oauthState.returnTo}?authError=${result.error}`));
+      res.redirect(oauthErrorUrl(oauthState.returnTo, result.error));
       return;
     }
     res.redirect(frontendUrl(oauthState.returnTo));
@@ -290,13 +312,14 @@ router.get("/auth/x/callback", async (req, res): Promise<void> => {
       res.redirect(frontendUrl(`${shareReturnTo}${separator}shareError=x_posting`));
       return;
     }
-    res.redirect(frontendUrl("/?authError=x"));
+    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, "x") : frontendUrl("/?authError=x"));
   }
 });
 
 // ---- Discord ----
 
 router.get("/auth/discord", async (req, res): Promise<void> => {
+  const returnTo = safeReturnTo(req);
   try {
     const currentUser = await getUserFromSession(req);
 
@@ -304,28 +327,35 @@ router.get("/auth/discord", async (req, res): Promise<void> => {
       await mockOAuth("discord", req, res);
       return;
     }
-    if (!isDiscordOAuthConfigured()) { res.redirect(frontendUrl("/?authError=discord_unavailable")); return; }
+    if (!isDiscordOAuthConfigured()) { res.redirect(oauthErrorUrl(returnTo, "discord_unavailable")); return; }
 
     const state = await signOAuthState({
       intent: currentUser ? "link" : "login",
       linkUserId: currentUser?.id,
-      returnTo: safeReturnTo(req),
+      returnTo,
+      expectedIdentity: expectedIdentity(req, "discord"),
     });
     res.redirect(buildDiscordAuthorizeUrl(state));
   } catch (err) {
     req.log.error({ err }, "Discord OAuth redirect error");
-    res.redirect(frontendUrl("/?authError=discord"));
+    res.redirect(oauthErrorUrl(returnTo, "discord"));
   }
 });
 
 router.get("/auth/discord/callback", async (req, res): Promise<void> => {
+  let callbackReturnTo: string | null = null;
   try {
     const code = req.query.code as string | undefined;
     const stateParam = req.query.state as string | undefined;
     if (!code || !stateParam) throw new Error("Missing code or state");
 
     const oauthState = await verifyOAuthState(stateParam);
+    callbackReturnTo = oauthState.returnTo;
     const { profile, accessToken } = await exchangeDiscordCode(code);
+    if (!expectedIdentityMatches(oauthState.expectedIdentity, profile)) {
+      res.redirect(oauthErrorUrl(oauthState.returnTo, "identity_mismatch"));
+      return;
+    }
     const discordMembership = await getArcGuildMembership(accessToken);
     const currentUser = await getUserFromSession(req);
 
@@ -340,23 +370,24 @@ router.get("/auth/discord/callback", async (req, res): Promise<void> => {
     });
 
     if (!result.ok) {
-      res.redirect(frontendUrl(`${oauthState.returnTo}?authError=${result.error}`));
+      res.redirect(oauthErrorUrl(oauthState.returnTo, result.error));
       return;
     }
     res.redirect(frontendUrl(oauthState.returnTo));
   } catch (err) {
     req.log.error({ err }, "Discord OAuth callback error");
-    res.redirect(frontendUrl("/?authError=discord"));
+    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, "discord") : frontendUrl("/?authError=discord"));
   }
 });
 
 // ---- GitHub (link-only — never a login method) ----
 
 router.get("/auth/github", async (req, res): Promise<void> => {
+  const returnTo = safeReturnTo(req);
   try {
     const currentUser = await getUserFromSession(req);
     if (!currentUser) {
-      res.redirect(frontendUrl("/?authError=login_required_before_github"));
+      res.redirect(oauthErrorUrl(returnTo, "login_required_before_github"));
       return;
     }
 
@@ -364,24 +395,26 @@ router.get("/auth/github", async (req, res): Promise<void> => {
       await mockOAuth("github", req, res);
       return;
     }
-    if (!isGithubOAuthConfigured()) { res.redirect(frontendUrl("/?authError=github_unavailable")); return; }
+    if (!isGithubOAuthConfigured()) { res.redirect(oauthErrorUrl(returnTo, "github_unavailable")); return; }
 
     const { verifier, challenge } = createPkcePair();
-    const state = await signOAuthState({ intent: "link", linkUserId: currentUser.id, returnTo: safeReturnTo(req), codeVerifier: verifier });
+    const state = await signOAuthState({ intent: "link", linkUserId: currentUser.id, returnTo, codeVerifier: verifier });
     res.redirect(buildGithubAuthorizeUrl(state, challenge));
   } catch (err) {
     req.log.error({ err }, "GitHub OAuth redirect error");
-    res.redirect(frontendUrl("/?authError=github"));
+    res.redirect(oauthErrorUrl(returnTo, "github"));
   }
 });
 
 router.get("/auth/github/callback", async (req, res): Promise<void> => {
+  let callbackReturnTo: string | null = null;
   try {
     const code = req.query.code as string | undefined;
     const stateParam = req.query.state as string | undefined;
     if (!code || !stateParam) throw new Error("Missing code or state");
 
     const oauthState = await verifyOAuthState(stateParam);
+    callbackReturnTo = oauthState.returnTo;
     const { profile, contributionCount, accountCreatedAt, contributionWindowStartedAt } = await exchangeGithubCodeWithContributions(code, oauthState.codeVerifier ?? "");
     const currentUser = await getUserFromSession(req);
 
@@ -398,13 +431,13 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
     });
 
     if (!result.ok) {
-      res.redirect(frontendUrl(`${oauthState.returnTo}?authError=${result.error}`));
+      res.redirect(oauthErrorUrl(oauthState.returnTo, result.error));
       return;
     }
     res.redirect(frontendUrl(oauthState.returnTo));
   } catch (err) {
     req.log.error({ err }, "GitHub OAuth callback error");
-    res.redirect(frontendUrl("/?authError=github"));
+    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, "github") : frontendUrl("/?authError=github"));
   }
 });
 

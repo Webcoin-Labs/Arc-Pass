@@ -181,13 +181,13 @@ export function FounderPassesPanel() {
                   <Input id="founder-invite-handle" required value={inviteForm.inviteHandle} onChange={(e) => setInviteForm((f) => ({ ...f, inviteHandle: e.target.value.replace(/^@+/, "") }))} placeholder="username" />
                   {inviteForm.invitePlatform === "discord" && (
                     <div className="flex w-28 items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
-                      <span className="text-muted-foreground" aria-hidden="true">#</span>
+                      {inviteForm.inviteDiscriminator && <span className="text-muted-foreground" aria-hidden="true">#</span>}
                       <label className="sr-only" htmlFor="founder-invite-discriminator">Legacy discriminator (optional)</label>
-                      <input id="founder-invite-discriminator" inputMode="numeric" maxLength={4} pattern="[0-9]{4}" value={inviteForm.inviteDiscriminator} onChange={(e) => setInviteForm((f) => ({ ...f, inviteDiscriminator: e.target.value.replace(/\D/g, "").slice(0, 4) }))} placeholder="1234" className="min-w-0 flex-1 bg-transparent px-1 py-2 outline-none" />
+                      <input id="founder-invite-discriminator" inputMode="numeric" maxLength={4} pattern="[0-9]{4}" value={inviteForm.inviteDiscriminator} onChange={(e) => setInviteForm((f) => ({ ...f, inviteDiscriminator: e.target.value.replace(/\D/g, "").slice(0, 4) }))} placeholder="Optional" className="min-w-0 flex-1 bg-transparent px-1 py-2 outline-none" />
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{inviteForm.invitePlatform === "x" ? "Enter the X handle without @." : "The #1234 discriminator is optional for legacy Discord accounts."}</p>
+                <p className="text-xs text-muted-foreground">{inviteForm.invitePlatform === "x" ? "Enter the X handle without @." : "Legacy 4-digit Discord tag is optional; modern accounts usually do not use one."}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

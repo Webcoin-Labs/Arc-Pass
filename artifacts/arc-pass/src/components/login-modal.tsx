@@ -2,30 +2,55 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { SiX } from "react-icons/si";
 import { DiscordIcon } from "@/components/discord-icon";
+import {
+  clearPendingEligibilityIdentity,
+  identityOAuthHref,
+  pendingIdentityLabel,
+  readPendingEligibilityIdentity,
+} from "@/lib/pending-eligibility";
 
 export function LoginModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const returnTo = typeof window === "undefined" ? "/dashboard" : `${window.location.pathname}${window.location.search}`;
-  const oauthHref = (provider: "x" | "discord") => `/api/auth/${provider}?returnTo=${encodeURIComponent(returnTo)}`;
+  const currentRoute = typeof window === "undefined" ? "/dashboard" : `${window.location.pathname}${window.location.search}`;
+  const returnTo = currentRoute === "/" ? "/dashboard" : currentRoute;
+  const pendingIdentity = readPendingEligibilityIdentity();
+  const oauthHref = (provider: "x" | "discord") => identityOAuthHref(provider, returnTo, pendingIdentity);
+  const checkedAccountLabel = pendingIdentity ? pendingIdentityLabel(pendingIdentity) : null;
+  const checkAnother = () => {
+    clearPendingEligibilityIdentity();
+    onOpenChange(false);
+    window.location.assign("/#check-status");
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl">Sign in to verify your identity</DialogTitle>
-          <DialogDescription className="text-center">Verify ownership and access your Arc Pass dashboard.</DialogDescription>
+          <DialogTitle className="text-center text-xl">{pendingIdentity ? "Continue with the account you checked" : "Sign in to verify your identity"}</DialogTitle>
+          <DialogDescription className="text-center">
+            {pendingIdentity
+              ? `Connect ${checkedAccountLabel} on ${pendingIdentity.platform === "x" ? "X" : "Discord"} so the eligibility check and verified account belong to the same person.`
+              : "Verify ownership and access your Arc Pass dashboard."}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-4">
-          <Button variant="outline" size="lg" className="h-12 justify-start gap-3 px-4 font-medium" asChild>
-            <a href={oauthHref("x")}>
-              <SiX className="h-4 w-4" aria-hidden="true" />
-              Continue with X
-            </a>
-          </Button>
-          <Button variant="outline" size="lg" className="h-12 justify-start gap-3 px-4 font-medium" asChild>
-            <a href={oauthHref("discord")}>
-              <DiscordIcon className="h-4 w-5 text-[#5865F2]" />
-              Continue with Discord
-            </a>
-          </Button>
+          {(!pendingIdentity || pendingIdentity.platform === "x") && (
+            <Button variant="outline" size="lg" className="h-12 justify-start gap-3 px-4 font-medium" asChild>
+              <a href={oauthHref("x")}>
+                <SiX className="h-4 w-4" aria-hidden="true" />
+                {pendingIdentity ? `Continue with X ${checkedAccountLabel}` : "Continue with X"}
+              </a>
+            </Button>
+          )}
+          {(!pendingIdentity || pendingIdentity.platform === "discord") && (
+            <Button variant="outline" size="lg" className="h-12 justify-start gap-3 px-4 font-medium" asChild>
+              <a href={oauthHref("discord")}>
+                <DiscordIcon className="h-4 w-5 text-[#5865F2]" />
+                {pendingIdentity ? `Continue with Discord ${checkedAccountLabel}` : "Continue with Discord"}
+              </a>
+            </Button>
+          )}
+          {pendingIdentity && (
+            <Button type="button" variant="ghost" size="sm" onClick={checkAnother}>Check another username</Button>
+          )}
         </div>
         {import.meta.env.DEV && (
           <div className="rounded-xl border border-dashed border-amber-400/40 bg-amber-400/10 p-3">

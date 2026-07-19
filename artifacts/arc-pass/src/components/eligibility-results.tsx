@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { FounderRequestDialog } from "@/components/founder-request-dialog";
-import type { EligibilityResult } from "@workspace/api-client-react";
+import type { EligibilityQueryPlatform, EligibilityResult } from "@workspace/api-client-react";
 
 function ObscuredCredential({ kind, eligible = false }: { kind: "founder" | "builder"; eligible?: boolean }) {
   const founder = kind === "founder";
@@ -68,7 +68,7 @@ const founderCopy: Record<string, { label: string; body: string }> = {
   unknown: { label: "Ineligible", body: "You are ineligible to claim a Founder Pass." },
 };
 
-export function EligibilityResults({ result, className, variant = "default" }: { result: EligibilityResult; className?: string; variant?: "default" | "immersive" }) {
+export function EligibilityResults({ result, lookup, className, variant = "default" }: { result: EligibilityResult; lookup?: { identifier: string; platform: EligibilityQueryPlatform; discriminator?: string } | null; className?: string; variant?: "default" | "immersive" }) {
   const [, setLocation] = useLocation();
   const [requestOpen, setRequestOpen] = useState(false);
   const founder = founderCopy[result.founder.status];
@@ -76,6 +76,11 @@ export function EligibilityResults({ result, className, variant = "default" }: {
   const founderCanApply = result.founder.status === "ineligible" || result.founder.status === "unknown";
   const builderClaimed = result.builder.status === "claimed";
   const immersive = variant === "immersive";
+  const checkedIdentity = lookup
+    ? lookup.platform === "x"
+      ? `X @${lookup.identifier.replace(/^@+/, "")}`
+      : `Discord ${lookup.identifier}${lookup.discriminator ? `#${lookup.discriminator}` : ""}`
+    : null;
   const cardClass = cn(
     "flex flex-col p-5 sm:p-7",
     immersive ? "rounded-3xl border border-white/10 bg-[#0b0e18] text-white shadow-none" : "rounded-3xl border border-slate-200 bg-white shadow-[0_18px_55px_rgba(22,30,55,.08)]",
@@ -99,7 +104,7 @@ export function EligibilityResults({ result, className, variant = "default" }: {
             </div>
           )}
           {result.founder.status === "eligible" || result.founder.status === "claimed" ? (
-            <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]", founderEligible && "bg-emerald-400 text-emerald-950 hover:bg-emerald-300")} onClick={() => setLocation(result.founder.status === "claimed" ? "/dashboard" : "/claim/founder")}>{founderEligible ? "Log in to verify and claim" : "Log in to your dashboard"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Button>
+            <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]", founderEligible && "bg-emerald-400 text-emerald-950 hover:bg-emerald-300")} onClick={() => setLocation("/claim/founder")}>Continue with {checkedIdentity ?? "the checked account"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Button>
           ) : null}
         </article>
 
@@ -107,8 +112,8 @@ export function EligibilityResults({ result, className, variant = "default" }: {
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><h3 className={cn("font-semibold", immersive ? "text-white" : "text-slate-950")}>Onchain Builder Pass</h3><Badge variant="secondary" className={cn(immersive && "border border-white/10 bg-white/10 text-white")}>{builderClaimed ? "Pass already claimed" : "Might be eligible"}</Badge></div>
           <ObscuredCredential kind="builder" />
           <p className={cn("mt-5 min-h-10 text-sm leading-6 text-pretty", immersive ? "text-white/60" : "text-slate-600")}>{builderClaimed ? "This pass has already been claimed. Sign in to view your passes." : "Onchain Builder Pass verification is available after login. Connect GitHub, ownership-verify a wallet, and analyse real Arc activity to check."}</p>
-          <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]")} onClick={() => setLocation(builderClaimed ? "/dashboard" : "/claim/builder")}>
-            {builderClaimed ? "Log in to your dashboard" : "Log in and connect wallet"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+          <Button className={cn("mt-4 h-12 w-full", immersive && "rounded-full bg-[#4f63ff] text-white hover:bg-[#4055ef]")} onClick={() => setLocation("/claim/builder")}>
+            Continue with {checkedIdentity ?? "the checked account"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
           </Button>
         </article>
       </div>

@@ -30,6 +30,11 @@ export interface ChainActivityResult {
   qualifyingTransactionCount: number;
   validContractCount: number;
   lastReviewedBlock: string;
+  // Optional "wrapped" display stats. Providers that cannot report them omit
+  // them; the app then hides the wrapped panel instead of guessing.
+  usdcSpent?: string;
+  eurcSpent?: string;
+  firstTransactionAt?: string;
 }
 
 export interface ChainAdapter {
@@ -236,13 +241,29 @@ export const mockChainAdapter: ChainAdapter = {
     const seedInput = [...walletAddresses].sort().join(",");
     const validContractCount = hashToInt(`contracts:${seedInput}`, 220);
     const qualifyingTransactionCount = hashToInt(`txs:${seedInput}`, 1100) + validContractCount * 4;
+    const firstTxYear = 2021 + hashToInt(`first-year:${seedInput}`, 4);
     return {
       qualifyingTransactionCount,
       validContractCount,
       lastReviewedBlock: String(hashToInt(`block:${seedInput}`, 20_000_000) + 1_000_000),
+      usdcSpent: (hashToInt(`usdc:${seedInput}`, 2_500_000) / 100).toFixed(2),
+      eurcSpent: (hashToInt(`eurc:${seedInput}`, 900_000) / 100).toFixed(2),
+      firstTransactionAt: new Date(Date.UTC(firstTxYear, hashToInt(`first-month:${seedInput}`, 12), 1 + hashToInt(`first-day:${seedInput}`, 28))).toISOString(),
     };
   },
 };
+
+function optionalDecimalAmount(value: unknown): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value.toFixed(2);
+  if (typeof value === "string" && /^\d+(\.\d+)?$/.test(value.trim())) return value.trim();
+  return undefined;
+}
+
+function optionalIsoDate(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+}
 
 async function getProviderActivity(walletAddresses: string[]): Promise<ChainActivityResult> {
   const explorerUrl = process.env.EXPLORER_API_URL;
@@ -256,10 +277,21 @@ async function getProviderActivity(walletAddresses: string[]): Promise<ChainActi
   });
   if (!response.ok) throw new VerificationUnavailableError();
   const payload = await response.json() as Partial<ChainActivityResult>;
-  if (!Number.isSafeInteger(payload.qualifyingTransactionCount) || !Number.isSafeInteger(payload.validContractCount) || typeof payload.lastReviewedBlock !== "string") {
+  const { qualifyingTransactionCount, validContractCount, lastReviewedBlock } = payload;
+  if (typeof qualifyingTransactionCount !== "number" || !Number.isSafeInteger(qualifyingTransactionCount) || typeof validContractCount !== "number" || !Number.isSafeInteger(validContractCount) || typeof lastReviewedBlock !== "string") {
     throw new VerificationUnavailableError();
   }
-  return payload as ChainActivityResult;
+  const usdcSpent = optionalDecimalAmount(payload.usdcSpent);
+  const eurcSpent = optionalDecimalAmount(payload.eurcSpent);
+  const firstTransactionAt = optionalIsoDate(payload.firstTransactionAt);
+  return {
+    qualifyingTransactionCount,
+    validContractCount,
+    lastReviewedBlock,
+    ...(usdcSpent !== undefined ? { usdcSpent } : {}),
+    ...(eurcSpent !== undefined ? { eurcSpent } : {}),
+    ...(firstTransactionAt !== undefined ? { firstTransactionAt } : {}),
+  };
 }
 
 function buildViemChainAdapter(): ChainAdapter | null {
@@ -288,7 +320,12 @@ function buildViemChainAdapter(): ChainAdapter | null {
       })
     : undefined;
 
-  const account = privateKeyToAccount(relayerKey as Hex);
+  const normalizedRelayerKey = relayerKey.startsWith("0x") ? relayerKey : `0x${relayerKey}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalizedRelayerKey)) {
+    logger.error("chain minting is unavailable because RELAYER_PRIVATE_KEY is not a 32-byte hex key");
+    return null;
+  }
+  const account = privateKeyToAccount(normalizedRelayerKey as Hex);
   const transport = http(rpcUrl);
   const publicClient = createPublicClient({ chain: arcChain, transport });
   const walletClient = createWalletClient({ account, chain: arcChain, transport });

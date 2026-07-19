@@ -401,13 +401,13 @@ export default function DashboardPage() {
           </div>
 
           <div id="connections" className="scroll-mt-24 divide-y border-t">
-            <ConnectionRow icon={<SiX className="size-4" />} label="X" connected={!!profile?.connections.x.connected} username={profile?.connections.x.username} href="/api/auth/x" />
+            <ConnectionRow icon={<SiX className="size-4" />} label="X" connected={!!profile?.connections.x.connected} username={profile?.connections.x.username} href="/api/auth/x?returnTo=%2Fdashboard" />
             <ConnectionRow
               icon={<DiscordIcon className="size-4" />}
               label="Discord"
               connected={!!profile?.connections.discord.connected}
               username={profile?.connections.discord.displayIdentity ?? profile?.connections.discord.username}
-              href="/api/auth/discord"
+              href="/api/auth/discord?returnTo=%2Fdashboard"
               tint="discord"
             />
             <ConnectionRow

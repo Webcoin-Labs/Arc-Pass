@@ -29,6 +29,7 @@ import { BuilderPassCard, type BuilderPassCardData } from "@/components/builder-
 import { FounderPassCard, type FounderPassCardData } from "@/components/founder-pass-card";
 import { FounderRequestDialog } from "@/components/founder-request-dialog";
 import { cn } from "@/lib/utils";
+import { clearPendingEligibilityIdentity, savePendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
 const verificationSteps = [
   {
@@ -560,6 +561,7 @@ export default function LandingPage() {
   const [lastLookup, setLastLookup] = useState<{ identifier: string; platform: EligibilityQueryPlatform; discriminator?: string } | null>(null);
 
   const handleCheck = async ({ identifier, platform, discriminator }: { identifier: string; platform: EligibilityQueryPlatform; discriminator?: string }) => {
+    clearPendingEligibilityIdentity();
     setScanning(true);
     setResult(null);
     setScanError(null);
@@ -568,6 +570,7 @@ export default function LandingPage() {
     try {
       const normalizedIdentifier = identifier.trim().replace(/^@/, "").toLowerCase();
       if (import.meta.env.DEV && normalizedIdentifier === "test") {
+        savePendingEligibilityIdentity({ identifier: normalizedIdentifier, platform, discriminator });
         await new Promise<void>((resolve) => window.setTimeout(resolve, 3_000));
         window.location.assign(`/api/auth/dev-test/${platform}?returnTo=/dashboard`);
         return;
@@ -577,6 +580,7 @@ export default function LandingPage() {
         checkEligibility.mutateAsync({ data: { identifier, platform, ...(discriminator ? { discriminator } : {}) } }),
         new Promise<void>((resolve) => window.setTimeout(resolve, 3_000)),
       ]);
+      savePendingEligibilityIdentity({ identifier: normalizedIdentifier, platform, discriminator });
       setResult(data);
       setScanning(false);
       window.requestAnimationFrame(() => document.getElementById("eligibility-results")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }));
@@ -654,7 +658,7 @@ export default function LandingPage() {
                 Check another username
               </button>
             </div>
-            <EligibilityResults result={result} variant="immersive" />
+            <EligibilityResults result={result} lookup={lastLookup} variant="immersive" />
             <EligibilityScanner platform={scanPlatform} result={result} className="mt-7" />
           </div>
         </section>

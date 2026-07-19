@@ -76,14 +76,14 @@ export function EligibilityChecker({
             "flex h-12 shrink-0 items-center rounded-2xl border px-3 sm:h-14 sm:w-[132px] sm:rounded-full",
             immersive ? "border-white/10 bg-white/[0.04] text-white/45" : "border-black bg-white text-black/50",
           )}>
-            <span aria-hidden="true">#</span>
+            {discriminator && <span aria-hidden="true">#</span>}
             <label className="sr-only" htmlFor="eligibility-discriminator">Legacy Discord discriminator (optional)</label>
             <input
               id="eligibility-discriminator"
               inputMode="numeric"
               maxLength={4}
               pattern="[0-9]{4}"
-              placeholder="1234"
+              placeholder="Optional"
               value={discriminator}
               onChange={(event) => setDiscriminator(event.target.value.replace(/\D/g, "").slice(0, 4))}
               className="min-w-0 flex-1 bg-transparent px-1.5 text-base text-inherit outline-none placeholder:text-inherit placeholder:opacity-55"

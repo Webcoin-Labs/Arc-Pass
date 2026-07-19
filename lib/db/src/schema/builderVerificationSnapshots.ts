@@ -22,6 +22,13 @@ export const builderVerificationSnapshotsTable = pgTable("builder_verification_s
   validContractCount: integer("valid_contract_count").notNull().default(0),
   calculatedTierId: integer("calculated_tier_id").references(() => builderTiersTable.id),
 
+  // Optional "wrapped" display stats supplied by the activity provider.
+  // Decimal token amounts are stored as strings to avoid float drift; all
+  // three stay null when the provider does not report them.
+  usdcSpent: text("usdc_spent"),
+  eurcSpent: text("eurc_spent"),
+  firstTransactionAt: timestamp("first_transaction_at", { withTimezone: true }),
+
   analysisTimestamp: timestamp("analysis_timestamp", { withTimezone: true }).notNull().defaultNow(),
   lastReviewedBlock: text("last_reviewed_block"),
   internalRiskFlags: jsonb("internal_risk_flags").$type<string[]>(),

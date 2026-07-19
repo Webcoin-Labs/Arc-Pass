@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Activity, Code2, Github, Lock, MessageCircle, ShieldCheck, TrendingUp, UserRound, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TierEmblem } from "@/components/tier-badge";
+import { NetworkMark } from "@/components/network-mark";
 import { formatPassNumber, formatDate, formatNetworkLabel } from "@/lib/format";
 
 export interface BuilderPassCardData {
@@ -179,7 +180,7 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
 
         <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-white/10 pt-2 font-mono text-[7px] tabular-nums sm:grid-cols-4 sm:gap-2 sm:text-[8px]">
           <div><p className="text-white/35">PASS</p><p className="mt-1 text-white/80">{formatPassNumber(data.passNumber)}</p></div>
-          <div><p className="text-white/35">NETWORK</p><p className="mt-1 text-white/80">{formatNetworkLabel(data.network)}</p></div>
+          <div><p className="text-white/35">NETWORK</p><p className="mt-1 flex items-center gap-1 text-white/80"><NetworkMark network={data.network} className="size-2.5 shrink-0 rounded-full" />{formatNetworkLabel(data.network)}</p></div>
           <div><p className="text-white/35">ISSUE DATE</p><p className="mt-1 truncate text-white/80">{data.initiallyIssuedAt ? formatDate(data.initiallyIssuedAt) : "Assigned after claim"}</p></div>
           <div><p className="text-white/35">ONCHAIN</p><p className="mt-1 text-white/80">{isMinted ? "Recorded" : "Pending"}</p></div>
         </div>

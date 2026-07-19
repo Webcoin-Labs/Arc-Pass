@@ -39,6 +39,7 @@ const authErrorMessages: Record<string, string> = {
   login_required_before_github: 'Sign in with X or Discord before connecting GitHub.',
   test_identity: 'The local test identity could not be created. Check the development test configuration.',
   session_mismatch: 'Your session changed during verification. Sign in and try again.',
+  identity_mismatch: 'That is not the account used for the eligibility check. Continue with the checked account or check another username.',
 };
 
 function OAuthErrorNotice() {

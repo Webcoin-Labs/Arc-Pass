@@ -23,9 +23,13 @@ real infrastructure exists.
    style): `pnpm add -D hardhat @nomicfoundation/hardhat-toolbox` inside a
    new `contracts` package, or use Foundry if preferred.
 2. Compile, deploy `FounderPass` and `BuilderPass` to your target network
-   (Arc mainnet or testnet), passing a multisig or admin address
-   and an `authorizedSigner` address (the address whose private key signs
+   (Arc mainnet or testnet), passing an admin address and an
+   `authorizedSigner` address (the address whose private key signs
    mint/upgrade authorizations — see below).
+   With the current API, the relayer submits both mints and admin revocations,
+   so the deployed `admin` must be the relayer address as well as
+   `authorizedSigner`. A multisig can be used as `admin` only after a separate
+   onchain admin-transaction flow is added for revocations and signer rotation.
 3. Set these environment variables on the API server:
    - `CHAIN_RPC_URL` — RPC endpoint for the target network
    - `ARC_CHAIN_ID` — numeric chain ID of that same RPC/network (required for replay protection)
@@ -34,7 +38,7 @@ real infrastructure exists.
    - `BUILDER_PASS_CONTRACT_ADDRESS` — deployed `BuilderPass` address
    - `EXPLORER_API_URL` / `EXPLORER_API_KEY` — an indexer/explorer API for computing real `qualifyingTransactionCount` / `validContractCount` (see the TODO in `chain-adapter.ts`)
 
-Once all five chain-related variables are set, `chain-adapter.ts` switches
+Once the required chain-related variables are set, `chain-adapter.ts` switches
 from `mode: "mock"` to `mode: "onchain"` automatically and starts signing
 real EIP-191 authorizations with the relayer key before calling
 `authorizedMint` / `authorizedUpgradeTier`.

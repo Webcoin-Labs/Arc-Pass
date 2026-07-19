@@ -1,9 +1,7 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ArrowRight, Download, ExternalLink, Eye, FastForward, Github, ShieldAlert, Lock, Share2 } from "lucide-react";
-import { SiX } from "react-icons/si";
-import { DiscordIcon } from "@/components/discord-icon";
+import { ArrowRight, Download, ExternalLink, Eye, FastForward, ShieldAlert, Lock, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useGetUserProfile, useListMyPasses, useClaimFounderPass, useMintFounderPass, getGetMeQueryKey, getGetUserProfileQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
@@ -17,6 +15,8 @@ import { founderOverallStatusMeta } from "@/lib/pass-status";
 import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FounderRequestDialog } from "@/components/founder-request-dialog";
+import { IdentityVerificationGate } from "@/components/identity-verification-gate";
+import { pendingIdentityMatches, readPendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
 export default function ClaimFounderPage() {
   const [, setLocation] = useLocation();
@@ -32,6 +32,7 @@ export default function ClaimFounderPage() {
   const [revealState, setRevealState] = useState<"idle" | "ready" | "revealing" | "revealed">("idle");
   const reduceMotion = useReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
+  const pendingIdentity = readPendingEligibilityIdentity();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/passes/me"] });
 
@@ -39,7 +40,7 @@ export default function ClaimFounderPage() {
     if (cardRef.current) void downloadNodeAsPng(cardRef.current, "arc-pass-founder.png");
   };
 
-  if (userLoading || passesLoading || (!!user && profileLoading)) {
+  if (userLoading || (!!user && (passesLoading || profileLoading))) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 px-3 py-8 sm:p-6">
         <Skeleton className="h-[300px] w-full max-w-[600px] rounded-[22px] sm:aspect-[1.48/1] sm:h-auto sm:rounded-[30px]" />
@@ -48,28 +49,8 @@ export default function ClaimFounderPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <Lock className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h1 className="text-xl font-semibold">Verify your identity to continue</h1>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">Sign in with X or Discord to confirm account ownership before claiming your Founder Pass.</p>
-        <div className="mt-6 flex w-full max-w-xs flex-col gap-3">
-          <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
-            <a href="/api/auth/x">
-              <SiX className="h-4 w-4" /> Continue with X
-            </a>
-          </Button>
-          <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
-            <a href="/api/auth/discord">
-              <DiscordIcon className="h-4 w-5 text-[#5865F2]" /> Continue with Discord
-            </a>
-          </Button>
-        </div>
-      </div>
-    );
+  if (!user || !pendingIdentityMatches(profile, pendingIdentity)) {
+    return <IdentityVerificationGate authenticated={!!user} profile={profile} pending={pendingIdentity} returnTo="/claim/founder" />;
   }
 
   const founderPass = passes?.founder;
@@ -86,21 +67,6 @@ export default function ClaimFounderPage() {
           className="w-full"
         />
         <FounderRequestDialog open={requestOpen} onOpenChange={setRequestOpen} defaultXUsername={profile?.connections.x.username ?? ""} />
-      </div>
-    );
-  }
-
-  if (founderPass.claimStatus === "locked" && !profile?.connections.github.connected) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <Github className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-        </div>
-        <h1 className="text-xl font-semibold">Verify your GitHub account</h1>
-        <p className="mt-2 max-w-md text-sm leading-6 text-pretty text-muted-foreground">Connect GitHub to prove ownership of the developer identity attached to your Founder Pass.</p>
-        <Button size="lg" className="mt-6 h-12 w-full max-w-xs gap-2" asChild>
-          <a href="/api/auth/github?returnTo=%2Fclaim%2Ffounder"><Github className="h-4 w-4" aria-hidden="true" /> Connect GitHub</a>
-        </Button>
       </div>
     );
   }

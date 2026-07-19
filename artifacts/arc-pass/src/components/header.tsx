@@ -8,7 +8,6 @@ import { AccountDropdown } from "@/components/account-dropdown";
 import { MobileNavigation } from "@/components/mobile-navigation";
 import { ArcGasIndicator } from "@/components/arc-gas-indicator";
 import { ArcPassBrand } from "@/components/arc-pass-brand";
-import { SupportAssistant } from "@/components/support-assistant";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -75,7 +74,6 @@ export function Header() {
             </Button>
           )}
 
-          <SupportAssistant isLanding={isLanding} />
           <MobileNavigation user={user} onLoginClick={() => setLoginOpen(true)} onLogout={handleLogout} isLanding={isLanding} />
         </div>
       </div>

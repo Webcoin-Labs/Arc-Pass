@@ -1,9 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ArrowRight, CheckCircle2, Download, ExternalLink, Eye, FastForward, Github, Lock, RotateCcw, Share2, ShieldAlert, WalletCards } from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, ExternalLink, Eye, FastForward, Github, LayoutDashboard, RotateCcw, Share2, ShieldAlert, WalletCards } from "lucide-react";
 import { SiX } from "react-icons/si";
-import { DiscordIcon } from "@/components/discord-icon";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,8 +27,11 @@ import { AnalysisProgress } from "@/components/analysis-progress";
 import { MintModal, type MintParams } from "@/components/mint-modal";
 import { MintSuccess } from "@/components/mint-success";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DiscordIcon } from "@/components/discord-icon";
 import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { formatDate } from "@/lib/format";
+import { IdentityVerificationGate } from "@/components/identity-verification-gate";
+import { identityOAuthHref, pendingIdentityMatches, readPendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
 const STEP_LABELS = ["Verify identity", "Connect GitHub", "Verify wallets", "Analyse activity", "Review pass", "Record onchain"];
 const ANALYSIS_MESSAGES = [
@@ -38,6 +40,8 @@ const ANALYSIS_MESSAGES = [
   "Calculating your Onchain Builder tier",
   "Preparing the verification record",
 ];
+
+const IDENTITY_ACK_KEY = "arc-pass:identity-step-acknowledged";
 
 const BUILDER_TIER_GUIDE = [
   { name: "Bronze", threshold: 2, emblem: "/tiers/bronze.png", tone: "#d18a56" },
@@ -51,7 +55,7 @@ export default function ClaimBuilderPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { data: user, isLoading: userLoading } = useGetMe({ query: { retry: false, queryKey: getGetMeQueryKey() } });
-  const { data: profile } = useGetUserProfile({ query: { enabled: !!user, queryKey: getGetUserProfileQueryKey() } });
+  const { data: profile, isLoading: profileLoading } = useGetUserProfile({ query: { enabled: !!user, queryKey: getGetUserProfileQueryKey() } });
   const { data: wallets = [], isLoading: walletsLoading } = useListUserWallets({ query: { enabled: !!user, queryKey: getListUserWalletsQueryKey() } });
   const { data: passes, isLoading: passesLoading } = useListMyPasses({ query: { enabled: !!user, queryKey: getListMyPassesQueryKey() } });
   const { data: supply } = useGetBuilderSupply();
@@ -62,8 +66,19 @@ export default function ClaimBuilderPage() {
 
   const [mintOpen, setMintOpen] = useState(false);
   const [revealState, setRevealState] = useState<"idle" | "ready" | "revealing" | "revealed">("idle");
+  const [confettiBurst, setConfettiBurst] = useState(0);
+  const [identityAcknowledged, setIdentityAcknowledged] = useState(() => {
+    try { return window.sessionStorage.getItem(IDENTITY_ACK_KEY) === "1"; } catch { return false; }
+  });
   const reduceMotion = useReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
+  const pendingIdentity = readPendingEligibilityIdentity();
+
+  useEffect(() => {
+    if (!confettiBurst) return;
+    const timer = window.setTimeout(() => setConfettiBurst(0), 3200);
+    return () => window.clearTimeout(timer);
+  }, [confettiBurst]);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/passes/me"] });
@@ -74,7 +89,7 @@ export default function ClaimBuilderPage() {
     if (cardRef.current) void downloadNodeAsPng(cardRef.current, "arc-pass-builder.png");
   };
 
-  if (userLoading || (!!user && passesLoading)) {
+  if (userLoading || (!!user && (passesLoading || profileLoading))) {
     return (
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-6 px-3 py-8 sm:p-6">
         <Skeleton className="h-11 w-full" />
@@ -83,31 +98,16 @@ export default function ClaimBuilderPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <Lock className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h1 className="text-xl font-semibold">Verify your identity to continue</h1>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">Sign in with X or Discord to verify your social identity.</p>
-        <div className="mt-6 flex w-full max-w-xs flex-col gap-3">
-          <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
-            <a href="/api/auth/discord">
-              <DiscordIcon className="h-4 w-5 text-[#5865F2]" /> Continue with Discord
-            </a>
-          </Button>
-          <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
-            <a href="/api/auth/x">
-              <SiX className="h-4 w-4" /> Continue with X
-            </a>
-          </Button>
-        </div>
-      </div>
-    );
+  if (!user || !pendingIdentityMatches(profile, pendingIdentity)) {
+    return <IdentityVerificationGate authenticated={!!user} profile={profile} pending={pendingIdentity} returnTo="/claim/builder" builderJourney />;
   }
 
-  const socialConnected = !!profile?.connections.discord.connected || !!profile?.connections.x.connected;
+  const discordConnection = profile?.connections.discord;
+  const xConnection = profile?.connections.x;
+  const discordExtra = (discordConnection ?? {}) as { arcMember?: boolean | null; arcJoinedAt?: string | null };
+  const discordConnected = !!discordConnection?.connected;
+  const xConnected = !!xConnection?.connected;
+  const socialConnected = discordConnected || xConnected;
   const githubConnected = !!profile?.connections.github.connected;
   // Prefer the dashboard query because it is invalidated after claiming and
   // minting. The verification response is only a fallback while that query
@@ -126,8 +126,27 @@ export default function ClaimBuilderPage() {
     ? Math.max(nextTier.threshold - qualifyingTransactions, 0)
     : null;
 
+  const arcMember = discordExtra.arcMember ?? builderPass?.discordCommunityMember ?? null;
+  const arcJoinedAt = discordExtra.arcJoinedAt ?? builderPass?.discordCommunityJoinedAt ?? null;
+  const membershipLine = arcMember === true
+    ? `Arc Discord member${arcJoinedAt ? ` since ${formatDate(arcJoinedAt)}` : ""}`
+    : arcMember === false
+      ? "Not in the Arc Discord yet"
+      : "Membership confirmed during verification";
+
+  // Wrapped stats ship ahead of the regenerated API client types.
+  const wrappedStats = (builderPass ?? {}) as { usdcSpent?: string | null; eurcSpent?: string | null; firstTransactionAt?: string | null };
+
   const developmentTestIdentity = profile?.isDevelopmentTestIdentity === true;
-  const step = !socialConnected ? 1 : !githubConnected ? 2 : wallets.length === 0 && !developmentTestIdentity ? 3 : !builderPass ? 4 : builderPass.claimStatus === "locked" ? 5 : 6;
+  // Both providers connected (or GitHub already linked from an earlier visit)
+  // means the identity step has clearly been completed — no need to re-ask.
+  const identityDone = socialConnected && (identityAcknowledged || (discordConnected && xConnected) || githubConnected);
+  const step = !identityDone ? 1 : !githubConnected ? 2 : wallets.length === 0 && !developmentTestIdentity ? 3 : !builderPass ? 4 : builderPass.claimStatus === "locked" ? 5 : 6;
+
+  const continueFromIdentity = () => {
+    try { window.sessionStorage.setItem(IDENTITY_ACK_KEY, "1"); } catch { /* flow works without persistence */ }
+    setIdentityAcknowledged(true);
+  };
 
   const handleVerify = () => {
     verifyBuilder.mutate(undefined, {
@@ -140,6 +159,7 @@ export default function ClaimBuilderPage() {
     claimPass.mutate(undefined, {
       onSuccess: () => {
         setRevealState("ready");
+        setConfettiBurst((value) => value + 1);
         void invalidateAll();
       },
       onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Couldn't claim your pass"),
@@ -153,6 +173,7 @@ export default function ClaimBuilderPage() {
         onSuccess: () => {
           invalidateAll();
           setMintOpen(false);
+          setConfettiBurst((value) => value + 1);
         },
         onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Minting failed"),
       },
@@ -172,6 +193,8 @@ export default function ClaimBuilderPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center px-3 py-10 sm:px-6 sm:py-12">
+      <ConfettiBurst burst={confettiBurst} reduceMotion={reduceMotion} />
+
       <div className="mb-10 w-full max-w-md">
         <VerificationStepper steps={STEP_LABELS} currentStep={Math.min(step, 6)} />
       </div>
@@ -179,17 +202,35 @@ export default function ClaimBuilderPage() {
       <div className="w-full max-w-3xl">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="s1" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-md text-center">
-              <h1 className="text-2xl font-bold">Verify a social identity</h1>
-              <p className="mt-2 text-muted-foreground">X or Discord is sufficient. You can connect the second account later.</p>
-              <Button size="lg" className="mt-8 h-12 w-full gap-2" asChild>
-                <a href="/api/auth/discord">
-                  <DiscordIcon className="h-4 w-5" /> Connect Discord
-                </a>
+            <motion.div key="identity" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-lg">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold">Verify your social identity</h1>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Discord or X anchors your builder identity. One is required — connecting both strengthens the verified record.</p>
+              </div>
+
+              <div className="mt-7 space-y-3">
+                <IdentityProviderCard
+                  icon={<DiscordIcon className="h-5 w-6 text-[#5865F2]" />}
+                  label="Discord"
+                  connected={discordConnected}
+                  identity={discordConnection?.displayIdentity ?? discordConnection?.username ?? null}
+                  detail={discordConnected ? membershipLine : "Connect Discord to record community membership"}
+                  connectHref={identityOAuthHref("discord", "/claim/builder", pendingIdentity)}
+                />
+                <IdentityProviderCard
+                  icon={<SiX className="size-4" />}
+                  label="X"
+                  connected={xConnected}
+                  identity={xConnection?.username ? `@${xConnection.username}` : null}
+                  detail={xConnected ? "Public identity anchor for eligibility lookups" : "Connect X to see your identity signals"}
+                  connectHref={identityOAuthHref("x", "/claim/builder", pendingIdentity)}
+                />
+              </div>
+
+              <Button size="lg" className="mt-6 h-12 w-full" disabled={!socialConnected} onClick={continueFromIdentity}>
+                Continue <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" className="mt-3 h-12 w-full gap-2" asChild>
-                <a href="/api/auth/x"><SiX className="h-4 w-4" /> Connect X</a>
-              </Button>
+              {!socialConnected && <p className="mt-2 text-center text-xs text-muted-foreground">Connect at least one account to continue.</p>}
             </motion.div>
           )}
 
@@ -289,11 +330,16 @@ export default function ClaimBuilderPage() {
               ) : revealState === "revealing" ? (
                 <Button variant="outline" size="lg" className="h-12 w-full max-w-xs" onClick={skipReveal}><FastForward className="mr-2 h-4 w-4" /> Skip reveal</Button>
               ) : (
-                <div className="grid w-full max-w-xl gap-3 sm:grid-cols-3">
-                  <Button variant="outline" size="lg" className="h-12" onClick={handleDownload}><Download className="mr-2 h-4 w-4" /> Download</Button>
-                  <Button variant="outline" size="lg" className="h-12" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share on X</Button>
-                  <Button size="lg" className="h-12" disabled={supply?.remainingClaims === 0} onClick={() => setMintOpen(true)}>
-                    {supply?.remainingClaims === 0 ? "Wave 1 full" : "Mint Onchain"} <ExternalLink className="ml-2 h-4 w-4" />
+                <div className="w-full max-w-xl space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Button variant="outline" size="lg" className="h-12" onClick={handleDownload}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                    <Button variant="outline" size="lg" className="h-12" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share on X</Button>
+                    <Button size="lg" className="h-12" disabled={supply?.remainingClaims === 0} onClick={() => setMintOpen(true)}>
+                      {supply?.remainingClaims === 0 ? "Wave 1 full" : "Mint Onchain"} <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button variant="ghost" size="lg" className="h-11 w-full" onClick={() => setLocation("/dashboard")}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Continue to dashboard
                   </Button>
                 </div>
               )}
@@ -307,52 +353,59 @@ export default function ClaimBuilderPage() {
                 data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username, discordDiscriminator: profile?.connections.discord.discriminator }}
                 className="max-w-[520px] md:max-w-[420px]"
               />
-              <MintSuccess
-                tokenId={builderPass.tokenId}
-                destinationWallet={builderPass.destinationWallet}
-                network={builderPass.network}
-                transactionHash={builderPass.transactionHash}
-                issuedAt={builderPass.initiallyIssuedAt}
-                 onViewPass={() => setLocation(`/pass/builder/${builderPass.id}`)}
-                 onDownload={handleDownload}
-                 onShare={handleShare}
-                 className="w-full max-w-sm flex-1"
-              />
+              <div className="w-full max-w-sm flex-1 space-y-3">
+                <MintSuccess
+                  tokenId={builderPass.tokenId}
+                  destinationWallet={builderPass.destinationWallet}
+                  network={builderPass.network}
+                  transactionHash={builderPass.transactionHash}
+                  issuedAt={builderPass.initiallyIssuedAt}
+                  onViewPass={() => setLocation(`/pass/builder/${builderPass.id}`)}
+                  onDownload={handleDownload}
+                  onShare={handleShare}
+                  className="w-full"
+                />
+                <Button variant="outline" size="lg" className="h-12 w-full" onClick={() => setLocation("/dashboard")}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" /> Continue to dashboard
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <section className="mt-14 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-tier-guide-title">
-        <div className="max-w-2xl">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Verified Arc activity</p>
-          <h2 id="builder-tier-guide-title" className="mt-2 text-2xl font-semibold">Builder tier guide</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Your highest tier is calculated from qualifying transactions on ownership-verified wallets. Contract deployments appear as a separate proof signal on the card.</p>
-        </div>
-        <div className="mt-6 grid gap-2 sm:grid-cols-5">
-          {BUILDER_TIER_GUIDE.map((tier) => (
-            <div key={tier.name} className="flex min-h-20 items-center gap-3 rounded-2xl border p-3 sm:flex-col sm:items-start" style={{ borderColor: `${tier.tone}55`, background: `linear-gradient(145deg, ${tier.tone}18, transparent)` }}>
-              <img src={tier.emblem} alt="" className="size-9 object-contain" />
-              <div><p className="text-sm font-semibold">{tier.name}</p><p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{tier.threshold.toLocaleString()}+ transactions</p></div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 grid gap-3 rounded-2xl border bg-background/55 p-4 sm:grid-cols-3">
-          <div><p className="text-xs text-muted-foreground">Current progress</p><p className="mt-1 text-lg font-semibold">{typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} qualifying transactions` : "Arc activity not verified"}</p></div>
-          <div><p className="text-xs text-muted-foreground">Current tier</p><p className="mt-1 text-lg font-semibold">{builderPass?.currentTier?.name ?? "Not assigned"}</p></div>
-          <div><p className="text-xs text-muted-foreground">Next tier</p><p className="mt-1 text-lg font-semibold">{nextTier && remainingForNextTier !== null ? `${nextTier.name} · ${remainingForNextTier.toLocaleString()} remaining` : builderPass?.currentTier?.name === "Diamond" ? "Highest tier reached" : "Verify activity to calculate"}</p></div>
-        </div>
-      </section>
+      <ArcWrapped
+        usdcSpent={wrappedStats.usdcSpent ?? null}
+        eurcSpent={wrappedStats.eurcSpent ?? null}
+        firstTransactionAt={wrappedStats.firstTransactionAt ?? null}
+        reduceMotion={reduceMotion}
+      />
 
-      <section className="mt-5 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-evidence-title">
+      <section className="mt-14 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-evidence-title">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Authenticated evidence</p>
             <h2 id="builder-evidence-title" className="mt-2 text-2xl font-semibold">Builder verification signals</h2>
           </div>
-          <p className="text-xs text-muted-foreground">No manually entered GitHub username can satisfy these checks.</p>
+          <p className="text-xs text-muted-foreground">No manually entered username can satisfy these checks.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <EvidenceCard
+            icon={DiscordIcon}
+            title="Discord identity"
+            value={discordConnected ? (discordConnection?.displayIdentity ?? discordConnection?.username ?? "Connected") : "Discord not connected"}
+            state={discordConnected ? "pass" : "action"}
+            detail={discordConnected ? membershipLine : "Connect Discord to record community membership"}
+            action={discordConnected ? undefined : { label: "Connect Discord", href: identityOAuthHref("discord", "/claim/builder", pendingIdentity) }}
+          />
+          <EvidenceCard
+            icon={SiX}
+            title="X identity"
+            value={xConnected ? `@${xConnection?.username ?? ""}` : "X not connected"}
+            state={xConnected ? "pass" : "action"}
+            detail={xConnected ? "Public identity anchor for eligibility lookups" : "Connect X to see your identity metrics"}
+            action={xConnected ? undefined : { label: "Connect X", href: identityOAuthHref("x", "/claim/builder", pendingIdentity) }}
+          />
           <EvidenceCard
             icon={Github}
             title="GitHub account age"
@@ -373,6 +426,27 @@ export default function ClaimBuilderPage() {
         {builderPass && <p className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs text-muted-foreground"><RotateCcw className="size-3.5" aria-hidden="true" /> Re-verification {builderPass.nextVerificationAt ? `available ${formatDate(builderPass.nextVerificationAt)}` : "available after the initial verification"}</p>}
       </section>
 
+      <section className="mt-5 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-tier-guide-title">
+        <div className="max-w-2xl">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Verified Arc activity</p>
+          <h2 id="builder-tier-guide-title" className="mt-2 text-2xl font-semibold">Builder tier guide</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Your highest tier is calculated from qualifying transactions on ownership-verified wallets. Contract deployments appear as a separate proof signal on the card.</p>
+        </div>
+        <div className="mt-6 grid gap-2 sm:grid-cols-5">
+          {BUILDER_TIER_GUIDE.map((tier) => (
+            <div key={tier.name} className="flex min-h-20 items-center gap-3 rounded-2xl border p-3 sm:flex-col sm:items-start" style={{ borderColor: `${tier.tone}55`, background: `linear-gradient(145deg, ${tier.tone}18, transparent)` }}>
+              <img src={tier.emblem} alt="" className="size-9 object-contain" />
+              <div><p className="text-sm font-semibold">{tier.name}</p><p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{tier.threshold.toLocaleString()}+ transactions</p></div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 grid gap-3 rounded-2xl border bg-background/55 p-4 sm:grid-cols-3">
+          <div><p className="text-xs text-muted-foreground">Current progress</p><p className="mt-1 text-lg font-semibold">{typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} qualifying transactions` : "Arc activity not verified"}</p></div>
+          <div><p className="text-xs text-muted-foreground">Current tier</p><p className="mt-1 text-lg font-semibold">{builderPass?.currentTier?.name ?? "Not assigned"}</p></div>
+          <div><p className="text-xs text-muted-foreground">Next tier</p><p className="mt-1 text-lg font-semibold">{nextTier && remainingForNextTier !== null ? `${nextTier.name} · ${remainingForNextTier.toLocaleString()} remaining` : builderPass?.currentTier?.name === "Diamond" ? "Highest tier reached" : "Verify activity to calculate"}</p></div>
+        </div>
+      </section>
+
       {builderPass && builderPass.claimStatus !== "locked" && supply && (
         <section className="mt-5 w-full max-w-5xl rounded-2xl border bg-card p-4" aria-label="Wave 1 onchain mint allocation">
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><strong>Wave 1 onchain mints: {supply.totalMinted.toLocaleString()} / {supply.phaseClaimLimit.toLocaleString()}</strong><span className="text-muted-foreground">{supply.remainingClaims.toLocaleString()} mint slots remain</span></div>
@@ -385,18 +459,136 @@ export default function ClaimBuilderPage() {
   );
 }
 
+function IdentityProviderCard({
+  icon,
+  label,
+  connected,
+  identity,
+  detail,
+  connectHref,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  connected: boolean;
+  identity: string | null;
+  detail: string;
+  connectHref: string;
+}) {
+  return (
+    <div className="flex items-center gap-3.5 rounded-2xl border bg-card p-4">
+      <span className="grid size-11 shrink-0 place-items-center rounded-xl border bg-background">{icon}</span>
+      <div className="min-w-0 flex-1 text-left">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold">{label}</p>
+          {connected && <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"><CheckCircle2 className="size-3" aria-hidden="true" /> Connected</span>}
+        </div>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{connected ? (identity ?? "Connected") : detail}</p>
+        {connected && identity && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{detail}</p>}
+      </div>
+      {!connected && (
+        <Button variant="outline" size="sm" className="h-10 shrink-0" asChild>
+          <a href={connectHref}>Connect</a>
+        </Button>
+      )}
+    </div>
+  );
+}
+
+const WRAPPED_NUMERAL_GRADIENT = "bg-gradient-to-br from-[#ffe3b3] via-[#ff9e64] to-[#ffb8e0] bg-clip-text text-transparent";
+
+function formatTokenAmount(value: string): string {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value;
+}
+
+function ArcWrapped({
+  usdcSpent,
+  eurcSpent,
+  firstTransactionAt,
+  reduceMotion,
+}: {
+  usdcSpent: string | null;
+  eurcSpent: string | null;
+  firstTransactionAt: string | null;
+  reduceMotion: boolean | null;
+}) {
+  const stats: Array<{ label: string; value: string; sub: string }> = [
+    ...(usdcSpent !== null ? [{ label: "USDC spent", value: `$${formatTokenAmount(usdcSpent)}`, sub: "Across your verified wallets on Arc" }] : []),
+    ...(eurcSpent !== null ? [{ label: "EURC spent", value: `€${formatTokenAmount(eurcSpent)}`, sub: "Across your verified wallets on Arc" }] : []),
+    ...(firstTransactionAt !== null ? [{ label: "First Arc transaction", value: new Date(firstTransactionAt).getFullYear().toString(), sub: `You started ${formatDate(firstTransactionAt)}` }] : []),
+  ];
+
+  if (stats.length === 0) return null;
+
+  return (
+    <section className="mt-10 w-full max-w-5xl overflow-hidden rounded-2xl border border-[#4a3f8f]/40 bg-[linear-gradient(150deg,#221a4f,#0d0b26_70%)] p-4 text-white sm:p-5" aria-labelledby="arc-wrapped-title">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="shrink-0 sm:w-40">
+          <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-[#ffb98a]">Your Arc activity</p>
+          <h2 id="arc-wrapped-title" className="mt-1 text-xl font-extrabold uppercase leading-tight">Wrapped</h2>
+        </div>
+        <div className="grid flex-1 gap-3 sm:grid-cols-3">
+          {stats.map((stat, index) => (
+            <motion.article
+              key={stat.label}
+              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: reduceMotion ? 0 : 0.3, delay: reduceMotion ? 0 : index * 0.06 }}
+              className="rounded-xl border border-white/[0.09] bg-white/[0.04] px-3.5 py-3"
+            >
+              <p className="font-mono text-[8px] font-semibold uppercase tracking-[0.14em] text-white/50">{stat.label}</p>
+              <p className={`mt-1 text-2xl font-extrabold leading-none sm:text-3xl ${WRAPPED_NUMERAL_GRADIENT}`}>{stat.value}</p>
+              <p className="mt-1 text-[10px] leading-4 text-white/45">{stat.sub}</p>
+            </motion.article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const CONFETTI_COLORS = ["#5270ff", "#ffd166", "#7de0dc", "#ff8fa3", "#9eb4ff", "#f0bd4e"];
+
+function ConfettiBurst({ burst, reduceMotion }: { burst: number; reduceMotion: boolean | null }) {
+  if (!burst || reduceMotion) return null;
+  return (
+    <div key={burst} className="pointer-events-none fixed inset-0 z-[70] overflow-hidden" aria-hidden="true">
+      {Array.from({ length: 36 }, (_, index) => {
+        const left = (index * 97) % 100;
+        const delay = ((index * 53) % 40) / 100;
+        const duration = 1.7 + ((index * 29) % 80) / 100;
+        const size = 6 + ((index * 13) % 8);
+        const direction = index % 2 ? 1 : -1;
+        return (
+          <motion.span
+            key={index}
+            className="absolute top-[-4%] block rounded-[2px]"
+            style={{ left: `${left}%`, width: size, height: size * 0.5 + 3, backgroundColor: CONFETTI_COLORS[index % CONFETTI_COLORS.length] }}
+            initial={{ y: 0, opacity: 1, rotate: 0, x: 0 }}
+            animate={{ y: "112vh", opacity: [1, 1, 0.9, 0], rotate: direction * (200 + ((index * 37) % 340)), x: direction * ((index * 31) % 130) }}
+            transition={{ duration, delay, ease: "easeIn" }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function EvidenceCard({
   icon: Icon,
   title,
   value,
   detail,
   state,
+  action,
 }: {
   icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
   title: string;
   value: string;
   detail: string;
   state: "pass" | "fail" | "action" | "unavailable";
+  action?: { label: string; href: string };
 }) {
   const stateLabel = state === "pass" ? "Requirement met" : state === "fail" ? "Requirement not met" : state === "action" ? "Action required" : "Verification unavailable";
   return (
@@ -411,6 +603,11 @@ function EvidenceCard({
       <p className="mt-4 text-xs text-muted-foreground">{title}</p>
       <p className="mt-1 text-base font-semibold">{value}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+      {action && (
+        <a href={action.href} className="mt-2 inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-primary hover:underline">
+          {action.label} <ArrowRight className="size-3" aria-hidden="true" />
+        </a>
+      )}
     </article>
   );
 }

@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-export function ArcMascot({ className, compact = false }: { className?: string; compact?: boolean }) {
+export function ArcMascot({ className, compact = false, variant = "founder" }: { className?: string; compact?: boolean; variant?: "founder" | "helpbot" }) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -13,16 +13,22 @@ export function ArcMascot({ className, compact = false }: { className?: string; 
       aria-hidden="true"
     >
       <div className="absolute inset-x-[13%] bottom-[3%] h-[16%] rounded-full bg-[#2455ff]/35 blur-xl" />
-      <img src="/mascot/solrishuavatar.png" alt="" className="absolute inset-0 size-full rounded-2xl object-contain drop-shadow-[0_10px_18px_rgba(32,83,255,.35)]" width={384} height={384} />
-      <motion.img
-        src="/favicon.svg"
-        alt=""
-        className="absolute left-1/2 top-[14%] z-10 size-[28%] -translate-x-1/2 rounded-full shadow-[0_0_12px_rgba(137,170,255,.65)]"
-        animate={reduceMotion ? undefined : { filter: ["brightness(1)", "brightness(1.25)", "brightness(1)"] }}
-        transition={reduceMotion ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        width={64}
-        height={64}
-      />
+      {variant === "helpbot" ? (
+        <img src="/logo/helpbot.webp" alt="" className="absolute inset-0 size-full rounded-2xl object-contain drop-shadow-[0_10px_18px_rgba(32,83,255,.35)]" />
+      ) : (
+        <>
+          <img src="/mascot/solrishuavatar.png" alt="" className="absolute inset-0 size-full rounded-2xl object-contain drop-shadow-[0_10px_18px_rgba(32,83,255,.35)]" width={384} height={384} />
+          <motion.img
+            src="/favicon.svg"
+            alt=""
+            className="absolute left-1/2 top-[14%] z-10 size-[28%] -translate-x-1/2 rounded-full shadow-[0_0_12px_rgba(137,170,255,.65)]"
+            animate={reduceMotion ? undefined : { filter: ["brightness(1)", "brightness(1.25)", "brightness(1)"] }}
+            transition={reduceMotion ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            width={64}
+            height={64}
+          />
+        </>
+      )}
     </motion.div>
   );
 }

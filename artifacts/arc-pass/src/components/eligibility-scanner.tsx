@@ -211,14 +211,14 @@ function resultSteps(result: EligibilityResult, platform: EligibilityQueryPlatfo
   return [
     { icon: Fingerprint, title: "Identity lookup", detail: `${platform === "x" ? "X" : "Discord"} registry lookup completed. A username is not ownership proof.`, state: "completed" },
     { icon: BadgeCheck, title: "Founder invitation lookup", detail: founderDetail, state: founderState },
-    { icon: Github, title: "GitHub account verification", detail: "Sign in, then connect GitHub to prove account ownership.", state: "action" },
+    { icon: Github, title: "GitHub account verification", detail: "Builder verification only: connect GitHub to prove account ownership.", state: "action" },
     { icon: Clock3, title: "GitHub account age check", detail: "Available after GitHub verification; minimum age is 180 days.", state: "waiting" },
     { icon: Code2, title: "GitHub contributions check", detail: "Available after GitHub verification; minimum is 10 contributions in 180 days.", state: "waiting" },
     { icon: WalletCards, title: "Wallet ownership verification", detail: "Connect a wallet and sign its server-issued ownership challenge.", state: "action" },
     { icon: Activity, title: "Arc activity analysis", detail: "Available after at least one wallet is ownership-verified.", state: "waiting" },
     { icon: MessageCircle, title: "Discord supporting signal", detail: platform === "discord" ? "Sign in to confirm this Discord identity and check Arc membership." : "Connect Discord after sign-in to check the supporting membership signal.", state: "action" },
     { icon: Blocks, title: "Builder tier calculation", detail: "Available after GitHub, wallet, and Arc activity checks complete.", state: "waiting" },
-    { icon: ShieldCheck, title: "Credential readiness", detail: founderClaimed ? "Your existing credential is available after sign-in." : founderMatched ? "Founder claim can continue after identity and GitHub verification." : "Builder eligibility can only be confirmed after login and verification.", state: founderClaimed ? "claimed" : founderMatched ? "action" : "waiting" },
+    { icon: ShieldCheck, title: "Credential readiness", detail: founderClaimed ? "Your existing credential is available after sign-in." : founderMatched ? "Founder claim can continue after verified identity sign-in." : "Builder eligibility can only be confirmed after login and verification.", state: founderClaimed ? "claimed" : founderMatched ? "action" : "waiting" },
   ];
 }
 

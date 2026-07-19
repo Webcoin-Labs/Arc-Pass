@@ -5,6 +5,7 @@ import { SiX } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { CompanyLogo } from "@/components/company-logo";
 import { FounderPassVariantBadge } from "@/components/founder-pass-variant-badge";
+import { NetworkMark } from "@/components/network-mark";
 import { formatDate } from "@/lib/format";
 
 export interface FounderPassCardData {
@@ -32,18 +33,6 @@ interface FounderPassCardProps {
   className?: string;
   interactive?: boolean;
   concealed?: boolean;
-}
-
-function ArcNetworkMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 500 500" role="img" aria-label="Arc" className={className}>
-      <rect width="500" height="500" rx="250" fill="#1B3158" />
-      <path
-        fill="white"
-        d="M250.466 85c40.921 0 77.296 35.453 102.433 99.828 13.074 33.482 22.693 73.263 28.392 116.54.51 3.865.943 7.793 1.388 11.713.145.242.232.467.202.65 0 0 3.35 20.918 4.061 57.27h-.378c-4.967-4.077-63.553-50.112-160.67-36.782 1.465-16.435 3.48-32.426 6.084-47.754.133-.783.287-1.54.422-2.318 38.091-1.148 71.431 3.275 96.997 9.072-.095-.607-.174-1.231-.271-1.835-5.255-32.726-13.008-62.687-23.005-88.291-16.345-41.866-37.674-67.877-55.655-67.877-17.98 0-39.309 26.012-55.654 67.877-3.956 10.126-7.558 20.926-10.788 32.317-4.541 15.962-8.356 33.074-11.403 51.054-4.509 26.553-7.326 55.032-8.364 84.537H114c2.319-70.017 14.19-135.362 34.033-186.173C173.165 120.453 209.545 85 250.466 85Z"
-      />
-    </svg>
-  );
 }
 
 function credentialId(data: FounderPassCardData): string {
@@ -165,7 +154,7 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
           <div className="min-w-0">
             <p className="font-mono text-[7px] uppercase tracking-[0.12em] text-white/35 sm:text-[8px]">Blockchain</p>
             <p className="mt-0.5 flex items-center gap-1 text-[9px] font-semibold text-white/86 sm:gap-1.5 sm:text-[11px]">
-              <ArcNetworkMark className="size-3 shrink-0 rounded-full sm:size-4" /> Arc
+              <NetworkMark network={data.network} className="size-3 shrink-0 rounded-full sm:size-4" /> Arc
             </p>
           </div>
           <div className="min-w-0">

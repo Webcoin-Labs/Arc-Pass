@@ -9,7 +9,7 @@ const FAQS = [
   },
   {
     q: "How do I claim a Founder Pass?",
-    a: "Founder Pass is invite-only and administered by Webcoin Labs. If you were invited, sign in with the matching X or Discord account, connect your GitHub account, review the issued credential, and complete the claim from your dashboard.",
+    a: "Founder Pass is invite-only and administered by Webcoin Labs. If you were invited, sign in with the matching X or Discord account, review the issued credential, and complete the claim from your dashboard. GitHub is not required for a Founder claim.",
   },
   {
     q: "What benefits come with a Founder Pass?",
