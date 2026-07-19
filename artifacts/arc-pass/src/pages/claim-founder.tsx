@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ArrowRight, Download, ExternalLink, Eye, FastForward, ShieldAlert, Lock, Share2 } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, Eye, FastForward, ShieldAlert, LayoutDashboard, Lock, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useGetUserProfile, useListMyPasses, useClaimFounderPass, useMintFounderPass, getGetMeQueryKey, getGetUserProfileQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
@@ -130,17 +130,22 @@ export default function ClaimFounderPage() {
         {founderPass.claimStatus === "minted" ? (
           <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-start">
             <FounderPassCard ref={cardRef} data={cardData} className="max-w-[620px]" />
-            <MintSuccess
-              tokenId={founderPass.tokenId}
-              destinationWallet={founderPass.destinationWallet}
-              network={founderPass.network}
-              transactionHash={founderPass.transactionHash}
-              issuedAt={founderPass.issuedAt}
-               onViewPass={() => setLocation(`/pass/founder/${founderPass.id}`)}
-               onDownload={handleDownload}
-               onShare={handleShare}
-               className="w-full max-w-sm flex-1"
-            />
+            <div className="w-full max-w-sm flex-1 space-y-3">
+              <MintSuccess
+                tokenId={founderPass.tokenId}
+                destinationWallet={founderPass.destinationWallet}
+                network={founderPass.network}
+                transactionHash={founderPass.transactionHash}
+                issuedAt={founderPass.issuedAt}
+                onViewPass={() => setLocation(`/pass/founder/${founderPass.id}`)}
+                onDownload={handleDownload}
+                onShare={handleShare}
+                className="w-full"
+              />
+              <Button variant="outline" size="lg" className="h-12 w-full" onClick={() => setLocation("/dashboard")}>
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Continue to dashboard
+              </Button>
+            </div>
           </motion.div>
         ) : (
           <motion.div key="claim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row">
@@ -173,6 +178,11 @@ export default function ClaimFounderPage() {
                   </>
                 )}
               </div>
+              {founderPass.claimStatus !== "locked" && revealState !== "ready" && revealState !== "revealing" && (
+                <Button variant="ghost" size="lg" className="mt-3 h-11 w-full" onClick={() => setLocation("/dashboard")}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" /> Continue to dashboard
+                </Button>
+              )}
             </div>
             <motion.div
               className="w-full max-w-[620px]"

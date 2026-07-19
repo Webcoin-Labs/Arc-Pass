@@ -85,7 +85,18 @@ export function validateEnvironment(): void {
   warnIncompleteGroup("Discord OAuth", ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI"]);
   warnIncompleteGroup("GitHub OAuth", ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_REDIRECT_URI"]);
   warnIncompleteGroup("chain minting", ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"]);
-  warnIncompleteGroup("activity provider", ["EXPLORER_API_URL", "EXPLORER_API_KEY"]);
+  if (configured("EXPLORER_API_URL") && !configured("EXPLORER_API_KEY")) {
+    try {
+      const hostname = new URL(process.env.EXPLORER_API_URL!).hostname.toLowerCase();
+      const publicBlockscout = hostname === "arcscan.app"
+        || hostname.endsWith(".arcscan.app")
+        || hostname === "blockscout.com"
+        || hostname.endsWith(".blockscout.com");
+      if (!publicBlockscout) console.warn("Custom activity provider is missing EXPLORER_API_KEY and will be unavailable.");
+    } catch {
+      console.warn("Custom activity provider URL is invalid and will be unavailable.");
+    }
+  }
   warnIncompleteGroup("Cloudflare R2", ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"]);
   if (isProduction) {
     for (const name of ["DATABASE_URL", "SESSION_SECRET", "APP_URL", "OAUTH_STATE_SIGNING_KEY", "MINT_SIGNING_KEY"]) {
@@ -126,6 +137,8 @@ export const configuration = {
   builderPhaseClaimLimit,
   appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:5173",
   mintingConfigured: ["CHAIN_RPC_URL", "ARC_CHAIN_ID", "RELAYER_PRIVATE_KEY", "FOUNDER_PASS_CONTRACT_ADDRESS", "BUILDER_PASS_CONTRACT_ADDRESS"].every(configured),
-  activityProviderConfigured: ["EXPLORER_API_URL", "EXPLORER_API_KEY"].every(configured),
+  // Builder activity defaults to the public Arcscan Blockscout endpoint. A
+  // custom provider may still require EXPLORER_API_KEY at request time.
+  activityProviderConfigured: true,
   cloudflareR2Configured: ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"].every(configured),
 };

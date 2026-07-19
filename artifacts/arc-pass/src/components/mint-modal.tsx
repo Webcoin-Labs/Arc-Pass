@@ -1,10 +1,12 @@
-import { useState } from "react";
-import { Wallet as WalletIcon, ArrowLeft, LockKeyhole, Loader2 } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Wallet as WalletIcon, ArrowLeft, LockKeyhole, Loader2, TriangleAlert } from "lucide-react";
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { arcTestnet } from "@/lib/wallet-provider";
 import type { MintRequestMintMethod, MintRequestNetwork } from "@workspace/api-client-react";
+import { toast } from "sonner";
 
 type Screen = "choice" | "connect";
 
@@ -29,12 +31,38 @@ export function MintModal({
 }) {
   const [screen, setScreen] = useState<Screen>("choice");
   const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const chainId = useChainId();
+  const { connectModalOpen, openConnectModal } = useConnectModal();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  const automaticSwitchKey = useRef<string | null>(null);
 
   const connectedAddress = screen === "connect" && isConnected ? address ?? null : null;
+  const isArcTestnet = !!connectedAddress && chainId === arcTestnet.id;
+
+  const switchToArcTestnet = useCallback(async () => {
+    try {
+      await switchChainAsync({ chainId: arcTestnet.id });
+      toast.success("Connected to Arc Testnet.");
+      return true;
+    } catch {
+      toast.error("Switch to Arc Testnet in your wallet to continue.");
+      return false;
+    }
+  }, [switchChainAsync]);
+
+  useEffect(() => {
+    if (!open || screen !== "connect" || connectModalOpen || !connectedAddress || isArcTestnet) return;
+    const promptKey = `${connectedAddress.toLowerCase()}:${chainId}`;
+    if (automaticSwitchKey.current === promptKey) return;
+    automaticSwitchKey.current = promptKey;
+    void switchToArcTestnet();
+  }, [chainId, connectModalOpen, connectedAddress, isArcTestnet, open, screen, switchToArcTestnet]);
 
   const handleClose = (next: boolean) => {
-    if (!next) setScreen("choice");
+    if (!next) {
+      setScreen("choice");
+      automaticSwitchKey.current = null;
+    }
     onOpenChange(next);
   };
 
@@ -44,7 +72,7 @@ export function MintModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleClose} modal={!connectModalOpen}>
       <DialogContent className="sm:max-w-md">
         {screen === "choice" && (
           <>
@@ -85,14 +113,27 @@ export function MintModal({
               {connectedAddress ? (
                 <div className="space-y-4">
                   <div className="rounded-lg border bg-muted/40 p-3 text-center font-mono text-sm tabular-nums">{connectedAddress}</div>
-                  <Button
-                    className="w-full"
-                    disabled={isPending}
-                    onClick={() => onMint({ mintMethod: "wallet_connect", walletAddress: connectedAddress, network })}
-                  >
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Confirm &amp; Mint
-                  </Button>
+                  {!isArcTestnet ? (
+                    <>
+                      <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-muted-foreground">
+                        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+                        <p>Arc Pass is minted on Arc Testnet. Approve the network switch in your wallet before continuing.</p>
+                      </div>
+                      <Button className="w-full" onClick={() => void switchToArcTestnet()} disabled={isSwitchingChain}>
+                        {isSwitchingChain ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isSwitchingChain ? "Check your wallet" : "Switch to Arc Testnet"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      disabled={isPending}
+                      onClick={() => onMint({ mintMethod: "wallet_connect", walletAddress: connectedAddress, network })}
+                    >
+                      {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Confirm &amp; Mint
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Button variant="outline" className="w-full" onClick={handleConnect}>

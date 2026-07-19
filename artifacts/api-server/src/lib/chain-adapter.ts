@@ -16,6 +16,13 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { logger } from "./logger";
 import { configuration } from "./env";
+import {
+  buildBlockscoutTransactionsUrl,
+  isBlockscoutExplorerUrl,
+  summarizeBlockscoutTransactions,
+  type BlockscoutPageParams,
+  type BlockscoutTransaction,
+} from "./blockscout-activity";
 
 export type Network = "arc" | "base";
 
@@ -56,6 +63,10 @@ export class VerificationUnavailableError extends Error {
 export class MintingUnavailableError extends Error {
   constructor() { super("Onchain minting is temporarily unavailable."); }
 }
+
+const DEFAULT_EXPLORER_API_URL = "https://testnet.arcscan.app";
+const ACTIVITY_REQUEST_TIMEOUT_MS = 15_000;
+const MAX_BLOCKSCOUT_PAGES = 100;
 
 /** Validates and returns the EIP-55 checksummed form of an address, or throws. */
 export function checksumAddress(address: string): string {
@@ -266,32 +277,107 @@ function optionalIsoDate(value: unknown): string | undefined {
 }
 
 async function getProviderActivity(walletAddresses: string[]): Promise<ChainActivityResult> {
-  const explorerUrl = process.env.EXPLORER_API_URL;
-  const explorerKey = process.env.EXPLORER_API_KEY;
-  if (!explorerUrl || !explorerKey) throw new VerificationUnavailableError();
-  const response = await fetch(explorerUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${explorerKey}` },
-    body: JSON.stringify({ addresses: walletAddresses }),
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!response.ok) throw new VerificationUnavailableError();
-  const payload = await response.json() as Partial<ChainActivityResult>;
-  const { qualifyingTransactionCount, validContractCount, lastReviewedBlock } = payload;
-  if (typeof qualifyingTransactionCount !== "number" || !Number.isSafeInteger(qualifyingTransactionCount) || typeof validContractCount !== "number" || !Number.isSafeInteger(validContractCount) || typeof lastReviewedBlock !== "string") {
+  const explorerUrl = process.env.EXPLORER_API_URL?.trim() || DEFAULT_EXPLORER_API_URL;
+  const explorerKey = process.env.EXPLORER_API_KEY?.trim();
+
+  try {
+    if (isBlockscoutExplorerUrl(explorerUrl)) {
+      return await getBlockscoutActivity(explorerUrl, explorerKey, walletAddresses);
+    }
+
+    // Preserve support for an explicitly configured custom provider. Its
+    // response contract predates the Arcscan Blockscout integration.
+    if (!explorerKey) throw new VerificationUnavailableError();
+    const response = await fetch(explorerUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${explorerKey}` },
+      body: JSON.stringify({ addresses: walletAddresses }),
+      signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Activity provider returned ${response.status}`);
+    const payload = await response.json() as Partial<ChainActivityResult>;
+    const { qualifyingTransactionCount, validContractCount, lastReviewedBlock } = payload;
+    if (typeof qualifyingTransactionCount !== "number" || !Number.isSafeInteger(qualifyingTransactionCount) || typeof validContractCount !== "number" || !Number.isSafeInteger(validContractCount) || typeof lastReviewedBlock !== "string") {
+      throw new Error("Activity provider returned an invalid response");
+    }
+    const usdcSpent = optionalDecimalAmount(payload.usdcSpent);
+    const eurcSpent = optionalDecimalAmount(payload.eurcSpent);
+    const firstTransactionAt = optionalIsoDate(payload.firstTransactionAt);
+    return {
+      qualifyingTransactionCount,
+      validContractCount,
+      lastReviewedBlock,
+      ...(usdcSpent !== undefined ? { usdcSpent } : {}),
+      ...(eurcSpent !== undefined ? { eurcSpent } : {}),
+      ...(firstTransactionAt !== undefined ? { firstTransactionAt } : {}),
+    };
+  } catch (error) {
+    if (error instanceof VerificationUnavailableError) throw error;
+    logger.warn(
+      { provider: isBlockscoutExplorerUrl(explorerUrl) ? "blockscout" : "custom", errorName: error instanceof Error ? error.name : "unknown" },
+      "Builder activity verification provider unavailable",
+    );
     throw new VerificationUnavailableError();
   }
-  const usdcSpent = optionalDecimalAmount(payload.usdcSpent);
-  const eurcSpent = optionalDecimalAmount(payload.eurcSpent);
-  const firstTransactionAt = optionalIsoDate(payload.firstTransactionAt);
-  return {
-    qualifyingTransactionCount,
-    validContractCount,
-    lastReviewedBlock,
-    ...(usdcSpent !== undefined ? { usdcSpent } : {}),
-    ...(eurcSpent !== undefined ? { eurcSpent } : {}),
-    ...(firstTransactionAt !== undefined ? { firstTransactionAt } : {}),
-  };
+}
+
+function parseBlockscoutPage(payload: unknown): { items: BlockscoutTransaction[]; nextPageParams?: BlockscoutPageParams } {
+  if (!payload || typeof payload !== "object") throw new Error("Blockscout returned an invalid page");
+  const page = payload as { items?: unknown; next_page_params?: unknown };
+  if (!Array.isArray(page.items)) throw new Error("Blockscout returned no transaction items");
+
+  if (page.next_page_params === undefined || page.next_page_params === null) {
+    return { items: page.items as BlockscoutTransaction[] };
+  }
+  if (typeof page.next_page_params !== "object") throw new Error("Blockscout returned invalid pagination");
+
+  const rawParams = page.next_page_params as Record<string, unknown>;
+  const nextPageParams: BlockscoutPageParams = {};
+  for (const name of ["block_number", "index", "items_count"] as const) {
+    const value = rawParams[name];
+    if (typeof value === "string" || typeof value === "number") nextPageParams[name] = value;
+  }
+  if (Object.keys(nextPageParams).length === 0) throw new Error("Blockscout returned empty pagination");
+  return { items: page.items as BlockscoutTransaction[], nextPageParams };
+}
+
+async function fetchBlockscoutWalletTransactions(
+  explorerUrl: string,
+  explorerKey: string | undefined,
+  walletAddress: string,
+): Promise<BlockscoutTransaction[]> {
+  const transactions: BlockscoutTransaction[] = [];
+  let pageParams: BlockscoutPageParams | undefined;
+
+  for (let page = 0; page < MAX_BLOCKSCOUT_PAGES; page += 1) {
+    const response = await fetch(buildBlockscoutTransactionsUrl(explorerUrl, walletAddress, pageParams, undefined, process.env.ARC_CHAIN_ID?.trim() || "5042002"), {
+      headers: {
+        accept: "application/json",
+        ...(explorerKey ? { authorization: `Bearer ${explorerKey}` } : {}),
+      },
+      signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Blockscout returned ${response.status}`);
+
+    const parsed = parseBlockscoutPage(await response.json());
+    transactions.push(...parsed.items);
+    if (!parsed.nextPageParams) return transactions;
+    pageParams = parsed.nextPageParams;
+  }
+
+  throw new Error("Blockscout pagination limit reached");
+}
+
+async function getBlockscoutActivity(
+  explorerUrl: string,
+  explorerKey: string | undefined,
+  walletAddresses: string[],
+): Promise<ChainActivityResult> {
+  const transactionPages = await Promise.all(
+    walletAddresses.map((walletAddress) => fetchBlockscoutWalletTransactions(explorerUrl, explorerKey, walletAddress)),
+  );
+  const summary = summarizeBlockscoutTransactions(transactionPages.flat(), walletAddresses);
+  return summary;
 }
 
 function buildViemChainAdapter(): ChainAdapter | null {

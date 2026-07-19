@@ -5,7 +5,7 @@ import { defineChain } from "viem";
 import { useTheme } from "next-themes";
 import "@rainbow-me/rainbowkit/styles.css";
 
-const arc = defineChain({
+export const arcTestnet = defineChain({
   id: Number(import.meta.env.VITE_ARC_CHAIN_ID || 5_042_002),
   name: "Arc Testnet",
   nativeCurrency: { name: "USD Coin", symbol: "USDC", decimals: 18 },
@@ -32,8 +32,8 @@ const wagmiConfig = getDefaultConfig({
   // blanks the page. "YOUR_PROJECT_ID" is its own documented placeholder that
   // it swaps for a shared demo project id until a real one is configured.
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
-  chains: [arc],
-  transports: { [arc.id]: http(arc.rpcUrls.default.http[0]) },
+  chains: [arcTestnet],
+  transports: { [arcTestnet.id]: http(arcTestnet.rpcUrls.default.http[0]) },
 });
 
 export function WalletProvider({ children }: PropsWithChildren) {

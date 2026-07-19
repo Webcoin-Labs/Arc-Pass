@@ -43,3 +43,27 @@ test("Railway liveness never waits for Neon readiness", async () => {
   assert.match(health, /router\.get\("\/readyz"/);
   assert.match(health, /status\(503\)/);
 });
+
+test("wallet flows release the parent modal and require Arc Testnet", async () => {
+  const walletProvider = await readFile(path.join(workspace, "artifacts/arc-pass/src/lib/wallet-provider.tsx"), "utf8");
+  const mintModal = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/mint-modal.tsx"), "utf8");
+  const walletManager = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/wallet-manager.tsx"), "utf8");
+
+  assert.match(walletProvider, /export const arcTestnet = defineChain/);
+  assert.match(mintModal, /connectModalOpen/);
+  assert.match(mintModal, /modal=\{!connectModalOpen\}/);
+  assert.match(mintModal, /switchChainAsync\(\{ chainId: arcTestnet\.id \}\)/);
+  assert.match(mintModal, /Switch to Arc Testnet/);
+  assert.match(walletManager, /switchChainAsync\(\{ chainId: arcTestnet\.id \}\)/);
+  assert.match(walletManager, /Switch to Arc Testnet/);
+});
+
+test("company logos are exported and rendered as true circular crops", async () => {
+  const cropDialog = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/image-crop-dialog.tsx"), "utf8");
+  const companyLogo = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/company-logo.tsx"), "utf8");
+
+  assert.match(cropDialog, /ctx\.arc\(OUTPUT_SIZE \/ 2, OUTPUT_SIZE \/ 2, OUTPUT_SIZE \/ 2/);
+  assert.match(cropDialog, /"image\/png"/);
+  assert.match(companyLogo, /object-cover/);
+  assert.doesNotMatch(companyLogo, /object-contain p-1\.5/);
+});

@@ -6,7 +6,7 @@ const INTEGRATIONS = [
   { name: "GitHub verification", vars: "GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI", fallback: "Active for Builder verification. Founder claims remain invite-only and do not require GitHub." },
   { name: "Gemini support and analysis", vars: "GEMINI_API_KEY, GEMINI_SUPPORT_MODEL / GEMINI_ANALYSIS_MODEL (optional)", fallback: "Optional qualitative enrichment and the public chat helper only. AI never grants eligibility, sets a tier, proves a wallet, claims, or mints." },
   { name: "Onchain minting", vars: "CHAIN_RPC_URL, ARC_CHAIN_ID, RELAYER_PRIVATE_KEY, FOUNDER_PASS_CONTRACT_ADDRESS, BUILDER_PASS_CONTRACT_ADDRESS", fallback: "Fails closed when configuration is incomplete." },
-  { name: "Explorer / indexer", vars: "EXPLORER_API_URL, EXPLORER_API_KEY", fallback: "Verification is unavailable when configuration is incomplete." },
+  { name: "Explorer / indexer", vars: "EXPLORER_API_URL (optional), EXPLORER_API_KEY (custom providers only)", fallback: "Builder activity uses Arcscan by default; custom providers need both values." },
   { name: "Discord guild membership", vars: "ARC_DISCORD_GUILD_ID", fallback: "Optional supporting signal only; shows member status and join date." },
   { name: "Production media storage", vars: "CLOUDFLARE_R2_ENDPOINT, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, CLOUDFLARE_R2_BUCKET, CLOUDFLARE_R2_PUBLIC_URL", fallback: "Required in production because local Railway disk is ephemeral." },
   { name: "Signed authorizations", vars: "MINT_SIGNING_KEY, OAUTH_STATE_SIGNING_KEY", fallback: "Uses an ephemeral key in dev; set a persistent key in production." },

@@ -34,7 +34,7 @@ export function CompanyLogoUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [cropSource, setCropSource] = useState<{ src: string; mimeType: string } | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
@@ -46,22 +46,20 @@ export function CompanyLogoUploader({
       toast.error("Use a PNG, WebP, or JPEG image");
       return;
     }
-    setCropSource({ src: URL.createObjectURL(file), mimeType: file.type });
+    setCropSource(URL.createObjectURL(file));
   };
 
   const closeCrop = () => {
-    if (cropSource) URL.revokeObjectURL(cropSource.src);
+    if (cropSource) URL.revokeObjectURL(cropSource);
     setCropSource(null);
   };
 
   const handleCropConfirm = async (blob: Blob) => {
-    const mimeType = cropSource?.mimeType ?? "image/png";
     closeCrop();
     setUploading(true);
     onUploadingChange?.(true);
     try {
-      const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : "png";
-      const file = new File([blob], `logo.${extension}`, { type: mimeType });
+      const file = new File([blob], "logo.png", { type: "image/png" });
       const url = await uploadImage(file);
       onChange(url);
     } catch (err) {
@@ -122,8 +120,7 @@ export function CompanyLogoUploader({
 
       <ImageCropDialog
         open={!!cropSource}
-        imageSrc={cropSource?.src ?? null}
-        mimeType={cropSource?.mimeType ?? "image/png"}
+        imageSrc={cropSource}
         onCancel={closeCrop}
         onConfirm={(blob) => void handleCropConfirm(blob)}
       />

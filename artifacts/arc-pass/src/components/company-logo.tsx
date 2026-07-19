@@ -8,9 +8,8 @@ const sizeMap = {
 } as const;
 
 /**
- * Circular container for a company logo. The circle clips the container,
- * never the logo itself — `object-contain` plus internal padding keeps
- * square, horizontal, vertical, and transparent-background logos intact.
+ * Circular container for a company logo. Uploaded crops fill the frame so
+ * square image corners cannot appear inside the circular pass treatment.
  */
 export function CompanyLogo({
   logoUrl,
@@ -35,7 +34,7 @@ export function CompanyLogo({
         <img
           src={logoUrl}
           alt={name ? `${name} logo` : "Company logo"}
-          className="h-full w-full object-contain p-1.5"
+          className="h-full w-full rounded-full object-cover"
           crossOrigin="anonymous"
           onError={() => setImageFailed(true)}
         />

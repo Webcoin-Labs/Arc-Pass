@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Wallet as WalletIcon, X, Loader2, ShieldCheck, Star } from "lucide-react";
-import { useAccount, useSignMessage } from "wagmi";
+import { useAccount, useChainId, useSignMessage, useSwitchChain } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,18 +9,46 @@ import { useCreateWalletChallenge, useVerifyWalletOwnership, useRemoveUserWallet
 import type { Wallet } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { arcTestnet } from "@/lib/wallet-provider";
 
 const MAX_WALLETS = 3;
 
 export function WalletManager({ wallets, className }: { wallets: Wallet[]; className?: string }) {
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
   const { openConnectModal } = useConnectModal();
   const { signMessageAsync } = useSignMessage();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const createChallenge = useCreateWalletChallenge();
   const verifyOwnership = useVerifyWalletOwnership();
   const removeWallet = useRemoveUserWallet();
   const [stage, setStage] = useState<"idle" | "challenge" | "signature" | "verifying">("idle");
+  const [awaitingConnection, setAwaitingConnection] = useState(false);
+  const automaticSwitchKey = useRef<string | null>(null);
+
+  const switchToArcTestnet = useCallback(async () => {
+    try {
+      await switchChainAsync({ chainId: arcTestnet.id });
+      toast.success("Connected to Arc Testnet.");
+      return true;
+    } catch {
+      toast.error("Switch to Arc Testnet in your wallet to continue.");
+      return false;
+    }
+  }, [switchChainAsync]);
+
+  useEffect(() => {
+    if (!awaitingConnection || !isConnected || !address) return;
+    if (chainId === arcTestnet.id) {
+      setAwaitingConnection(false);
+      return;
+    }
+    const promptKey = `${address.toLowerCase()}:${chainId}`;
+    if (automaticSwitchKey.current === promptKey) return;
+    automaticSwitchKey.current = promptKey;
+    void switchToArcTestnet().finally(() => setAwaitingConnection(false));
+  }, [address, awaitingConnection, chainId, isConnected, switchToArcTestnet]);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["/api/users/me/wallets"] });
@@ -28,7 +56,12 @@ export function WalletManager({ wallets, className }: { wallets: Wallet[]; class
   };
 
   const handleVerify = async () => {
-    if (!isConnected || !address) { openConnectModal?.(); return; }
+    if (!isConnected || !address) {
+      setAwaitingConnection(true);
+      openConnectModal?.();
+      return;
+    }
+    if (chainId !== arcTestnet.id && !(await switchToArcTestnet())) return;
     if (wallets.some((wallet) => wallet.address.toLowerCase() === address.toLowerCase())) {
       toast.info("This wallet is already ownership-verified."); return;
     }
@@ -48,7 +81,7 @@ export function WalletManager({ wallets, className }: { wallets: Wallet[]; class
     }
   };
 
-  const pending = stage !== "idle";
+  const pending = stage !== "idle" || isSwitchingChain;
   return (
     <div className={className} aria-busy={pending}>
       <ul className="space-y-2" aria-label="Ownership-verified wallets">
@@ -77,7 +110,17 @@ export function WalletManager({ wallets, className }: { wallets: Wallet[]; class
         <div className="mt-4">
           <Button type="button" variant="secondary" className="h-12 w-full gap-2" onClick={handleVerify} disabled={pending}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <WalletIcon className="h-4 w-4" aria-hidden="true" />}
-            {!isConnected ? "Connect wallet" : stage === "signature" ? "Check your wallet to sign" : pending ? "Verifying ownership…" : "Verify connected wallet"}
+            {!isConnected
+              ? "Connect wallet"
+              : isSwitchingChain
+                ? "Check your wallet to switch networks"
+                : chainId !== arcTestnet.id
+                  ? "Switch to Arc Testnet"
+                  : stage === "signature"
+                    ? "Check your wallet to sign"
+                    : pending
+                      ? "Verifying ownership…"
+                      : "Verify connected wallet"}
           </Button>
           <p className="mt-3 text-xs leading-5 text-muted-foreground">
             Webcoin Labs receives your public address and signed ownership proof. We never receive private keys or seed phrases. {wallets.length}/{MAX_WALLETS} verified.

@@ -2,6 +2,7 @@ import { logger } from "./logger";
 
 const CACHE_TTL_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 8_000;
+const DEFAULT_EXPLORER_API_URL = "https://testnet.arcscan.app";
 
 export interface ArcGasPrice {
   network: "Arc";
@@ -20,17 +21,21 @@ type BlockscoutStats = {
 let cached: { value: ArcGasPrice; expiresAt: number } | null = null;
 let pending: Promise<ArcGasPrice> | null = null;
 
-export function buildBlockscoutStatsUrl(baseUrl: string, apiKey: string): string {
+export function buildBlockscoutStatsUrl(baseUrl: string, apiKey?: string, chainId = "5042002"): string {
   const url = new URL(baseUrl);
   const path = url.pathname.replace(/\/$/, "");
 
-  if (!path || path === "/api") {
+  if (url.hostname.toLowerCase() === "api.blockscout.com" && (!path || path === "/v2" || path === "/v2/api")) {
+    url.pathname = `/${/^\d+$/.test(chainId) ? chainId : "5042002"}/api/v2/stats`;
+  } else if (!path || path === "/api") {
     url.pathname = "/api/v2/stats";
+  } else if (path.endsWith("/api/v2")) {
+    url.pathname = `${path}/stats`;
   } else if (!path.endsWith("/api/v2/stats")) {
     url.pathname = `${path}/api/v2/stats`.replace(/\/+/g, "/");
   }
 
-  url.searchParams.set("apikey", apiKey);
+  if (apiKey?.trim()) url.searchParams.set("apikey", apiKey.trim());
   return url.toString();
 }
 
@@ -46,14 +51,14 @@ export function parseBlockscoutGasPrice(payload: BlockscoutStats): number {
 }
 
 async function requestGasPrice(): Promise<ArcGasPrice> {
-  const explorerUrl = process.env.EXPLORER_API_URL;
-  const explorerKey = process.env.EXPLORER_API_KEY;
-  if (!explorerUrl || !explorerKey) {
-    throw new Error("Blockscout is not configured");
-  }
+  const explorerUrl = process.env.EXPLORER_API_URL?.trim() || DEFAULT_EXPLORER_API_URL;
+  const explorerKey = process.env.EXPLORER_API_KEY?.trim();
 
-  const response = await fetch(buildBlockscoutStatsUrl(explorerUrl, explorerKey), {
-    headers: { accept: "application/json" },
+  const response = await fetch(buildBlockscoutStatsUrl(explorerUrl, undefined, process.env.ARC_CHAIN_ID?.trim() || "5042002"), {
+    headers: {
+      accept: "application/json",
+      ...(explorerKey ? { authorization: `Bearer ${explorerKey}` } : {}),
+    },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 

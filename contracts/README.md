@@ -36,7 +36,8 @@ real infrastructure exists.
    - `RELAYER_PRIVATE_KEY` — private key of the `authorizedSigner` account (also pays gas for relayed mints)
    - `FOUNDER_PASS_CONTRACT_ADDRESS` — deployed `FounderPass` address
    - `BUILDER_PASS_CONTRACT_ADDRESS` — deployed `BuilderPass` address
-   - `EXPLORER_API_URL` / `EXPLORER_API_KEY` — an indexer/explorer API for computing real `qualifyingTransactionCount` / `validContractCount` (see the TODO in `chain-adapter.ts`)
+   - `EXPLORER_API_URL` — optional Blockscout-compatible explorer base URL; it defaults to Arcscan testnet. For Blockscout PRO, use `https://api.blockscout.com/5042002/api/v2`.
+   - `EXPLORER_API_KEY` — optional for public Blockscout endpoints, required only when using a custom activity provider
 
 Once the required chain-related variables are set, `chain-adapter.ts` switches
 from `mode: "mock"` to `mode: "onchain"` automatically and starts signing

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { ZoomIn } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -16,29 +16,34 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function cropToBlob(imageSrc: string, area: Area, mimeType: string): Promise<Blob> {
+async function cropToBlob(imageSrc: string, area: Area): Promise<Blob> {
   const image = await loadImage(imageSrc);
   const canvas = document.createElement("canvas");
   canvas.width = OUTPUT_SIZE;
   canvas.height = OUTPUT_SIZE;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not supported in this browser");
+  ctx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
   ctx.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  ctx.restore();
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't export the cropped image"))), mimeType, 0.92);
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't export the cropped image"))), "image/png");
   });
 }
 
 export function ImageCropDialog({
   open,
   imageSrc,
-  mimeType,
   onCancel,
   onConfirm,
 }: {
   open: boolean;
   imageSrc: string | null;
-  mimeType: string;
   onCancel: () => void;
   onConfirm: (blob: Blob) => void;
 }) {
@@ -46,6 +51,12 @@ export function ImageCropDialog({
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedArea(null);
+  }, [imageSrc]);
 
   const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
     setCroppedArea(areaPixels);
@@ -59,7 +70,7 @@ export function ImageCropDialog({
     if (!imageSrc || !croppedArea) return;
     setSaving(true);
     try {
-      const blob = await cropToBlob(imageSrc, croppedArea, mimeType);
+      const blob = await cropToBlob(imageSrc, croppedArea);
       onConfirm(blob);
     } finally {
       setSaving(false);
