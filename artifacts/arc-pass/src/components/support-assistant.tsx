@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Send, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { Loader2, Send, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ApiError, useCreateSupportChatReply } from "@workspace/api-client-react";
 import { ArcMascot } from "@/components/arc-mascot";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ type SupportLimitPayload = {
 const INITIAL_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: "Hi — I’m Arc Support. I can explain Arc Pass, verification, claiming, minting, and connected accounts. I cannot access or change an account, so please never send seed phrases, private keys, passwords, or codes.",
+  content: "Hi — I’m Webcoin Labs Support. I can explain Arc Pass, verification, claiming, minting, and connected accounts. I cannot access or change an account, so please never send seed phrases, private keys, passwords, or codes.",
 };
 
 function formatResetTime(value: string | null): string | null {
@@ -138,9 +138,7 @@ export function SupportAssistant({ isLanding = false, floating = false }: { isLa
               <img src="/logo/helpbot.webp" alt="" className="size-full object-contain" />
             </div>
             <div>
-              <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-white">
-                <img src="/logo/Arc_Logo_White.svg" alt="" className="h-4 w-auto" /> Support <Sparkles className="size-3.5 text-[#a7b6ff]" aria-hidden="true" />
-              </SheetTitle>
+              <SheetTitle className="text-lg font-semibold text-white">Webcoin Labs Support</SheetTitle>
               <SheetDescription className="mt-1.5 text-sm leading-5 text-white/58">
                 Product help, verification guidance, and troubleshooting.
               </SheetDescription>

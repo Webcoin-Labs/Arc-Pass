@@ -229,6 +229,7 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
         <p className="mb-3 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">Live Preview</p>
         <FounderPassCard
           interactive={false}
+          forceReveal
           data={{
             variant: form.variant,
             displayName: pass.displayName,

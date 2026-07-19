@@ -2,18 +2,23 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, founderPassesTable, builderPassesTable, usersTable } from "@workspace/db";
 import { eq, and, isNull } from "drizzle-orm";
 import { normalizeXHandle, parseDiscordIdentity } from "../lib/identity";
+import { fingerprintRateLimitKey, reserveRateLimit, setRateLimitHeaders } from "../lib/rate-limit";
 
 const router: IRouter = Router();
-const previewAttempts = new Map<string, { count: number; resetAt: number }>();
 
-router.use("/eligibility", (req, res, next) => {
-  const key = req.ip || "unknown";
-  const now = Date.now();
-  const entry = previewAttempts.get(key);
-  if (!entry || entry.resetAt <= now) { previewAttempts.set(key, { count: 1, resetAt: now + 60_000 }); next(); return; }
-  if (entry.count >= 20) { res.status(429).json({ error: "Too many eligibility checks. Try again shortly." }); return; }
-  entry.count += 1;
-  next();
+router.use("/eligibility", async (req, res, next) => {
+  try {
+    const decision = await reserveRateLimit(fingerprintRateLimitKey("eligibility", req.ip || "unknown"), 20, 60_000);
+    setRateLimitHeaders(res, decision);
+    if (!decision.allowed) {
+      res.setHeader("Retry-After", String(Math.max(1, Math.ceil((decision.resetAt.getTime() - Date.now()) / 1_000))));
+      res.status(429).json({ error: "Too many eligibility checks. Try again shortly." });
+      return;
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 async function previewEligibility(req: Request, res: Response): Promise<void> {

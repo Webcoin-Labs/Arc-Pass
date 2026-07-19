@@ -33,6 +33,7 @@ interface FounderPassCardProps {
   className?: string;
   interactive?: boolean;
   concealed?: boolean;
+  forceReveal?: boolean;
 }
 
 function credentialId(data: FounderPassCardData): string {
@@ -51,13 +52,13 @@ function statusLabel(data: FounderPassCardData): string {
 }
 
 export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardProps>(function FounderPassCard(
-  { data, className, interactive = true, concealed = false },
+  { data, className, interactive = true, concealed = false, forceReveal = false },
   ref,
 ) {
   const isPremium = data.variant === "premium_black";
   const credentialIssueDate = data.issuedAt ?? data.claimedAt;
   const prefersReducedMotion = useReducedMotion();
-  const eligibleUnclaimed = concealed || (data.eligibilityStatus === "eligible" && (data.claimStatus ?? "locked") === "locked");
+  const eligibleUnclaimed = !forceReveal && (concealed || (data.eligibilityStatus === "eligible" && (data.claimStatus ?? "locked") === "locked"));
   const dimmed = !data.claimStatus || (data.claimStatus === "locked" && data.eligibilityStatus !== "eligible");
   const avatarUrl = data.avatarUrl || data.fallbackAvatarUrl;
   const socialUsername = (data.xUsername || data.username || "").replace(/^@/, "");

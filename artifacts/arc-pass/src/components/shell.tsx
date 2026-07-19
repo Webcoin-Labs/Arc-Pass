@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Header } from "./header";
 import { Footer } from "./footer";
@@ -10,6 +11,11 @@ const FOOTER_ROUTES = new Set(["/", "/dashboard"]);
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const showFooter = FOOTER_ROUTES.has(location);
+
+  useEffect(() => {
+    if (window.location.hash) return;
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [location]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background selection:bg-primary/20">

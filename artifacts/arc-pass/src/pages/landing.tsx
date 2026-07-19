@@ -50,6 +50,12 @@ const verificationSteps = [
     title: "Analyse the work",
     body: "Qualifying deployments and activity determine Builder eligibility and tier.",
   },
+  {
+    number: "04",
+    icon: Trophy,
+    title: "Claim your pass",
+    body: "Claim your verified credential, then mint it onchain when you are ready.",
+  },
 ];
 
 const BUILDER_PHASE_ONE_SUPPLY = 2_499;
@@ -560,6 +566,17 @@ export default function LandingPage() {
   const [founderRequestOpen, setFounderRequestOpen] = useState(false);
   const [lastLookup, setLastLookup] = useState<{ identifier: string; platform: EligibilityQueryPlatform; discriminator?: string } | null>(null);
 
+  const scrollToFlow = (id: string, topOffset: number, delay = 0) => {
+    window.setTimeout(() => {
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(id);
+        if (!target) return;
+        const top = Math.max(0, window.scrollY + target.getBoundingClientRect().top - topOffset);
+        window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+      });
+    }, delay);
+  };
+
   const handleCheck = async ({ identifier, platform, discriminator }: { identifier: string; platform: EligibilityQueryPlatform; discriminator?: string }) => {
     clearPendingEligibilityIdentity();
     setScanning(true);
@@ -567,6 +584,7 @@ export default function LandingPage() {
     setScanError(null);
     setScanPlatform(platform);
     setLastLookup({ identifier, platform, discriminator });
+    scrollToFlow("check-status", 112);
     try {
       const normalizedIdentifier = identifier.trim().replace(/^@/, "").toLowerCase();
       if (import.meta.env.DEV && normalizedIdentifier === "test") {
@@ -583,7 +601,7 @@ export default function LandingPage() {
       savePendingEligibilityIdentity({ identifier: normalizedIdentifier, platform, discriminator });
       setResult(data);
       setScanning(false);
-      window.requestAnimationFrame(() => document.getElementById("eligibility-results")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }));
+      scrollToFlow("eligibility-results", 24, 260);
     } catch (error) {
       setScanError(error);
       setScanning(false);
@@ -635,6 +653,33 @@ export default function LandingPage() {
                   <EligibilityScanner platform={scanPlatform} error={scanError} onRetry={lastLookup ? () => void handleCheck(lastLookup) : undefined} />
                 </motion.div>
               )}
+              {!scanning && !scanError && result && lastLookup && (
+                <motion.div key="locked" initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: "easeOut" }} className="mx-auto max-w-3xl">
+                  <div className="flex flex-col gap-2.5 rounded-3xl border border-white/15 bg-[#11131a]/95 p-2 shadow-2xl backdrop-blur-xl sm:flex-row sm:items-center sm:rounded-full sm:py-2 sm:pl-5 sm:pr-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5 px-2 sm:px-0">
+                      <LockKeyhole className="size-4 shrink-0 text-[#8da2ff]" aria-hidden="true" />
+                      <span className="truncate text-sm text-white/75">
+                        Checked <strong className="font-semibold text-white">@{lastLookup.identifier}</strong> on {lastLookup.platform === "x" ? "X" : "Discord"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setResult(null); setScanError(null); setLastLookup(null); scrollToFlow("check-status", 112); }}
+                      className="min-h-11 shrink-0 cursor-pointer rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-white/10"
+                    >
+                      Check another
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => scrollToFlow("eligibility-results", 24)}
+                    className="mt-3.5 inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-white/55 transition-colors hover:text-white/85"
+                  >
+                    Your preview is ready below — sign in to prove ownership and continue claiming
+                    <ArrowRight className="size-3.5 rotate-90" aria-hidden="true" />
+                  </button>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
 
@@ -647,14 +692,14 @@ export default function LandingPage() {
       <PartnerCloud />
 
       {result && (
-        <section id="eligibility-results" className="scroll-mt-20 border-y border-white/10 bg-[#070912] px-4 py-12 sm:px-6 lg:px-8" aria-label="Eligibility preview result">
+        <section id="eligibility-results" className="scroll-mt-6 border-y border-white/10 bg-[#070912] px-4 py-12 sm:px-6 lg:px-8" aria-label="Eligibility preview result">
           <div className="mx-auto max-w-6xl">
             <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="font-mono text-xs text-[#7895ff]">PRIVATE PREVIEW COMPLETE</p>
                 <h2 className="mt-2 text-3xl font-semibold text-balance sm:text-4xl">Your Arc Pass status</h2>
               </div>
-              <button type="button" onClick={() => { setResult(null); window.requestAnimationFrame(() => document.getElementById("check-status")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" })); }} className="min-h-11 cursor-pointer self-start rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-white/10 sm:self-auto">
+              <button type="button" onClick={() => { setResult(null); scrollToFlow("check-status", 112); }} className="min-h-11 cursor-pointer self-start rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-white/10 sm:self-auto">
                 Check another username
               </button>
             </div>
@@ -696,10 +741,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <p className="font-mono text-xs font-semibold text-[#7895ff]">PROOF BEFORE PROFILE</p>
-            <h2 className="mt-5 text-4xl font-semibold leading-tight text-balance sm:text-6xl">Verification happens in three deliberate steps.</h2>
+            <h2 className="mt-5 text-4xl font-semibold leading-tight text-balance sm:text-6xl">Verification happens in four deliberate steps.</h2>
           </div>
 
-          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+          <div className="mt-12 grid gap-4 lg:grid-cols-4">
             {verificationSteps.map((step, index) => {
               const Icon = step.icon;
               return (

@@ -1,16 +1,11 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
-  Activity,
   BadgeCheck,
   Blocks,
   Check,
   CircleAlert,
-  Clock3,
-  Code2,
   Fingerprint,
-  Github,
-  MessageCircle,
   RotateCcw,
   ShieldCheck,
   WalletCards,
@@ -182,16 +177,10 @@ const statusMeta: Record<FlowState, { label: string; className: string; dot: str
 function pendingSteps(platform: EligibilityQueryPlatform): VerificationStep[] {
   const identity = platform === "x" ? "X" : "Discord";
   return [
-    { icon: Fingerprint, title: "Identity lookup", detail: `Checking the ${identity} handle against the Arc Pass registry.`, state: "checking" },
-    { icon: BadgeCheck, title: "Founder invitation lookup", detail: "Waiting for the registry response.", state: "waiting" },
-    { icon: Github, title: "GitHub account verification", detail: "Runs after secure sign-in and GitHub connection.", state: "waiting" },
-    { icon: Clock3, title: "GitHub account age check", detail: "Requires an ownership-verified GitHub account.", state: "waiting" },
-    { icon: Code2, title: "GitHub contributions check", detail: "Checks the previous 180 days after GitHub verification.", state: "waiting" },
-    { icon: WalletCards, title: "Wallet ownership verification", detail: "Each wallet must sign a unique server nonce.", state: "waiting" },
-    { icon: Activity, title: "Arc activity analysis", detail: "Runs only against ownership-verified wallets.", state: "waiting" },
-    { icon: MessageCircle, title: "Discord supporting signal", detail: "Membership supports context; it never grants eligibility alone.", state: "waiting" },
-    { icon: Blocks, title: "Builder tier calculation", detail: "Calculated from verified Arc transactions.", state: "waiting" },
-    { icon: ShieldCheck, title: "Credential readiness", detail: "Combines all required verification signals.", state: "waiting" },
+    { icon: Fingerprint, title: "Identity lookup", detail: `Matching this ${identity} handle.`, state: "checking" },
+    { icon: BadgeCheck, title: "Founder invite", detail: "Awaiting registry response.", state: "waiting" },
+    { icon: WalletCards, title: "Builder checks", detail: "GitHub + signed wallet, after login.", state: "waiting" },
+    { icon: ShieldCheck, title: "Readiness", detail: "Confirmed after sign-in.", state: "waiting" },
   ];
 }
 
@@ -201,24 +190,18 @@ function resultSteps(result: EligibilityResult, platform: EligibilityQueryPlatfo
   const founderClaimed = founderStatus === "claimed";
   const founderState: FlowState = founderClaimed ? "claimed" : founderMatched ? "eligible" : founderStatus === "under_review" ? "action" : "not_eligible";
   const founderDetail = founderClaimed
-    ? "A pass already exists for this verified identity."
+    ? "A pass already exists."
     : founderMatched
-      ? "An active invitation matches this handle. Sign in to prove ownership."
+      ? "Invite matches. Sign in to claim."
       : founderStatus === "under_review"
-        ? "The Founder application is currently under review."
-        : "No active Founder invitation matches this handle.";
+        ? "Application under review."
+        : "No invite matches this handle.";
 
   return [
-    { icon: Fingerprint, title: "Identity lookup", detail: `${platform === "x" ? "X" : "Discord"} registry lookup completed. A username is not ownership proof.`, state: "completed" },
-    { icon: BadgeCheck, title: "Founder invitation lookup", detail: founderDetail, state: founderState },
-    { icon: Github, title: "GitHub account verification", detail: "Builder verification only: connect GitHub to prove account ownership.", state: "action" },
-    { icon: Clock3, title: "GitHub account age check", detail: "Available after GitHub verification; minimum age is 180 days.", state: "waiting" },
-    { icon: Code2, title: "GitHub contributions check", detail: "Available after GitHub verification; minimum is 10 contributions in 180 days.", state: "waiting" },
-    { icon: WalletCards, title: "Wallet ownership verification", detail: "Connect a wallet and sign its server-issued ownership challenge.", state: "action" },
-    { icon: Activity, title: "Arc activity analysis", detail: "Available after at least one wallet is ownership-verified.", state: "waiting" },
-    { icon: MessageCircle, title: "Discord supporting signal", detail: platform === "discord" ? "Sign in to confirm this Discord identity and check Arc membership." : "Connect Discord after sign-in to check the supporting membership signal.", state: "action" },
-    { icon: Blocks, title: "Builder tier calculation", detail: "Available after GitHub, wallet, and Arc activity checks complete.", state: "waiting" },
-    { icon: ShieldCheck, title: "Credential readiness", detail: founderClaimed ? "Your existing credential is available after sign-in." : founderMatched ? "Founder claim can continue after verified identity sign-in." : "Builder eligibility can only be confirmed after login and verification.", state: founderClaimed ? "claimed" : founderMatched ? "action" : "waiting" },
+    { icon: Fingerprint, title: "Identity lookup", detail: `${platform === "x" ? "X" : "Discord"} handle found in registry.`, state: "completed" },
+    { icon: BadgeCheck, title: "Founder invite", detail: founderDetail, state: founderState },
+    { icon: WalletCards, title: "Builder checks", detail: "Connect GitHub + signed wallet after login.", state: "action" },
+    { icon: ShieldCheck, title: "Readiness", detail: founderClaimed ? "Credential available after sign-in." : founderMatched ? "Founder claim ready after sign-in." : "Confirmed after login + verification.", state: founderClaimed ? "claimed" : founderMatched ? "action" : "waiting" },
   ];
 }
 
@@ -262,71 +245,55 @@ export function EligibilityScanner({
   }
 
   return (
-    <section className={cn("overflow-hidden rounded-[28px] border border-white/12 bg-[#080b15]/92 text-left shadow-[0_30px_100px_rgba(0,0,0,.42)] backdrop-blur-xl", className)} aria-live="polite" aria-busy={isChecking}>
-      <div className="grid lg:grid-cols-[0.42fr_0.58fr]">
-        <div className="relative overflow-hidden border-b border-white/10 p-5 sm:p-7 lg:border-b-0 lg:border-r">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(79,99,255,.26),transparent_38%),linear-gradient(145deg,rgba(255,255,255,.045),transparent_55%)]" aria-hidden="true" />
-          <div className="relative">
-            <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8da2ff]">
-              {isChecking ? <GeoSyncLoader size={14} /> : failed ? <CircleAlert className="size-3.5" aria-hidden="true" /> : <Check className="size-3.5" aria-hidden="true" />}
-              {isChecking ? "Live verification trace" : failed ? "Trace interrupted" : "Registry response received"}
-            </div>
-            <h2 className="mt-5 text-2xl font-semibold leading-tight text-balance text-white sm:text-3xl">
-              {isChecking ? "Checking what can be verified now." : failed ? "Verification is temporarily unavailable." : "Your public preview is ready."}
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-white/55">
-              {isChecking
-                ? "This panel advances only when the API returns a real state. Private GitHub and wallet checks stay locked until you sign in."
-                : failed
-                  ? "We did not create eligibility, a tier, or a pass from incomplete data."
-                  : "The public lookup is complete. Ownership-sensitive checks correctly remain gated behind secure sign-in."}
-            </p>
+    <section className={cn("relative overflow-hidden rounded-2xl border border-white/12 bg-[#080b15]/92 p-4 text-left shadow-[0_24px_80px_rgba(0,0,0,.4)] backdrop-blur-xl sm:p-5", className)} aria-live="polite" aria-busy={isChecking}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(79,99,255,.2),transparent_42%)]" aria-hidden="true" />
 
-            <div className="mt-7 rounded-2xl border border-white/10 bg-black/25 p-4">
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-white/45">Verification coverage</span>
-                <span className="font-mono font-semibold tabular-nums text-white">{isChecking ? "LIVE" : `${resolved} / ${steps.length}`}</span>
-              </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
-                {isChecking ? (
-                  <motion.div className="h-full w-1/3 rounded-full bg-[#7895ff]" animate={reduceMotion ? undefined : { x: ["-100%", "300%"] }} transition={{ duration: 1.35, repeat: Infinity, ease: "easeInOut" }} />
-                ) : (
-                  <motion.div className="h-full origin-left rounded-full bg-gradient-to-r from-[#4f63ff] to-[#8da2ff]" initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: resolved / steps.length }} />
-                )}
-              </div>
-            </div>
-
-            {failed && onRetry && (
-              <button type="button" onClick={onRetry} className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8da2ff]">
-                <RotateCcw className="size-4" aria-hidden="true" /> Retry verification
-              </button>
-            )}
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.04]", failed ? "text-rose-300" : "text-emerald-300")}>
+            {failed ? <CircleAlert className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />}
+          </span>
+          <div>
+            <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8da2ff]">{failed ? "Trace interrupted" : "Registry response received"}</p>
+            <h2 className="text-base font-semibold leading-tight text-white sm:text-lg">{failed ? "Verification unavailable." : "Your public preview is ready."}</h2>
           </div>
         </div>
 
-        <ol className="divide-y divide-white/[0.07] p-2 sm:p-3" aria-label="Arc Pass verification checks">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const meta = statusMeta[step.state];
-            return (
-              <li key={step.title} className="group grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-xl px-2 py-3.5 transition-colors hover:bg-white/[0.025] sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:items-center sm:px-3">
-                <span className={cn("grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.035]", meta.className)}>
-                  {step.state === "checking" ? <GeoSyncLoader size={16} /> : <Icon className="size-4" aria-hidden="true" />}
+        <div className="flex items-center gap-3">
+          <span className="hidden text-xs text-white/40 sm:inline">Sign in to run private checks</span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 font-mono text-[10px] font-semibold tabular-nums text-white">
+            {resolved} / {steps.length} resolved
+          </span>
+          {failed && onRetry && (
+            <button type="button" onClick={onRetry} className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-white/15 px-3 text-xs font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8da2ff]">
+              <RotateCcw className="size-3.5" aria-hidden="true" /> Retry
+            </button>
+          )}
+        </div>
+      </div>
+
+      <ol className="relative mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4" aria-label="Arc Pass verification checks">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          const meta = statusMeta[step.state];
+          return (
+            <li key={step.title} className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className={cn("grid size-8 place-items-center rounded-lg border border-white/10 bg-white/[0.04]", meta.className)}>
+                  {step.state === "checking" ? <GeoSyncLoader size={14} /> : <Icon className="size-4" aria-hidden="true" />}
                 </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{step.title}</p>
-                  <p className="mt-1 text-xs leading-5 text-white/45">{step.detail}</p>
-                </div>
-                <span className={cn("col-start-2 inline-flex w-fit items-center gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.11em] sm:col-start-auto", meta.className)}>
+                <span className={cn("inline-flex items-center gap-1.5 font-mono text-[8px] font-semibold uppercase tracking-[0.1em]", meta.className)}>
                   <span className={cn("size-1.5 rounded-full", meta.dot, step.state === "checking" && "animate-pulse motion-reduce:animate-none")} aria-hidden="true" />
                   {meta.label}
                 </span>
-                <span className="sr-only">Check {index + 1} of {steps.length}</span>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-white">{step.title}</p>
+              <p className="mt-1 text-xs leading-5 text-white/45">{step.detail}</p>
+              <span className="sr-only">Check {index + 1} of {steps.length}</span>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

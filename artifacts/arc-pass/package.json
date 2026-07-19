@@ -79,6 +79,7 @@
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "2.2.11",
+    "react-easy-crop": "^6.2.2",
     "wagmi": "2.19.5"
   }
 }

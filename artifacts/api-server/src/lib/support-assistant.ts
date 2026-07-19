@@ -141,7 +141,7 @@ export async function generateSupportReply(message: string): Promise<string> {
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const client = new GoogleGenerativeAI(apiKey);
     const model = client.getGenerativeModel({
-      model: process.env.GEMINI_SUPPORT_MODEL?.trim() || "gemini-2.5-flash",
+      model: process.env.GEMINI_SUPPORT_MODEL?.trim() || "gemini-3.5-flash",
       systemInstruction: SUPPORT_CONTEXT,
     });
     const result = await model.generateContent({

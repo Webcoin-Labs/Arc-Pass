@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { UploadCloud, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CompanyLogo } from "@/components/company-logo";
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -33,8 +34,9 @@ export function CompanyLogoUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [cropSource, setCropSource] = useState<{ src: string; mimeType: string } | null>(null);
 
-  const handleFile = async (file: File | undefined) => {
+  const handleFile = (file: File | undefined) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image must be 5MB or smaller");
@@ -44,9 +46,22 @@ export function CompanyLogoUploader({
       toast.error("Use a PNG, WebP, or JPEG image");
       return;
     }
+    setCropSource({ src: URL.createObjectURL(file), mimeType: file.type });
+  };
+
+  const closeCrop = () => {
+    if (cropSource) URL.revokeObjectURL(cropSource.src);
+    setCropSource(null);
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
+    const mimeType = cropSource?.mimeType ?? "image/png";
+    closeCrop();
     setUploading(true);
     onUploadingChange?.(true);
     try {
+      const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : "png";
+      const file = new File([blob], `logo.${extension}`, { type: mimeType });
       const url = await uploadImage(file);
       onChange(url);
     } catch (err) {
@@ -74,7 +89,7 @@ export function CompanyLogoUploader({
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              void handleFile(e.dataTransfer.files[0]);
+              handleFile(e.dataTransfer.files[0]);
             }}
             className={cn(
               "flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors disabled:cursor-wait disabled:opacity-70",
@@ -94,7 +109,7 @@ export function CompanyLogoUploader({
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.currentTarget.value = "";
-              void handleFile(file);
+              handleFile(file);
             }}
           />
         </div>
@@ -104,6 +119,14 @@ export function CompanyLogoUploader({
           </Button>
         )}
       </div>
+
+      <ImageCropDialog
+        open={!!cropSource}
+        imageSrc={cropSource?.src ?? null}
+        mimeType={cropSource?.mimeType ?? "image/png"}
+        onCancel={closeCrop}
+        onConfirm={(blob) => void handleCropConfirm(blob)}
+      />
     </div>
   );
 }

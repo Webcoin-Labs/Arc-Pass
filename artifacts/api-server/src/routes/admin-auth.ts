@@ -11,19 +11,24 @@ router.post("/admin/auth/login", async (req, res): Promise<void> => {
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   if (!email || !password || password.length > 256) { res.status(400).json({ error: "Email and password are required." }); return; }
   let [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.email, email));
-  if (!admin && configuration.enableDevAdminBootstrap && email === configuration.devAdminBootstrapEmail) {
+  if (!admin) {
     const [existingAdmin] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable).limit(1);
+    // Both bootstrap paths only ever create the very first admin row — once
+    // any admin exists, neither can create another. This closes a standing
+    // super-admin-creation path that would otherwise fire on every login
+    // attempt against the configured bootstrap email indefinitely.
     if (!existingAdmin) {
-      if (password.length < 12) {
-        res.status(400).json({ error: "The first local administrator password must be at least 12 characters." });
-        return;
+      if (configuration.enableDevAdminBootstrap && email === configuration.devAdminBootstrapEmail) {
+        if (password.length < 12) {
+          res.status(400).json({ error: "The first local administrator password must be at least 12 characters." });
+          return;
+        }
+        const passwordHash = await hashAdminPassword(password);
+        [admin] = await db.insert(adminUsersTable).values({ email, passwordHash, role: "super_admin" }).returning();
+      } else if (email === process.env.ADMIN_BOOTSTRAP_EMAIL?.toLowerCase() && process.env.ADMIN_BOOTSTRAP_PASSWORD_HASH) {
+        [admin] = await db.insert(adminUsersTable).values({ email, passwordHash: process.env.ADMIN_BOOTSTRAP_PASSWORD_HASH, role: "super_admin" }).returning();
       }
-      const passwordHash = await hashAdminPassword(password);
-      [admin] = await db.insert(adminUsersTable).values({ email, passwordHash, role: "super_admin" }).returning();
     }
-  }
-  if (!admin && email === process.env.ADMIN_BOOTSTRAP_EMAIL?.toLowerCase() && process.env.ADMIN_BOOTSTRAP_PASSWORD_HASH) {
-    [admin] = await db.insert(adminUsersTable).values({ email, passwordHash: process.env.ADMIN_BOOTSTRAP_PASSWORD_HASH, role: "super_admin" }).returning();
   }
   if (!admin || !admin.isActive || (admin.lockedUntil && admin.lockedUntil > new Date())) {
     res.status(401).json({ error: "Invalid credentials or account temporarily locked." }); return;

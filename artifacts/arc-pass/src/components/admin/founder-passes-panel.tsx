@@ -147,7 +147,7 @@ export function FounderPassesPanel() {
       </div>
 
       <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-5xl">
           <SheetHeader className="mb-6">
             <SheetTitle>Edit Founder Pass</SheetTitle>
           </SheetHeader>

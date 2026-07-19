@@ -31,7 +31,7 @@ export async function analyzeBuilderProfile(input: BuilderAnalysisInput): Promis
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const client = new GoogleGenerativeAI(apiKey);
     const model = client.getGenerativeModel({
-      model: process.env.GEMINI_ANALYSIS_MODEL?.trim() || "gemini-2.5-flash",
+      model: process.env.GEMINI_ANALYSIS_MODEL?.trim() || "gemini-3.5-flash",
     });
 
     const prompt = [
