@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Link } from "wouter";
 import { ArrowUpRight, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,16 @@ export function MobileNavigation({
     isLanding ? "border-white/10 text-white" : "border-black/15 text-black",
   );
 
+  const handleLandingAnchorClick = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
+    if (!isLanding) return;
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    event.preventDefault();
+    window.history.pushState({}, "", `/#${id}`);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -47,7 +57,7 @@ export function MobileNavigation({
 
           <nav className="mt-5 flex flex-col" aria-label="Mobile navigation">
             <Link href="/#passes" onClick={() => setOpen(false)} className={linkClass}>Passes <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
-            <Link href="/#how-it-works" onClick={() => setOpen(false)} className={linkClass}>How it works <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
+            <Link href="/#how-it-works" onClick={(event) => { setOpen(false); handleLandingAnchorClick(event, "how-it-works"); }} className={linkClass}>How it works <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             <Link href="/faq" onClick={() => setOpen(false)} className={linkClass}>FAQ <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             <Link href="/docs" onClick={() => setOpen(false)} className={linkClass}>Documentation <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
             {user && <Link href="/dashboard" onClick={() => setOpen(false)} className={linkClass}>My Passes <ArrowUpRight className="size-4" aria-hidden="true" /></Link>}

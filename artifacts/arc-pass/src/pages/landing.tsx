@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useCheckEligibility, useGetBuilderSupply } from "@workspace/api-client-react";
@@ -566,6 +566,19 @@ export default function LandingPage() {
   const [founderRequestOpen, setFounderRequestOpen] = useState(false);
   const [lastLookup, setLastLookup] = useState<{ identifier: string; platform: EligibilityQueryPlatform; discriminator?: string } | null>(null);
 
+  useEffect(() => {
+    const scrollToHashTarget = () => {
+      if (window.location.hash !== "#how-it-works") return;
+      window.requestAnimationFrame(() => {
+        document.getElementById("how-it-works")?.scrollIntoView({ behavior: "auto", block: "start" });
+      });
+    };
+
+    scrollToHashTarget();
+    window.addEventListener("hashchange", scrollToHashTarget);
+    return () => window.removeEventListener("hashchange", scrollToHashTarget);
+  }, []);
+
   const scrollToFlow = (id: string, topOffset: number, delay = 0) => {
     window.setTimeout(() => {
       window.requestAnimationFrame(() => {
@@ -737,7 +750,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="border-y border-white/10 bg-[#070912] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+      <section id="how-it-works" className="scroll-mt-24 border-y border-white/10 bg-[#070912] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <p className="font-mono text-xs font-semibold text-[#7895ff]">PROOF BEFORE PROFILE</p>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,16 @@ export function Header() {
     logout.mutate(undefined, { onSuccess: () => window.location.reload() });
   };
 
+  const handleLandingAnchorClick = (id: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isLanding) return;
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    event.preventDefault();
+    window.history.pushState({}, "", `/#${id}`);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <header
       className={cn(
@@ -52,7 +62,7 @@ export function Header() {
 
         <nav className={cn("hidden items-center lg:flex", isLanding ? "gap-1 rounded-full border border-white/10 bg-white/5 p-1" : "gap-6")} aria-label="Primary navigation">
           <Link href="/#passes" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Passes</Link>
-          <Link href="/#how-it-works" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>How it works</Link>
+          <Link href="/#how-it-works" onClick={handleLandingAnchorClick("how-it-works")} className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>How it works</Link>
           <Link href="/faq" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>FAQ</Link>
           <Link href="/docs" className={cn("inline-flex min-h-11 cursor-pointer items-center text-sm font-medium transition-colors duration-150", isLanding ? "rounded-full px-3.5 text-white/65 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground")}>Docs</Link>
         </nav>
