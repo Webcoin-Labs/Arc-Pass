@@ -90,18 +90,11 @@ export default function ClaimFounderPage() {
     });
   };
 
-  const handleMint = (params: MintParams) => {
-    mintPass.mutate(
-      { data: { mintMethod: params.mintMethod, walletAddress: params.walletAddress, network: params.network } },
-      {
-        onSuccess: () => {
-          invalidate();
-          setMintOpen(false);
-          setConfettiBurst((value) => value + 1);
-        },
-        onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Minting failed"),
-      },
-    );
+  const handleMint = async (params: MintParams) => {
+    await mintPass.mutateAsync({ data: { mintMethod: params.mintMethod, walletAddress: params.walletAddress, network: params.network } });
+    await invalidate();
+    setMintOpen(false);
+    setConfettiBurst((value) => value + 1);
   };
 
   const handleShare = () => {

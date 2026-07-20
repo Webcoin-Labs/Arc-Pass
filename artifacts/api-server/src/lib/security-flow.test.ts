@@ -44,18 +44,36 @@ test("Railway liveness never waits for Neon readiness", async () => {
   assert.match(health, /status\(503\)/);
 });
 
-test("wallet flows release the parent modal and require Arc Testnet", async () => {
+test("mint wallet flow requires an explicit destination, supports switching, verifies ownership, and requires Arc Testnet", async () => {
   const walletProvider = await readFile(path.join(workspace, "artifacts/arc-pass/src/lib/wallet-provider.tsx"), "utf8");
   const mintModal = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/mint-modal.tsx"), "utf8");
   const walletManager = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/wallet-manager.tsx"), "utf8");
 
   assert.match(walletProvider, /export const arcTestnet = defineChain/);
+  assert.match(walletProvider, /reconnectOnMount=\{false\}/);
   assert.match(mintModal, /connectModalOpen/);
-  assert.match(mintModal, /modal=\{!connectModalOpen\}/);
+  assert.match(mintModal, /walletPickerRequested/);
+  assert.match(mintModal, /disconnectAsync/);
+  assert.match(mintModal, /Choose another wallet/);
+  assert.match(mintModal, /Use this wallet/);
+  assert.match(mintModal, /useCreateWalletChallenge/);
+  assert.match(mintModal, /useVerifyWalletOwnership/);
+  assert.match(mintModal, /Verify wallet ownership/);
+  assert.match(mintModal, /modal=\{!walletPickerRequested && !connectModalOpen\}/);
+  assert.match(mintModal, /max-h-\[calc\(100dvh-1rem\)\]/);
+  assert.match(mintModal, /overflow-y-auto/);
   assert.match(mintModal, /switchChainAsync\(\{ chainId: arcTestnet\.id \}\)/);
   assert.match(mintModal, /Switch to Arc Testnet/);
   assert.match(walletManager, /switchChainAsync\(\{ chainId: arcTestnet\.id \}\)/);
   assert.match(walletManager, /Switch to Arc Testnet/);
+});
+
+test("Founder pass omits unavailable company-detail copy", async () => {
+  const founderCard = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/founder-pass-card.tsx"), "utf8");
+
+  assert.doesNotMatch(founderCard, /Company details unavailable/);
+  assert.match(founderCard, /data\.companyIndustry &&/);
+  assert.match(founderCard, /data\.companyName && \(\s*<section/);
 });
 
 test("company logos are exported and rendered as true circular crops", async () => {

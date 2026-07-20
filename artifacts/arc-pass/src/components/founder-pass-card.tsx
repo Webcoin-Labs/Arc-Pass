@@ -1,6 +1,6 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { BadgeCheck, Building2, Fingerprint, Lock, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck, Fingerprint, Lock, ShieldCheck, UserRound } from "lucide-react";
 import { SiX } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { CompanyLogo } from "@/components/company-logo";
@@ -124,26 +124,24 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
             </div>
           </section>
 
-          <section className="min-w-0 rounded-xl border border-[#9bb9ff]/28 bg-transparent p-3 sm:rounded-2xl sm:p-[7%]" aria-label="Company">
-            <div className="flex min-w-0 items-center gap-2.5 sm:gap-[7%]">
-              {data.companyName ? (
+          {data.companyName && (
+            <section className="min-w-0 rounded-xl border border-[#9bb9ff]/28 bg-transparent p-3 sm:rounded-2xl sm:p-[7%]" aria-label="Company">
+              <div className="flex min-w-0 items-center gap-2.5 sm:gap-[7%]">
                 <CompanyLogo
                   logoUrl={data.companyLogoUrl}
                   name={data.companyName}
                   size="md"
                   className="size-9 border-[#9dbaff]/30 bg-[#061c58]/80 shadow-[0_8px_20px_rgba(0,10,52,.24)] sm:size-12"
                 />
-              ) : (
-                <span className="grid size-9 shrink-0 place-items-center rounded-full border border-[#9dbaff]/30 bg-[#061c58]/80 sm:size-12">
-                  <Building2 className="size-4 text-white/62 sm:size-5" aria-hidden="true" />
-                </span>
-              )}
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold leading-tight text-white sm:text-base">{data.companyName || "Company not provided"}</p>
-                <p className="mt-0.5 truncate text-[8px] text-white/58 sm:text-[9px]">{data.companyIndustry || "Company details unavailable"}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold leading-tight text-white sm:text-base">{data.companyName}</p>
+                  {data.companyIndustry && (
+                    <p className="mt-0.5 truncate text-[8px] text-white/58 sm:text-[9px]">{data.companyIndustry}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-y border-[#a6bfff]/22 py-3 sm:grid-cols-[1.35fr_.7fr_.9fr_.72fr] sm:gap-[3%] sm:py-[2.6%]">

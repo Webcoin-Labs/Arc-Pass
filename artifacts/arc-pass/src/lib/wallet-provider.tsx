@@ -39,7 +39,7 @@ const wagmiConfig = getDefaultConfig({
 export function WalletProvider({ children }: PropsWithChildren) {
   const { resolvedTheme } = useTheme();
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
       <RainbowKitProvider
         modalSize="compact"
         theme={resolvedTheme === "dark"
