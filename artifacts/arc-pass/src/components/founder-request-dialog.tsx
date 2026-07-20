@@ -59,7 +59,7 @@ export function FounderRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-[560px] gap-0 overflow-hidden rounded-[28px] border border-white/10 bg-[#1a1b20] p-0 text-white shadow-[0_28px_100px_rgba(0,0,0,.64)] sm:w-full">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-2rem)] max-w-[560px] gap-0 overflow-y-auto overscroll-contain rounded-[28px] border border-white/10 bg-[#1a1b20] p-0 text-white shadow-[0_28px_100px_rgba(0,0,0,.64)] sm:max-h-[calc(100dvh-2rem)] sm:w-full">
         <div className="border-b border-white/[0.08] bg-[radial-gradient(circle_at_85%_0%,rgba(43,119,255,.2),transparent_38%)] px-6 pb-5 pt-7 sm:px-8 sm:pt-8">
           <div className="mb-5 grid size-10 place-items-center rounded-2xl border border-[#4d76ff]/35 bg-[#315dff]/15 text-[#aab9ff]">
             <ShieldCheck className="size-5" aria-hidden="true" />
