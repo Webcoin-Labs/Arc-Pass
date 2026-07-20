@@ -85,3 +85,33 @@ test("company logos are exported and rendered as true circular crops", async () 
   assert.match(companyLogo, /object-cover/);
   assert.doesNotMatch(companyLogo, /object-contain p-1\.5/);
 });
+
+test("Founder NFT metadata resolves to permanent generated R2 artwork", async () => {
+  const sharing = await readFile(path.join(workspace, "artifacts/api-server/src/routes/sharing.ts"), "utf8");
+  const artwork = await readFile(path.join(workspace, "artifacts/api-server/src/lib/founder-pass-artwork.ts"), "utf8").catch(() => "");
+
+  assert.match(sharing, /ensureFounderPassArtwork/);
+  assert.match(sharing, /image:\s*artworkUrl/);
+  assert.doesNotMatch(sharing, /image:\s*`\$\{base\}\/api\/share\/\$\{type\}\/\$\{id\}\/image`/);
+  assert.match(artwork, /passes\/founder/);
+  assert.match(artwork, /persistGeneratedArtwork/);
+  assert.match(artwork, /CARDHOLDER/);
+  assert.match(artwork, /CREDENTIAL/);
+  assert.match(artwork, /BLOCKCHAIN/);
+  assert.match(artwork, /ISSUE DATE/);
+  assert.match(artwork, /Verified by Webcoin Labs/);
+  assert.match(artwork, /NON-TRANSFERABLE/);
+});
+
+test("Premier Founder keeps its gold identity over an Arc blue, lavender, and pink background", async () => {
+  const css = await readFile(path.join(workspace, "artifacts/arc-pass/src/index.css"), "utf8");
+  const badge = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/founder-pass-variant-badge.tsx"), "utf8");
+  const premiumMaterial = css.match(/\.pass-material-founder-black\s*\{[\s\S]*?\n\s*\}/)?.[0] ?? "";
+
+  assert.match(premiumMaterial, /radial-gradient/);
+  assert.match(premiumMaterial, /#123d9d/i);
+  assert.match(premiumMaterial, /#e6b7d2/i);
+  assert.doesNotMatch(css, /--material-founder-black-from:\s*28 45% 6%/);
+  assert.match(badge, /#f6d38a/);
+  assert.match(badge, /premierfounderpass\.webp/);
+});

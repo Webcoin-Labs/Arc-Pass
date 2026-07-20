@@ -25,5 +25,5 @@ export function formatDate(value: string | Date | null | undefined): string {
 export function explorerTxUrl(network: string | null | undefined, txHash: string | null | undefined): string | null {
   if (!txHash) return null;
   if (network === "base") return `https://basescan.org/tx/${txHash}`;
-  return `https://explorer.arc.network/tx/${txHash}`;
+  return `https://testnet.arcscan.app/tx/${txHash}`;
 }

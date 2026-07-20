@@ -7,6 +7,7 @@ import { configuration } from "../lib/env";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { createPkcePair, signOAuthState } from "../lib/oauth/provider";
 import { buildXAuthorizeUrl, isXOAuthConfigured } from "../lib/oauth/x";
+import { ensureFounderPassArtwork, type FounderPassArtworkData } from "../lib/founder-pass-artwork";
 
 const router: IRouter = Router();
 const directShareUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
@@ -30,6 +31,30 @@ const acceptDirectShareImage: RequestHandler = (req, res, next) => {
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+}
+
+function founderArtworkData(
+  pass: typeof founderPassesTable.$inferSelect,
+  tierName: string | null,
+): FounderPassArtworkData {
+  return {
+    id: pass.id,
+    variant: pass.variant,
+    displayName: pass.displayName,
+    username: pass.username ?? pass.inviteHandle,
+    avatarUrl: pass.avatarUrl,
+    founderTitle: pass.founderTitle,
+    companyName: pass.companyName,
+    companyIndustry: pass.companyIndustry,
+    companyLogoUrl: pass.companyLogoUrl,
+    tierName,
+    passNumber: pass.passNumber,
+    network: pass.network,
+    issuedAt: pass.issuedAt,
+    claimedAt: pass.claimedAt,
+    eligibilityStatus: pass.eligibilityStatus,
+    claimStatus: pass.claimStatus,
+  };
 }
 
 router.post("/share/x/direct", requireAuth, acceptDirectShareImage, async (req, res): Promise<void> => {
@@ -74,14 +99,20 @@ async function shareRecord(type: string, id: number) {
   if (type === "founder") {
     const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, id));
     if (!pass || pass.claimStatus === "locked") return null;
-    return { title: "Founder Pass", holder: pass.displayName || "Verified founder", detail: pass.claimStatus === "minted" ? "Minted on Arc · Webcoin Labs" : "Claimed to Arc Pass inventory · Webcoin Labs" };
+    const [tier] = pass.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, pass.founderTierId)) : [null];
+    return {
+      title: "Founder Pass",
+      holder: pass.displayName || "Verified founder",
+      detail: pass.claimStatus === "minted" ? "Minted on Arc · Webcoin Labs" : "Claimed to Arc Pass inventory · Webcoin Labs",
+      artwork: founderArtworkData(pass, tier?.name ?? null),
+    };
   }
   if (type === "builder") {
     const [pass] = await db.select().from(builderPassesTable).where(eq(builderPassesTable.id, id));
     if (!pass || pass.claimStatus === "locked") return null;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pass.userId));
     const [tier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
-    return { title: "Onchain Builder Pass", holder: user?.displayName || "Verified builder", detail: pass.claimStatus === "minted" ? `${tier?.name || "Verified"} tier · minted on Arc` : `${tier?.name || "Verified"} tier · claimed to inventory` };
+    return { title: "Onchain Builder Pass", holder: user?.displayName || "Verified builder", detail: pass.claimStatus === "minted" ? `${tier?.name || "Verified"} tier · minted on Arc` : `${tier?.name || "Verified"} tier · claimed to inventory`, artwork: null };
   }
   return null;
 }
@@ -92,15 +123,18 @@ async function metadataRecord(type: string, id: number) {
     if (!pass || pass.claimStatus !== "minted") return null;
     const [tier] = pass.founderTierId ? await db.select().from(founderTiersTable).where(eq(founderTiersTable.id, pass.founderTierId)) : [null];
     return {
-      name: `${pass.displayName || "Verified founder"} · Arc Founder Pass`,
-      description: "A permanent, non-transferable Founder credential issued by Webcoin Labs.",
-      attributes: [
-        { trait_type: "Credential", value: "Founder Pass" },
-        { trait_type: "Founder type", value: pass.variant === "premium_black" ? "Premium Founder" : "Normal Founder" },
-        ...(tier ? [{ trait_type: "Founder tier", value: tier.name }] : []),
-        ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
-        { trait_type: "Transferable", value: "No" },
-      ],
+      metadata: {
+        name: `${pass.displayName || "Verified founder"} · Arc Founder Pass`,
+        description: "A permanent, non-transferable Founder credential issued by Webcoin Labs.",
+        attributes: [
+          { trait_type: "Credential", value: "Founder Pass" },
+          { trait_type: "Founder type", value: pass.variant === "premium_black" ? "Premier Founder" : "Emerging Founder" },
+          ...(tier ? [{ trait_type: "Founder tier", value: tier.name }] : []),
+          ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
+          { trait_type: "Transferable", value: "No" },
+        ],
+      },
+      artwork: founderArtworkData(pass, tier?.name ?? null),
     };
   }
 
@@ -110,14 +144,17 @@ async function metadataRecord(type: string, id: number) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pass.userId));
     const [tier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
     return {
-      name: `${user?.displayName || "Verified builder"} · Arc Onchain Builder Pass`,
-      description: "A permanent, non-transferable Onchain Builder credential issued by Webcoin Labs.",
-      attributes: [
-        { trait_type: "Credential", value: "Onchain Builder Pass" },
-        ...(tier ? [{ trait_type: "Builder tier", value: tier.name }] : []),
-        ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
-        { trait_type: "Transferable", value: "No" },
-      ],
+      metadata: {
+        name: `${user?.displayName || "Verified builder"} · Arc Onchain Builder Pass`,
+        description: "A permanent, non-transferable Onchain Builder credential issued by Webcoin Labs.",
+        attributes: [
+          { trait_type: "Credential", value: "Onchain Builder Pass" },
+          ...(tier ? [{ trait_type: "Builder tier", value: tier.name }] : []),
+          ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
+          { trait_type: "Transferable", value: "No" },
+        ],
+      },
+      artwork: null,
     };
   }
 
@@ -133,20 +170,29 @@ router.get("/metadata/:type/:id", async (req, res): Promise<void> => {
   if (!record) { res.sendStatus(404); return; }
 
   const base = configuration.appUrl.replace(/\/$/, "");
+  const artworkUrl = record.artwork
+    ? await ensureFounderPassArtwork(record.artwork, base)
+    : `${base}/api/share/${type}/${id}/image`;
   res
     .type("json")
     .set("Cache-Control", "public, max-age=300")
     .json({
-      ...record,
-      image: `${base}/api/share/${type}/${id}/image`,
+      ...record.metadata,
+      image: artworkUrl,
       external_url: `${base}/pass/${type}/${id}`,
     });
 });
 
 router.get("/share/:type/:id/image", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
-  const record = Number.isSafeInteger(id) ? await shareRecord(String(req.params.type), id) : null;
+  const type = String(req.params.type);
+  const record = Number.isSafeInteger(id) ? await shareRecord(type, id) : null;
   if (!record) { res.sendStatus(404); return; }
+  if (record.artwork) {
+    const artworkUrl = await ensureFounderPassArtwork(record.artwork, configuration.appUrl);
+    res.set("Cache-Control", "public, max-age=300").redirect(302, artworkUrl);
+    return;
+  }
   const title = escapeHtml(record.title);
   const holder = escapeHtml(record.holder);
   const detail = escapeHtml(record.detail);
@@ -160,7 +206,7 @@ router.get("/share/:type/:id", async (req, res): Promise<void> => {
   if (!record) { res.sendStatus(404); return; }
   const base = configuration.appUrl.replace(/\/$/, "");
   const canonical = `${base}/api/share/${type}/${id}`;
-  const image = `${canonical}/image`;
+  const image = record.artwork ? await ensureFounderPassArtwork(record.artwork, base) : `${canonical}/image`;
   const target = `${base}/pass/${type}/${id}`;
   const title = `${record.holder} · ${record.title}`;
   res.type("html").set("Cache-Control", "public, max-age=300").send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><meta property="og:type" content="website"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(record.detail)}"><meta property="og:url" content="${escapeHtml(canonical)}"><meta property="og:image" content="${escapeHtml(image)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:image" content="${escapeHtml(image)}"><meta http-equiv="refresh" content="0;url=${escapeHtml(target)}"></head><body><p><a href="${escapeHtml(target)}">View this Arc Pass</a></p></body></html>`);

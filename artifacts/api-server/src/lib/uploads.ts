@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import type { RequestHandler } from "express";
 import multer from "multer";
 import sharp from "sharp";
@@ -11,7 +11,8 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR?.trim() || path.join(os.tmpdir(), "a
 const PUBLIC_PATH_PREFIX = "/uploads";
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/webp", "image/jpeg"]);
-const GENERATED_IMAGE_KEY = /^arc-pass\/\d{4}\/\d{2}\/[a-f0-9]{40}\.(?:png|webp|jpg)$/;
+const GENERATED_IMAGE_KEY = /^(?:arc-pass\/\d{4}\/\d{2}\/[a-f0-9]{40}\.(?:png|webp|jpg)|passes\/(?:founder|builder)\/\d+-[a-f0-9]{16}\.webp)$/;
+const GENERATED_ARTWORK_KEY = /^passes\/(?:founder|builder)\/\d+-[a-f0-9]{16}\.webp$/;
 
 const r2Configuration = {
   endpoint: process.env.CLOUDFLARE_R2_ENDPOINT?.trim() ?? "",
@@ -80,6 +81,92 @@ export function uploadedImageKeyFromPath(requestPath: string): string | null {
   const withoutQuery = requestPath.split("?", 1)[0] ?? "";
   const candidate = withoutQuery.replace(/^\/+/, "").replace(/^uploads\//, "");
   return GENERATED_IMAGE_KEY.test(candidate) ? candidate : null;
+}
+
+function generatedArtworkKey(value: string): string {
+  if (!GENERATED_ARTWORK_KEY.test(value)) throw new Error("Invalid generated pass artwork key");
+  return value;
+}
+
+export function generatedArtworkPublicUrl(objectKey: string): string {
+  const key = generatedArtworkKey(objectKey);
+  return r2Configuration.publicUrl ? `${r2Configuration.publicUrl}/${key}` : `${PUBLIC_PATH_PREFIX}/${key}`;
+}
+
+function isMissingObject(error: unknown): boolean {
+  const storageError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return storageError.name === "NotFound"
+    || storageError.name === "NoSuchKey"
+    || storageError.$metadata?.httpStatusCode === 404;
+}
+
+export async function findGeneratedArtworkUrl(objectKey: string): Promise<string | null> {
+  const key = generatedArtworkKey(objectKey);
+  if (cloudflareR2Configured) {
+    try {
+      await getR2Client().send(new HeadObjectCommand({ Bucket: r2Configuration.bucket, Key: key }));
+      return generatedArtworkPublicUrl(key);
+    } catch (error) {
+      if (isMissingObject(error)) return null;
+      throw error;
+    }
+  }
+
+  try {
+    await fs.access(path.join(UPLOADS_DIR, ...key.split("/")));
+    return generatedArtworkPublicUrl(key);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+export async function persistGeneratedArtwork(objectKey: string, buffer: Buffer): Promise<string> {
+  const key = generatedArtworkKey(objectKey);
+  const detected = detectImage(buffer);
+  if (detected?.contentType !== "image/webp") throw new Error("Generated pass artwork must be WebP");
+
+  if (cloudflareR2Configured) {
+    await getR2Client().send(new PutObjectCommand({
+      Bucket: r2Configuration.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: "image/webp",
+      CacheControl: "public, max-age=31536000, immutable",
+    }));
+    return generatedArtworkPublicUrl(key);
+  }
+
+  const localPath = path.join(UPLOADS_DIR, ...key.split("/"));
+  await fs.mkdir(path.dirname(localPath), { recursive: true });
+  try {
+    await fs.writeFile(localPath, buffer, { flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  return generatedArtworkPublicUrl(key);
+}
+
+export async function readStoredImage(requestPath: string): Promise<Buffer | null> {
+  const objectKey = uploadedImageKeyFromPath(requestPath);
+  if (!objectKey) return null;
+
+  if (cloudflareR2Configured) {
+    try {
+      const object = await getR2Client().send(new GetObjectCommand({ Bucket: r2Configuration.bucket, Key: objectKey }));
+      return object.Body ? Buffer.from(await object.Body.transformToByteArray()) : null;
+    } catch (error) {
+      if (isMissingObject(error)) return null;
+      throw error;
+    }
+  }
+
+  try {
+    return await fs.readFile(path.join(UPLOADS_DIR, ...objectKey.split("/")));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
 }
 
 export function normalizeUploadedImageUrl(value: string | null | undefined, publicUrl = r2Configuration.publicUrl): string | null | undefined {
@@ -167,8 +254,7 @@ export const serveUploadedImage: RequestHandler = async (req, res, next) => {
     if (object.LastModified) res.setHeader("Last-Modified", object.LastModified.toUTCString());
     res.send(body);
   } catch (error) {
-    const storageError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-    if (storageError.name === "NoSuchKey" || storageError.$metadata?.httpStatusCode === 404) {
+    if (isMissingObject(error)) {
       res.sendStatus(404);
       return;
     }
