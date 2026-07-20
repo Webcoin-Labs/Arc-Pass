@@ -1,9 +1,13 @@
 import { db, builderTiersTable, type BuilderTier } from "@workspace/db";
 import { asc, eq } from "drizzle-orm";
+import { accountAgeDays, BUILDER_GITHUB_TIER_RULES } from "./builder-tier-policy";
 
 export interface BuilderActivityCounts {
   qualifyingTransactionCount: number;
   validContractCount: number;
+  githubContributionCount?: number | null;
+  githubAccountCreatedAt?: Date | string | null;
+  analysisTimestamp?: Date;
 }
 
 export async function getActiveBuilderTiers(): Promise<BuilderTier[]> {
@@ -15,17 +19,28 @@ export async function getActiveBuilderTiers(): Promise<BuilderTier[]> {
 }
 
 /**
- * Returns the highest tier whose published verified Arc transaction threshold
- * is met. Deployed contracts remain a separate verified proof signal on the
- * credential and never silently change the public transaction tier scale.
+ * Returns the highest tier reached through either verified Arc activity or
+ * verified GitHub history. GitHub-based qualification requires both the
+ * contribution and account-age floor for that tier. Deployed contracts remain
+ * a separate proof signal and never silently affect the tier.
  */
 export function calculateBuilderTier(
   tiers: BuilderTier[],
   counts: BuilderActivityCounts,
 ): BuilderTier | null {
   const sorted = [...tiers].sort((a, b) => b.rank - a.rank);
+  const githubContributions = Math.max(0, counts.githubContributionCount ?? 0);
+  const githubAge = accountAgeDays(counts.githubAccountCreatedAt, counts.analysisTimestamp ?? new Date());
   for (const tier of sorted) {
-    if (counts.qualifyingTransactionCount >= tier.transactionThreshold) return tier;
+    const githubRule = BUILDER_GITHUB_TIER_RULES[tier.slug.toLowerCase()];
+    const qualifiesThroughArc = counts.qualifyingTransactionCount >= tier.transactionThreshold;
+    const qualifiesThroughGithub = Boolean(
+      githubRule
+      && githubAge !== null
+      && githubContributions >= githubRule.contributionThreshold
+      && githubAge >= githubRule.minimumAccountAgeDays,
+    );
+    if (qualifiesThroughArc || qualifiesThroughGithub) return tier;
   }
   return null;
 }

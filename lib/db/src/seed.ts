@@ -32,11 +32,11 @@ async function seed() {
   await db
     .insert(builderTiersTable)
     .values([
-      { slug: "bronze", name: "Bronze", rank: 1, transactionThreshold: 2, contractThreshold: 0, description: "2+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/bronze.png" },
-      { slug: "silver", name: "Silver", rank: 2, transactionThreshold: 10, contractThreshold: 0, description: "10+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/silver.png" },
-      { slug: "gold", name: "Gold", rank: 3, transactionThreshold: 50, contractThreshold: 0, description: "50+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/gold.png" },
-      { slug: "platinum", name: "Platinum", rank: 4, transactionThreshold: 100, contractThreshold: 0, description: "100+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/platinum.png" },
-      { slug: "diamond", name: "Diamond", rank: 5, transactionThreshold: 1000, contractThreshold: 0, description: "1,000+ verified qualifying Arc transactions.", isActive: true, emblemUrl: "/tiers/diamond.png" },
+      { slug: "bronze", name: "Bronze", rank: 1, transactionThreshold: 2, contractThreshold: 0, description: "2+ Arc transactions OR 10+ GitHub contributions with a 180-day-old account.", isActive: true, emblemUrl: "/tiers/bronze.png" },
+      { slug: "silver", name: "Silver", rank: 2, transactionThreshold: 10, contractThreshold: 0, description: "10+ Arc transactions OR 250+ GitHub contributions with a 1-year-old account.", isActive: true, emblemUrl: "/tiers/silver.png" },
+      { slug: "gold", name: "Gold", rank: 3, transactionThreshold: 50, contractThreshold: 0, description: "50+ Arc transactions OR 750+ GitHub contributions with a 2-year-old account.", isActive: true, emblemUrl: "/tiers/gold.png" },
+      { slug: "platinum", name: "Platinum", rank: 4, transactionThreshold: 100, contractThreshold: 0, description: "100+ Arc transactions OR 1,500+ GitHub contributions with a 3-year-old account.", isActive: true, emblemUrl: "/tiers/platinum.png" },
+      { slug: "diamond", name: "Diamond", rank: 5, transactionThreshold: 1000, contractThreshold: 0, description: "1,000+ Arc transactions OR 3,000+ GitHub contributions with a 4-year-old account.", isActive: true, emblemUrl: "/tiers/diamond.png" },
     ])
     .onConflictDoNothing({ target: builderTiersTable.slug });
 

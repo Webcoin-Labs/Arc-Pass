@@ -27,6 +27,7 @@ import { configuration } from "../lib/env";
 import { isDevelopmentTestUser } from "../lib/dev-test-identities";
 import { releaseBuilderWaveMintReservation, reserveBuilderWaveMint } from "../lib/wave-allocation";
 import { releaseFounderMintReservation, reserveFounderMint } from "../lib/founder-mint-lock";
+import { accountAgeDays } from "../lib/builder-tier-policy";
 
 const router: IRouter = Router();
 
@@ -36,9 +37,7 @@ function requireBuilderGithubSignals(user: typeof usersTable.$inferSelect, res: 
   if (!failure) return true;
   if (failure === "not_connected") res.status(403).json({ error: "Connect and verify your GitHub account before continuing.", code: "github_verification_required" });
   else if (failure === "provider_unavailable") res.status(503).json({ error: "GitHub eligibility signals are temporarily unavailable. Reconnect GitHub and try again.", code: "github_verification_unavailable" });
-  else if (failure === "reconnect_required") res.status(409).json({ error: "Reconnect GitHub to refresh the previous 180 days of contribution data.", code: "github_reconnect_required" });
-  else if (failure === "account_too_new") res.status(403).json({ error: "Builder eligibility requires a GitHub account at least 180 days old.", code: "github_account_too_new" });
-  else res.status(403).json({ error: "Builder eligibility requires at least 10 GitHub contributions during the previous 180 days.", code: "github_contributions_insufficient" });
+  else res.status(409).json({ error: "Reconnect GitHub to refresh your previous 180 days of contribution data.", code: "github_reconnect_required" });
   return false;
 }
 
@@ -328,14 +327,21 @@ async function runBuilderAnalysis(userId: number) {
   const walletAddresses = wallets.map((w) => w.address);
 
   const activity = await chainAdapter.getBuilderOnchainActivity(walletAddresses);
+  const githubAge = accountAgeDays(user?.githubAccountCreatedAt);
   const qualitative = {
-    githubSummary: null,
+    githubSummary: user?.githubContributionCount == null || githubAge === null
+      ? null
+      : `${user.githubContributionCount} GitHub contributions in the verified 180-day window; account age ${githubAge} days.`,
     ecosystemSummary: `${activity.qualifyingTransactionCount} qualifying transactions and ${activity.validContractCount} valid contract deployments were verified.`,
     riskFlags: [] as string[],
   };
 
   const tiers = await getActiveBuilderTiers();
-  const tier = calculateBuilderTier(tiers, activity);
+  const tier = calculateBuilderTier(tiers, {
+    ...activity,
+    githubContributionCount: user?.githubContributionCount,
+    githubAccountCreatedAt: user?.githubAccountCreatedAt,
+  });
 
   return { activity, qualitative, tier, wallets };
 }
@@ -413,7 +419,7 @@ router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<voi
   const summary = [
     "Social identity verified",
     `${wallets.length} wallet${wallets.length === 1 ? "" : "s"} ownership-verified`,
-    tier ? `Builder tier assigned: ${tier.name}` : "No qualifying contract deployment found yet",
+    tier ? `Builder tier assigned: ${tier.name}` : "No Arc or age-qualified GitHub tier threshold reached yet",
     qualitative.ecosystemSummary,
   ];
 

@@ -6,7 +6,7 @@ import { logger } from "../lib/logger";
 import { signOAuthState, verifyOAuthState, createPkcePair } from "../lib/oauth/provider";
 import { isXOAuthConfigured, buildXAuthorizeUrl, exchangeXCode, exchangeXCodeWithAccessToken, getXOAuthErrorCode, postImageToX } from "../lib/oauth/x";
 import { isDiscordOAuthConfigured, buildDiscordAuthorizeUrl, exchangeDiscordCode, getArcGuildMembership, type ArcGuildMembershipSnapshot } from "../lib/oauth/discord";
-import { isGithubOAuthConfigured, buildGithubAuthorizeUrl, exchangeGithubCodeWithContributions } from "../lib/oauth/github";
+import { isGithubOAuthConfigured, buildGithubAuthorizeUrl, exchangeGithubCodeWithContributions, getGithubOAuthErrorCode } from "../lib/oauth/github";
 import type { OAuthIntent, OAuthProfile } from "../lib/oauth/types";
 import { configuration } from "../lib/env";
 import { grantDevelopmentTestEntitlements } from "../lib/dev-test-identities";
@@ -412,10 +412,15 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
   try {
     const code = req.query.code as string | undefined;
     const stateParam = req.query.state as string | undefined;
-    if (!code || !stateParam) throw new Error("Missing code or state");
+    if (!stateParam) throw new Error("Missing OAuth state");
 
     const oauthState = await verifyOAuthState(stateParam);
     callbackReturnTo = oauthState.returnTo;
+    if (req.query.error === "access_denied") {
+      res.redirect(oauthErrorUrl(oauthState.returnTo, "github_denied"));
+      return;
+    }
+    if (!code) throw new Error("Missing authorization code");
     const { profile, contributionCount, accountCreatedAt, contributionWindowStartedAt } = await exchangeGithubCodeWithContributions(code, oauthState.codeVerifier ?? "");
     const currentUser = await getUserFromSession(req);
 
@@ -438,7 +443,8 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
     res.redirect(frontendUrl(oauthState.returnTo));
   } catch (err) {
     req.log.error({ err }, "GitHub OAuth callback error");
-    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, "github") : frontendUrl("/?authError=github"));
+    const errorCode = getGithubOAuthErrorCode(err) ?? "github";
+    res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, errorCode) : frontendUrl(`/?authError=${errorCode}`));
   }
 });
 

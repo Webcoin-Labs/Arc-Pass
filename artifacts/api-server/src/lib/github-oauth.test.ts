@@ -70,21 +70,33 @@ test("claim identity requires an ownership-verified GitHub link", async () => {
   assert.equal(hasVerifiedGithub({ githubUserId: "42" }), true);
 });
 
-test("Builder GitHub thresholds enforce the exact 180-day age and 10-contribution boundaries", async () => {
+test("Builder GitHub verification accepts a complete fresh 180-day snapshot without imposing a global tier floor", async () => {
   const { getGithubEligibilityFailure } = await import("./auth");
   const now = new Date("2026-07-18T00:00:00Z");
-  const base = { githubUserId: "42", githubAccountCreatedAt: new Date("2026-01-19T00:00:00Z"), githubContributionCount: 10, githubContributionWindowStartedAt: new Date("2026-01-19T00:00:00Z"), githubContributionsUpdatedAt: now };
+  const base = { githubUserId: "42", githubAccountCreatedAt: new Date("2026-07-01T00:00:00Z"), githubContributionCount: 0, githubContributionWindowStartedAt: new Date("2026-01-19T00:00:00Z"), githubContributionsUpdatedAt: now };
   assert.equal(getGithubEligibilityFailure(base, now), null);
-  assert.equal(getGithubEligibilityFailure({ ...base, githubAccountCreatedAt: new Date("2026-01-19T00:00:01Z") }, now), "account_too_new");
-  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionCount: 9 }, now), "insufficient_contributions");
   assert.equal(getGithubEligibilityFailure({ ...base, githubContributionCount: null }, now), "provider_unavailable");
   assert.equal(getGithubEligibilityFailure({ ...base, githubUserId: null }, now), "not_connected");
 });
 
-test("GitHub contributions outside the authenticated previous-180-day snapshot cannot qualify", async () => {
+test("GitHub contribution snapshots must cover the authenticated previous 180 days and stay fresh", async () => {
   const { getGithubEligibilityFailure } = await import("./auth");
   const now = new Date("2026-07-18T00:00:00Z");
-  const base = { githubUserId: "42", githubAccountCreatedAt: new Date("2020-01-01T00:00:00Z"), githubContributionCount: 10, githubContributionWindowStartedAt: new Date("2025-07-18T00:00:00Z"), githubContributionsUpdatedAt: now };
-  assert.equal(getGithubEligibilityFailure(base, now), "provider_unavailable");
-  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionWindowStartedAt: new Date("2026-01-19T00:00:00Z"), githubContributionsUpdatedAt: new Date("2026-07-10T23:59:59Z") }, now), "reconnect_required");
+  const base = { githubUserId: "42", githubAccountCreatedAt: new Date("2020-01-01T00:00:00Z"), githubContributionCount: 10, githubContributionWindowStartedAt: new Date("2026-01-19T00:00:00Z"), githubContributionsUpdatedAt: now };
+  assert.equal(getGithubEligibilityFailure(base, now), null);
+  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionWindowStartedAt: new Date("2026-04-19T00:00:00Z") }, now), "reconnect_required");
+  assert.equal(getGithubEligibilityFailure({ ...base, githubContributionsUpdatedAt: new Date("2026-07-10T23:59:59Z") }, now), "reconnect_required");
+});
+
+test("GitHub contribution API failures are explicit and cannot create a partial verification", async (t) => {
+  const { fetchGithubContributionCount, GithubOAuthError } = await import("./oauth/github");
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  globalThis.fetch = (async () => Response.json({ errors: [{ message: "rate limited" }] })) as typeof fetch;
+
+  await assert.rejects(fetchGithubContributionCount("github-user-token"), (error: unknown) => {
+    assert.ok(error instanceof GithubOAuthError);
+    assert.equal(error.code, "github_contributions");
+    return true;
+  });
 });

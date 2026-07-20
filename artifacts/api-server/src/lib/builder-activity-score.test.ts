@@ -10,6 +10,7 @@ function activity(overrides: Record<string, unknown>) {
     qualifyingTransactionCount: 2,
     validContractCount: 0,
     githubContributionCount: 0,
+    githubAccountCreatedAt: "2020-01-01T00:00:00.000Z",
     transactionsLast30Days: 2,
     activeDaysLast30Days: 2,
     lastTransactionAt: "2026-07-19T00:00:00.000Z",
@@ -26,6 +27,24 @@ test("builder level stays inside the long-term credential tier band", () => {
   assert.equal(activity({ tierName: "Platinum", qualifyingTransactionCount: 100 }).level, 70);
   assert.equal(activity({ tierName: "Diamond", qualifyingTransactionCount: 1_000 }).level, 90);
   assert.equal(activity({ tierName: "Diamond", qualifyingTransactionCount: 20_000, validContractCount: 20, githubContributionCount: 500 }).level, 100);
+});
+
+test("GitHub contribution volume and account age can progress level independently of Arc transactions", () => {
+  const mature = activity({
+    tierName: "Silver",
+    qualifyingTransactionCount: 0,
+    githubContributionCount: 900,
+    githubAccountCreatedAt: "2020-01-01T00:00:00.000Z",
+  });
+  const young = activity({
+    tierName: "Silver",
+    qualifyingTransactionCount: 0,
+    githubContributionCount: 900,
+    githubAccountCreatedAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  assert.ok(mature.level! > young.level!);
+  assert.equal(young.level, 30);
 });
 
 test("activity score rewards recent Arc transaction frequency independently from level", () => {

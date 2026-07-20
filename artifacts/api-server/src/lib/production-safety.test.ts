@@ -36,7 +36,7 @@ test("Founder invitations require a company name and accept a company logo", asy
   assert.equal(AdminCreateFounderInviteBody.safeParse({ ...base, companyName: "Arc Labs", companyLogoUrl: "/uploads/logo.png" }).success, true);
 });
 
-test("Onchain Builder tiers use the exact qualifying transaction boundaries and never downgrade", async () => {
+test("Builder tiers use the highest verified Arc or age-qualified GitHub signal and never downgrade", async () => {
   const { calculateBuilderTier, isUpgrade } = await import("./tier-config");
   const tiers = [
     { id: 1, slug: "bronze", name: "Bronze", rank: 1, transactionThreshold: 2, contractThreshold: 0 },
@@ -57,5 +57,16 @@ test("Onchain Builder tiers use the exact qualifying transaction boundaries and 
   assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 100, validContractCount: 0 })?.name, "Platinum");
   assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 999, validContractCount: 0 })?.name, "Platinum");
   assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 1000, validContractCount: 0 })?.name, "Diamond");
+  const oldGithubAccount = new Date("2018-01-01T00:00:00Z");
+  const now = new Date("2026-07-20T00:00:00Z");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 10, githubAccountCreatedAt: oldGithubAccount, analysisTimestamp: now })?.name, "Bronze");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 10, githubAccountCreatedAt: new Date("2026-01-21T00:00:00Z"), analysisTimestamp: now })?.name, "Bronze");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 10, githubAccountCreatedAt: new Date("2026-01-22T00:00:00Z"), analysisTimestamp: now }), null);
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 250, githubAccountCreatedAt: oldGithubAccount, analysisTimestamp: now })?.name, "Silver");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 750, githubAccountCreatedAt: oldGithubAccount, analysisTimestamp: now })?.name, "Gold");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 1_500, githubAccountCreatedAt: oldGithubAccount, analysisTimestamp: now })?.name, "Platinum");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 3_000, githubAccountCreatedAt: oldGithubAccount, analysisTimestamp: now })?.name, "Diamond");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 0, validContractCount: 0, githubContributionCount: 3_000, githubAccountCreatedAt: new Date("2026-01-01T00:00:00Z"), analysisTimestamp: now })?.name, "Bronze");
+  assert.equal(calculateBuilderTier(tiers, { qualifyingTransactionCount: 2, validContractCount: 0, githubContributionCount: 0, githubAccountCreatedAt: new Date("2026-01-01T00:00:00Z"), analysisTimestamp: now })?.name, "Bronze");
   assert.equal(isUpgrade(silver!, tiers[0] as never), false);
 });

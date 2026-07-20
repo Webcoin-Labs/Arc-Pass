@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { ArrowUpRight, BadgeCheck, Github, LockKeyhole, MessageCircle, RefreshCw, ShieldCheck, UserRound, WalletCards } from "lucide-react";
 
 const tierGuide = [
-  ["Bronze", "2+", "/tiers/bronze.png"], ["Silver", "10+", "/tiers/silver.png"], ["Gold", "50+", "/tiers/gold.png"], ["Platinum", "100+", "/tiers/platinum.png"], ["Diamond", "1,000+", "/tiers/diamond.png"],
+  ["Bronze", "2+", "10+ / 180d", "/tiers/bronze.png"], ["Silver", "10+", "250+ / 1y", "/tiers/silver.png"], ["Gold", "50+", "750+ / 2y", "/tiers/gold.png"], ["Platinum", "100+", "1,500+ / 3y", "/tiers/platinum.png"], ["Diamond", "1,000+", "3,000+ / 4y", "/tiers/diamond.png"],
 ] as const;
 
 export default function DocsPage() {
@@ -47,7 +47,7 @@ export default function DocsPage() {
         <section id="eligibility" className="scroll-mt-24 rounded-3xl border bg-card p-6 sm:p-8">
           <Github className="size-6 text-primary" aria-hidden="true" />
           <h2 className="mt-5 text-2xl font-semibold">Builder eligibility</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">Requires GitHub ownership verification, an account at least 180 days old, at least 10 GitHub contributions in the previous 180 days, one ownership-verified wallet, and real qualifying Arc activity. Discord membership is a supporting signal, not a substitute.</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">Requires GitHub ownership verification with a fresh 180-day contribution snapshot and at least one ownership-verified wallet. A tier can be earned through qualifying Arc activity or through GitHub contribution volume combined with account age. Discord membership is a supporting signal, not a substitute.</p>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">If GitHub or the Arc activity provider is unavailable, verification pauses. Arc Pass never guesses transactions, deployments, eligibility, or tier.</p>
         </section>
 
@@ -59,9 +59,9 @@ export default function DocsPage() {
 
         <section id="tiers" className="scroll-mt-24 rounded-3xl border bg-card p-6 sm:p-8 lg:col-span-2">
           <h2 className="text-2xl font-semibold">Builder tier thresholds</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">The highest matching tier is calculated from qualifying transactions across ownership-verified wallets. Verified contract deployments are shown independently on the credential.</p>
-          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5">{tierGuide.map(([name, threshold, emblem]) => <div key={name} className="rounded-2xl border p-4"><img src={emblem} alt="" className="size-9 object-contain" /><p className="mt-2 font-semibold">{name}</p><p className="mt-1 font-mono text-xs text-muted-foreground">{threshold} transactions</p></div>)}</div>
-          <p className="mt-5 text-sm leading-6 text-muted-foreground">The claim page shows the current count, current tier, next tier, remaining requirement, and re-verification availability. A later verified increase upgrades the same credential number in place. Arc Pass never automatically downgrades a Builder tier.</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">The higher verified result wins: qualifying Arc transactions, or GitHub contributions with the minimum account age. Verified contract deployments are shown independently on the credential.</p>
+          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5">{tierGuide.map(([name, arcThreshold, githubThreshold, emblem]) => <div key={name} className="rounded-2xl border p-4"><img src={emblem} alt="" className="size-9 object-contain" /><p className="mt-2 font-semibold">{name}</p><p className="mt-1 font-mono text-xs leading-5 text-muted-foreground">{arcThreshold} Arc tx<br />OR {githubThreshold} GitHub</p></div>)}</div>
+          <p className="mt-5 text-sm leading-6 text-muted-foreground">GitHub totals cover the previous 180 days. A later verified increase can upgrade the same credential number in place, while Arc Pass never automatically downgrades a Builder tier.</p>
           <Link href="/tiers" className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary hover:underline">Full guide: how passes and tiers work <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
         </section>
 

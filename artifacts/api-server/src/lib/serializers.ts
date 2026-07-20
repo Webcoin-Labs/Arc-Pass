@@ -111,6 +111,7 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     qualifyingTransactionCount: latestSnapshot?.qualifyingTransactionCount,
     validContractCount: latestSnapshot?.validContractCount,
     githubContributionCount: user?.githubContributionCount,
+    githubAccountCreatedAt: user?.githubAccountCreatedAt,
     transactionsLast30Days: latestSnapshot?.transactionsLast30Days,
     activeDaysLast30Days: latestSnapshot?.activeDaysLast30Days,
     lastTransactionAt: latestSnapshot?.lastTransactionAt,

@@ -17,6 +17,14 @@ import {
 } from "@workspace/api-client-react";
 import type { FounderTier, AdminBuilderTier } from "@workspace/api-client-react";
 
+const GITHUB_TIER_LABELS: Record<string, string> = {
+  Bronze: "10+ contributions / 180d account",
+  Silver: "250+ contributions / 1y account",
+  Gold: "750+ contributions / 2y account",
+  Platinum: "1,500+ contributions / 3y account",
+  Diamond: "3,000+ contributions / 4y account",
+};
+
 export function TierConfigPanel() {
   return (
     <Tabs defaultValue="founder">
@@ -122,7 +130,7 @@ function BuilderTiersTab() {
 
   return (
     <div>
-      <p className="mb-4 text-xs text-muted-foreground">Tier names and qualifying Arc transaction thresholds are fixed product rules. Edit only the presentation below.</p>
+      <p className="mb-4 text-xs text-muted-foreground">Tier names and verification thresholds are fixed product rules. A builder qualifies through the Arc path or the age-qualified GitHub path. Edit only the presentation below.</p>
       <ul className="space-y-2">
         {tiers?.map((tier) => (
           <li key={tier.id} className="flex cursor-pointer items-center justify-between rounded-xl border bg-card px-4 py-3" onClick={() => openEdit(tier)}>
@@ -131,7 +139,7 @@ function BuilderTiersTab() {
               <div>
                 <p className="text-sm font-medium">{tier.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {tier.transactionThreshold}+ qualifying Arc transactions
+                  {tier.transactionThreshold}+ Arc tx OR {GITHUB_TIER_LABELS[tier.name] ?? "verified GitHub history"}
                 </p>
               </div>
             </div>
@@ -148,7 +156,7 @@ function BuilderTiersTab() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 rounded-xl border bg-muted/30 p-4 text-sm">
               <div><p className="text-xs text-muted-foreground">Tier</p><p className="mt-1 font-semibold">{editing?.name}</p></div>
-              <div><p className="text-xs text-muted-foreground">Threshold</p><p className="mt-1 font-semibold">{editing?.transactionThreshold}+ transactions</p></div>
+              <div><p className="text-xs text-muted-foreground">Threshold</p><p className="mt-1 font-semibold">{editing?.transactionThreshold}+ Arc tx OR {editing ? GITHUB_TIER_LABELS[editing.name] : "GitHub rule"}</p></div>
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>

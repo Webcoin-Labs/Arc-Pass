@@ -1,11 +1,24 @@
 import { Link } from "wouter";
 import { ArrowRight, BadgeCheck, Blocks, Github, ShieldCheck } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import type { ReactNode } from "react";
 
-const FAQS = [
+const FAQS: Array<{ q: string; a: ReactNode }> = [
   {
     q: "What is Arc Pass?",
     a: "Arc Pass is a verified credential system for founders and builders. It creates a portable onchain record of verified founder status or builder contribution; it is not a collectible or a tradable asset.",
+  },
+  {
+    q: "Is Arc Pass affiliated with Arc?",
+    a: <span>No. Arc Pass is an independent, experimental project by Webcoin Labs. It is not operated by, endorsed by, or affiliated with Arc. See the <a className="font-medium text-primary underline underline-offset-4" href="https://www.webcoinlabs.com/docs/legal/terms" target="_blank" rel="noreferrer">Terms of Service</a> for the complete terms.</span>,
+  },
+  {
+    q: "What happens to my pass when Arc mainnet launches?",
+    a: "Webcoin Labs plans to make corresponding Arc Pass credentials available on mainnet through an airdrop or a claim flow. The final process, eligibility snapshot, and timing will be announced before the mainnet rollout; holding a pass does not promise a token or financial reward.",
+  },
+  {
+    q: "Will there be a Wave 2 Builder Pass?",
+    a: "Yes. Webcoin Labs plans a Wave 2 for Builder Passes. Its timing, allocation, and eligibility rules will be announced separately.",
   },
   {
     q: "How do I claim a Founder Pass?",
@@ -21,15 +34,19 @@ const FAQS = [
   },
   {
     q: "What GitHub account requirements apply?",
-    a: "Builder verification requires an authenticated GitHub account at least 180 days old with 10 or more qualifying contributions during the previous 180 days. A manually entered GitHub username never grants eligibility. Founder Pass remains invite-only and admin-controlled.",
+    a: "Builder verification requires you to authenticate GitHub so Arc Pass can read the account creation date and the previous 180 days of contribution totals. A manually entered username never counts. GitHub volume and account age can qualify you for a tier, while verified Arc activity provides an independent qualification path.",
   },
   {
     q: "What determines the Onchain Builder tier?",
-    a: "Your tier is calculated from real qualifying Arc transactions across ownership-verified wallets. Contract deployments are displayed as a separate verified proof signal. If the RPC or indexer is unavailable, verification pauses instead of guessing.",
+    a: "Your tier is the higher result from two verified paths: qualifying Arc transactions across ownership-verified wallets, or GitHub contributions combined with account age. Contract deployments remain a separate proof signal. Arc and GitHub provider failures pause verification instead of inventing data.",
   },
   {
     q: "What are the Builder tier thresholds?",
-    a: "Bronze requires 2 qualifying Arc transactions, Silver 10, Gold 50, Platinum 100, and Diamond 1,000. Re-verification can only move an existing credential upward.",
+    a: "Bronze: 2+ Arc transactions OR 10+ GitHub contributions with a 180-day-old account. Silver: 10+ OR 250+ with a 1-year-old account. Gold: 50+ OR 750+ with a 2-year-old account. Platinum: 100+ OR 1,500+ with a 3-year-old account. Diamond: 1,000+ OR 3,000+ with a 4-year-old account. GitHub contributions are measured over the previous 180 days.",
+  },
+  {
+    q: "How are Builder level and activity score calculated?",
+    a: "Level reflects long-term progress inside your verified tier using the stronger of your Arc transaction progress or age-qualified GitHub contribution progress, with a small verified-contract proof bonus. Activity score is separate: it measures Arc usage frequency, active days, and recency, so level and activity score do not have to match.",
   },
   {
     q: "Can I upgrade my Onchain Builder tier?",
@@ -74,7 +91,7 @@ export default function FaqPage() {
         {[
           { icon: ShieldCheck, label: "Founder Pass", value: "Invite verified" },
           { icon: Blocks, label: "Builder Pass", value: "Activity verified" },
-          { icon: Github, label: "GitHub baseline", value: "180 days · 10+ contributions" },
+          { icon: Github, label: "GitHub signal", value: "Verified 180-day history" },
         ].map((item) => {
           const Icon = item.icon;
           return (

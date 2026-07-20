@@ -4,6 +4,7 @@ import { eq, and, isNull, or } from "drizzle-orm";
 import crypto from "crypto";
 import { logger } from "./logger";
 import { normalizeXHandle, parseDiscordIdentity } from "./identity";
+import { GITHUB_CONTRIBUTION_WINDOW_DAYS, GITHUB_SNAPSHOT_MAX_AGE_DAYS } from "./builder-tier-policy";
 export { requireDedicatedAdmin as requireAdmin } from "./admin-auth";
 
 export type AuthedRequest = Request & { user: User };
@@ -14,20 +15,14 @@ export function hasVerifiedGithub(user: Pick<User, "githubUserId">): boolean {
   return Boolean(user.githubUserId);
 }
 
-export const GITHUB_MIN_ACCOUNT_AGE_DAYS = 180;
-export const GITHUB_MIN_CONTRIBUTIONS = 10;
-export const GITHUB_SNAPSHOT_MAX_AGE_DAYS = 7;
-
-export function getGithubEligibilityFailure(user: Pick<User, "githubUserId" | "githubAccountCreatedAt" | "githubContributionCount" | "githubContributionWindowStartedAt" | "githubContributionsUpdatedAt">, now = new Date()): "not_connected" | "provider_unavailable" | "reconnect_required" | "account_too_new" | "insufficient_contributions" | null {
+export function getGithubEligibilityFailure(user: Pick<User, "githubUserId" | "githubAccountCreatedAt" | "githubContributionCount" | "githubContributionWindowStartedAt" | "githubContributionsUpdatedAt">, now = new Date()): "not_connected" | "provider_unavailable" | "reconnect_required" | null {
   if (!user.githubUserId) return "not_connected";
   if (!user.githubAccountCreatedAt || user.githubContributionCount == null || !user.githubContributionWindowStartedAt || !user.githubContributionsUpdatedAt) return "provider_unavailable";
-  const minimumAgeMs = GITHUB_MIN_ACCOUNT_AGE_DAYS * 24 * 60 * 60 * 1000;
   const snapshotMaxAgeMs = GITHUB_SNAPSHOT_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
   if (now.getTime() - user.githubContributionsUpdatedAt.getTime() > snapshotMaxAgeMs) return "reconnect_required";
   const capturedWindowMs = user.githubContributionsUpdatedAt.getTime() - user.githubContributionWindowStartedAt.getTime();
-  if (capturedWindowMs < minimumAgeMs - 60_000 || capturedWindowMs > minimumAgeMs + 24 * 60 * 60 * 1000) return "provider_unavailable";
-  if (now.getTime() - user.githubAccountCreatedAt.getTime() < minimumAgeMs) return "account_too_new";
-  if (user.githubContributionCount < GITHUB_MIN_CONTRIBUTIONS) return "insufficient_contributions";
+  const expectedWindowMs = GITHUB_CONTRIBUTION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  if (capturedWindowMs < expectedWindowMs - 60_000 || capturedWindowMs > expectedWindowMs + 24 * 60 * 60 * 1000) return "reconnect_required";
   return null;
 }
 

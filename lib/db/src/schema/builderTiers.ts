@@ -3,9 +3,10 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 // Builder tier catalog. Slug, name, rank, active state, and qualifying Arc
-// transaction thresholds are fixed product rules. Administrators may update
-// presentation fields (emblem, description, accent), but deployed-contract
-// counts remain evidence only and never affect tier calculation.
+// transaction thresholds are fixed product rules. The parallel GitHub/age
+// policy lives in api-server/src/lib/builder-tier-policy.ts. Administrators
+// may update presentation fields, while deployed-contract counts remain
+// evidence only and never affect tier calculation.
 export const builderTiersTable = pgTable("builder_tiers", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(), // 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'

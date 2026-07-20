@@ -2,11 +2,11 @@ import { Link } from "wouter";
 import { ArrowRight, ArrowUpRight, BadgeCheck, Blocks, Eye, Fingerprint, RefreshCw, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
 
 const TIERS = [
-  { name: "Bronze", threshold: "2+", emblem: "/tiers/bronze.png", tone: "#d18a56", blurb: "First verified proof of real Arc activity." },
-  { name: "Silver", threshold: "10+", emblem: "/tiers/silver.png", tone: "#b6c5d8", blurb: "Consistent qualifying transactions across verified wallets." },
-  { name: "Gold", threshold: "50+", emblem: "/tiers/gold.png", tone: "#f0bd4e", blurb: "Sustained building with meaningful onchain output." },
-  { name: "Platinum", threshold: "100+", emblem: "/tiers/platinum.png", tone: "#7de0dc", blurb: "High-volume contribution recognized across the ecosystem." },
-  { name: "Diamond", threshold: "1,000+", emblem: "/tiers/diamond.png", tone: "#9eb4ff", blurb: "The highest verified tier. Reserved for prolific builders." },
+  { name: "Bronze", arc: "2+", github: "10+ · 180d", emblem: "/tiers/bronze.png", tone: "#d18a56", blurb: "First verified proof of building activity." },
+  { name: "Silver", arc: "10+", github: "250+ · 1y", emblem: "/tiers/silver.png", tone: "#b6c5d8", blurb: "Consistent verified activity across either path." },
+  { name: "Gold", arc: "50+", github: "750+ · 2y", emblem: "/tiers/gold.png", tone: "#f0bd4e", blurb: "Sustained building with meaningful output." },
+  { name: "Platinum", arc: "100+", github: "1,500+ · 3y", emblem: "/tiers/platinum.png", tone: "#7de0dc", blurb: "High-volume contribution recognized across the ecosystem." },
+  { name: "Diamond", arc: "1,000+", github: "3,000+ · 4y", emblem: "/tiers/diamond.png", tone: "#9eb4ff", blurb: "The highest verified tier. Reserved for prolific builders." },
 ] as const;
 
 const LIFECYCLE = [
@@ -30,18 +30,18 @@ export default function TiersPage() {
       <div className="max-w-3xl">
         <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-primary">How passes work</p>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">One credential. Five tiers. Earned, not bought.</h1>
-        <p className="mt-5 text-lg leading-8 text-muted-foreground">The Onchain Builder Pass is a living, non-transferable credential. Your tier is calculated from qualifying transactions on ownership-verified wallets — and it can only move up.</p>
+        <p className="mt-5 text-lg leading-8 text-muted-foreground">The Onchain Builder Pass is a living, non-transferable credential. Your tier uses the higher verified result from Arc activity or age-qualified GitHub contributions — and it can only move up.</p>
       </div>
 
       <section className="mt-12" aria-labelledby="tier-ladder-title">
         <h2 id="tier-ladder-title" className="text-2xl font-semibold">The tier ladder</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Your highest matching tier is assigned automatically during verification. Contract deployments and GitHub contributions appear as separate proof signals on the card.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Your highest matching tier is assigned automatically. GitHub thresholds require both the shown previous-180-day contribution total and account age. Contract deployments remain a separate proof signal.</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {TIERS.map((tier) => (
             <article key={tier.name} className="flex flex-col rounded-2xl border p-4" style={{ borderColor: `${tier.tone}55`, background: `linear-gradient(160deg, ${tier.tone}14, transparent 60%)` }}>
               <img src={tier.emblem} alt="" className="size-12 object-contain" />
               <h3 className="mt-3 font-semibold">{tier.name}</h3>
-              <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{tier.threshold} Arc transactions</p>
+              <p className="mt-0.5 font-mono text-[11px] leading-5 text-muted-foreground">{tier.arc} Arc tx<br />OR {tier.github} GitHub</p>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{tier.blurb}</p>
             </article>
           ))}

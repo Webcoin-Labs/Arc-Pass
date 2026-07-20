@@ -45,11 +45,11 @@ const ANALYSIS_MESSAGES = [
 const IDENTITY_ACK_KEY = "arc-pass:identity-step-acknowledged";
 
 const BUILDER_TIER_GUIDE = [
-  { name: "Bronze", threshold: 2, emblem: "/tiers/bronze.png", tone: "#d18a56" },
-  { name: "Silver", threshold: 10, emblem: "/tiers/silver.png", tone: "#b6c5d8" },
-  { name: "Gold", threshold: 50, emblem: "/tiers/gold.png", tone: "#f0bd4e" },
-  { name: "Platinum", threshold: 100, emblem: "/tiers/platinum.png", tone: "#7de0dc" },
-  { name: "Diamond", threshold: 1000, emblem: "/tiers/diamond.png", tone: "#9eb4ff" },
+  { name: "Bronze", arcThreshold: 2, githubThreshold: 10, githubAge: "180d", emblem: "/tiers/bronze.png", tone: "#d18a56" },
+  { name: "Silver", arcThreshold: 10, githubThreshold: 250, githubAge: "1y", emblem: "/tiers/silver.png", tone: "#b6c5d8" },
+  { name: "Gold", arcThreshold: 50, githubThreshold: 750, githubAge: "2y", emblem: "/tiers/gold.png", tone: "#f0bd4e" },
+  { name: "Platinum", arcThreshold: 100, githubThreshold: 1_500, githubAge: "3y", emblem: "/tiers/platinum.png", tone: "#7de0dc" },
+  { name: "Diamond", arcThreshold: 1_000, githubThreshold: 3_000, githubAge: "4y", emblem: "/tiers/diamond.png", tone: "#9eb4ff" },
 ] as const;
 
 export default function ClaimBuilderPage() {
@@ -120,12 +120,8 @@ export default function ClaimBuilderPage() {
     ? Math.max(0, Math.floor((Date.now() - new Date(github.accountCreatedAt).getTime()) / 86_400_000))
     : null;
   const qualifyingTransactions = builderPass?.qualifyingTransactionCount ?? null;
-  const nextTier = typeof qualifyingTransactions === "number"
-    ? BUILDER_TIER_GUIDE.find((tier) => tier.threshold > qualifyingTransactions) ?? null
-    : null;
-  const remainingForNextTier = nextTier && typeof qualifyingTransactions === "number"
-    ? Math.max(nextTier.threshold - qualifyingTransactions, 0)
-    : null;
+  const currentTierIndex = BUILDER_TIER_GUIDE.findIndex((tier) => tier.name === builderPass?.currentTier?.name);
+  const nextTier = currentTierIndex >= 0 ? (BUILDER_TIER_GUIDE[currentTierIndex + 1] ?? null) : BUILDER_TIER_GUIDE[0];
 
   const arcMember = discordExtra.arcMember ?? builderPass?.discordCommunityMember ?? null;
   const arcJoinedAt = discordExtra.arcJoinedAt ?? builderPass?.discordCommunityJoinedAt ?? null;
@@ -232,7 +228,7 @@ export default function ClaimBuilderPage() {
             <motion.div key="github" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-md text-center">
               <Github className="mx-auto h-12 w-12" aria-hidden="true" />
               <h1 className="mt-5 text-2xl font-bold">Connect GitHub</h1>
-              <p className="mt-2 max-w-lg text-sm leading-6 text-pretty text-muted-foreground">Builder review requires a GitHub account at least 180 days old with 10 or more contributions during the previous 180 days.</p>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-pretty text-muted-foreground">Authenticate GitHub so Arc Pass can verify your account age and previous 180 days of contributions. GitHub history or verified Arc activity can qualify you for a tier.</p>
               <p className="mt-2 text-muted-foreground">Verify ownership of your developer identity before Arc Pass analyses wallets or allows a claim.</p>
               <Button size="lg" className="mt-8 h-12 w-full gap-2" asChild>
                 <a href="/api/auth/github?returnTo=%2Fclaim%2Fbuilder"><Github className="h-4 w-4" aria-hidden="true" /> Connect GitHub</a>
@@ -410,15 +406,15 @@ export default function ClaimBuilderPage() {
             icon={Github}
             title="GitHub account age"
             value={githubAgeDays === null ? (githubConnected ? "GitHub data unavailable" : "GitHub not connected") : `${githubAgeDays.toLocaleString()} days`}
-            state={githubAgeDays === null ? "unavailable" : githubAgeDays >= 180 ? "pass" : "fail"}
-            detail="Minimum: 180 days"
+            state={githubAgeDays === null ? "unavailable" : "pass"}
+            detail="Older accounts can unlock higher GitHub-based tiers"
           />
           <EvidenceCard
             icon={Github}
             title="GitHub contributions"
             value={github?.contributionCount == null ? (githubConnected ? "GitHub data unavailable" : "GitHub not connected") : `${github.contributionCount.toLocaleString()} contributions`}
-            state={github?.contributionCount == null ? "unavailable" : github.contributionCount >= 10 ? "pass" : "fail"}
-            detail={github?.contributionWindowStartedAt ? `Window: ${formatDate(github.contributionWindowStartedAt)} to today` : "Previous 180 days · minimum 10"}
+            state={github?.contributionCount == null ? "unavailable" : "pass"}
+            detail={github?.contributionWindowStartedAt ? `Window: ${formatDate(github.contributionWindowStartedAt)} to today` : "Previous 180 days"}
           />
           <EvidenceCard icon={WalletCards} title="Wallet ownership" value={wallets.length > 0 ? `${wallets.length} ownership-verified wallet${wallets.length === 1 ? "" : "s"}` : "Wallet ownership not verified"} state={wallets.length > 0 ? "pass" : "action"} detail="A connection alone is not ownership proof" />
           <EvidenceCard icon={ShieldAlert} title="Arc activity" value={typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} qualifying transactions` : "Verification not completed"} state={typeof qualifyingTransactions === "number" ? (qualifyingTransactions >= 2 ? "pass" : "fail") : "unavailable"} detail={typeof builderPass?.validContractCount === "number" ? `${builderPass.validContractCount.toLocaleString()} verified contract deployments` : "Real RPC/indexer data required"} />
@@ -428,22 +424,22 @@ export default function ClaimBuilderPage() {
 
       <section className="mt-5 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-tier-guide-title">
         <div className="max-w-2xl">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Verified Arc activity</p>
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Verified builder signals</p>
           <h2 id="builder-tier-guide-title" className="mt-2 text-2xl font-semibold">Builder tier guide</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Your highest tier is calculated from qualifying transactions on ownership-verified wallets. Contract deployments appear as a separate proof signal on the card.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">The higher verified result wins: qualifying Arc transactions, or GitHub contributions combined with account age. Contract deployments remain a separate proof signal.</p>
         </div>
         <div className="mt-6 grid gap-2 sm:grid-cols-5">
           {BUILDER_TIER_GUIDE.map((tier) => (
             <div key={tier.name} className="flex min-h-20 items-center gap-3 rounded-2xl border p-3 sm:flex-col sm:items-start" style={{ borderColor: `${tier.tone}55`, background: `linear-gradient(145deg, ${tier.tone}18, transparent)` }}>
               <img src={tier.emblem} alt="" className="size-9 object-contain" />
-              <div><p className="text-sm font-semibold">{tier.name}</p><p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{tier.threshold.toLocaleString()}+ transactions</p></div>
+              <div><p className="text-sm font-semibold">{tier.name}</p><p className="mt-0.5 font-mono text-[10px] leading-4 text-muted-foreground">{tier.arcThreshold.toLocaleString()}+ Arc tx<br />OR {tier.githubThreshold.toLocaleString()}+ GitHub · {tier.githubAge}</p></div>
             </div>
           ))}
         </div>
         <div className="mt-6 grid gap-3 rounded-2xl border bg-background/55 p-4 sm:grid-cols-3">
-          <div><p className="text-xs text-muted-foreground">Current progress</p><p className="mt-1 text-lg font-semibold">{typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} qualifying transactions` : "Arc activity not verified"}</p></div>
+          <div><p className="text-xs text-muted-foreground">Verified signals</p><p className="mt-1 text-lg font-semibold">{typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} Arc · ${(github?.contributionCount ?? 0).toLocaleString()} GitHub` : "Activity not verified"}</p></div>
           <div><p className="text-xs text-muted-foreground">Current tier</p><p className="mt-1 text-lg font-semibold">{builderPass?.currentTier?.name ?? "Not assigned"}</p></div>
-          <div><p className="text-xs text-muted-foreground">Next tier</p><p className="mt-1 text-lg font-semibold">{nextTier && remainingForNextTier !== null ? `${nextTier.name} · ${remainingForNextTier.toLocaleString()} remaining` : builderPass?.currentTier?.name === "Diamond" ? "Highest tier reached" : "Verify activity to calculate"}</p></div>
+          <div><p className="text-xs text-muted-foreground">Next tier</p><p className="mt-1 text-sm font-semibold leading-6">{nextTier ? `${nextTier.name}: ${nextTier.arcThreshold.toLocaleString()}+ Arc tx OR ${nextTier.githubThreshold.toLocaleString()}+ GitHub / ${nextTier.githubAge}` : builderPass?.currentTier?.name === "Diamond" ? "Highest tier reached" : "Verify activity to calculate"}</p></div>
         </div>
       </section>
 

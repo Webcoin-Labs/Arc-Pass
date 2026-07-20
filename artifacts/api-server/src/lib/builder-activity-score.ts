@@ -1,8 +1,11 @@
+import { accountAgeDays, BUILDER_GITHUB_TIER_RULES } from "./builder-tier-policy";
+
 interface BuilderActivityInput {
   tierName?: string | null;
   qualifyingTransactionCount?: number | null;
   validContractCount?: number | null;
   githubContributionCount?: number | null;
+  githubAccountCreatedAt?: Date | string | null;
   transactionsLast30Days?: number | null;
   activeDaysLast30Days?: number | null;
   lastTransactionAt?: Date | string | null;
@@ -15,14 +18,16 @@ interface LevelBand {
   ceiling: number;
   transactionFloor: number;
   transactionCeiling: number;
+  githubContributionCeiling: number;
+  githubAgeCeilingDays: number;
 }
 
 const LEVEL_BANDS: Record<string, LevelBand> = {
-  bronze: { floor: 10, ceiling: 29, transactionFloor: 2, transactionCeiling: 9 },
-  silver: { floor: 30, ceiling: 49, transactionFloor: 10, transactionCeiling: 49 },
-  gold: { floor: 50, ceiling: 69, transactionFloor: 50, transactionCeiling: 99 },
-  platinum: { floor: 70, ceiling: 89, transactionFloor: 100, transactionCeiling: 999 },
-  diamond: { floor: 90, ceiling: 100, transactionFloor: 1_000, transactionCeiling: 10_000 },
+  bronze: { floor: 10, ceiling: 29, transactionFloor: 2, transactionCeiling: 9, githubContributionCeiling: 249, githubAgeCeilingDays: 364 },
+  silver: { floor: 30, ceiling: 49, transactionFloor: 10, transactionCeiling: 49, githubContributionCeiling: 749, githubAgeCeilingDays: 729 },
+  gold: { floor: 50, ceiling: 69, transactionFloor: 50, transactionCeiling: 99, githubContributionCeiling: 1_499, githubAgeCeilingDays: 1_094 },
+  platinum: { floor: 70, ceiling: 89, transactionFloor: 100, transactionCeiling: 999, githubContributionCeiling: 2_999, githubAgeCeilingDays: 1_459 },
+  diamond: { floor: 90, ceiling: 100, transactionFloor: 1_000, transactionCeiling: 10_000, githubContributionCeiling: 6_000, githubAgeCeilingDays: 2_920 },
 };
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -35,11 +40,9 @@ function safeDate(value: Date | string | null | undefined) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function contributionBonus(validContractCount: number, githubContributionCount: number) {
+function proofBonus(validContractCount: number) {
   return Number(validContractCount >= 1)
-    + Number(validContractCount >= 5)
-    + Number(githubContributionCount >= 50)
-    + Number(githubContributionCount >= 250);
+    + Number(validContractCount >= 5);
 }
 
 function scaledLog(value: number, target: number, points: number) {
@@ -54,12 +57,21 @@ function calculateLevel(input: BuilderActivityInput) {
   const transactions = Math.max(0, input.qualifyingTransactionCount ?? 0);
   const contracts = Math.max(0, input.validContractCount ?? 0);
   const githubContributions = Math.max(0, input.githubContributionCount ?? 0);
-  const progressRange = Math.max(1, band.transactionCeiling - band.transactionFloor);
-  const progress = clamp((transactions - band.transactionFloor) / progressRange, 0, 1);
-  const progressPointsAvailable = Math.max(0, band.ceiling - band.floor - 4);
+  const githubRule = BUILDER_GITHUB_TIER_RULES[normalizedTier];
+  const analyzedAt = safeDate(input.analysisTimestamp) ?? new Date();
+  const githubAge = accountAgeDays(input.githubAccountCreatedAt, analyzedAt);
+  const transactionProgress = clamp((transactions - band.transactionFloor) / Math.max(1, band.transactionCeiling - band.transactionFloor), 0, 1);
+  const contributionProgress = githubRule
+    ? clamp((githubContributions - githubRule.contributionThreshold) / Math.max(1, band.githubContributionCeiling - githubRule.contributionThreshold), 0, 1)
+    : 0;
+  const ageProgress = githubRule && githubAge !== null
+    ? clamp((githubAge - githubRule.minimumAccountAgeDays) / Math.max(1, band.githubAgeCeilingDays - githubRule.minimumAccountAgeDays), 0, 1)
+    : 0;
+  const progress = Math.max(transactionProgress, Math.min(contributionProgress, ageProgress));
+  const progressPointsAvailable = Math.max(0, band.ceiling - band.floor - 2);
 
   return clamp(
-    band.floor + Math.floor(progress * progressPointsAvailable) + contributionBonus(contracts, githubContributions),
+    band.floor + Math.floor(progress * progressPointsAvailable) + proofBonus(contracts),
     band.floor,
     band.ceiling,
   );

@@ -366,16 +366,16 @@ export default function DashboardPage() {
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {[
-            { name: "Bronze", threshold: "2+", emblem: "/tiers/bronze.png" },
-            { name: "Silver", threshold: "10+", emblem: "/tiers/silver.png" },
-            { name: "Gold", threshold: "50+", emblem: "/tiers/gold.png" },
-            { name: "Platinum", threshold: "100+", emblem: "/tiers/platinum.png" },
-            { name: "Diamond", threshold: "1,000+", emblem: "/tiers/diamond.png" },
-          ].map(({ name, threshold, emblem }) => (
+            { name: "Bronze", arc: "2+", github: "10+ / 180d", emblem: "/tiers/bronze.png" },
+            { name: "Silver", arc: "10+", github: "250+ / 1y", emblem: "/tiers/silver.png" },
+            { name: "Gold", arc: "50+", github: "750+ / 2y", emblem: "/tiers/gold.png" },
+            { name: "Platinum", arc: "100+", github: "1,500+ / 3y", emblem: "/tiers/platinum.png" },
+            { name: "Diamond", arc: "1,000+", github: "3,000+ / 4y", emblem: "/tiers/diamond.png" },
+          ].map(({ name, arc, github, emblem }) => (
             <div key={name} className={cn("rounded-2xl border p-3", builderPass?.currentTier?.name === name && "border-primary/50 bg-primary/5")}>
               <img src={emblem} alt="" className="size-8 object-contain" />
               <p className="mt-2 text-sm font-semibold">{name}</p>
-              <p className="mt-1 font-mono text-[10px] text-muted-foreground">{threshold} Arc transactions</p>
+              <p className="mt-1 font-mono text-[10px] leading-4 text-muted-foreground">{arc} Arc tx<br />OR {github} GitHub</p>
             </div>
           ))}
         </div>
