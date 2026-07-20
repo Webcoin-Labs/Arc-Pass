@@ -12,7 +12,9 @@ import {
 
 const ARTWORK_WIDTH = 1200;
 const ARTWORK_HEIGHT = 845;
-const ARTWORK_VERSION = "founder-card-arc-aurora-v2-exact-brand-assets";
+// This value is part of the permanent R2 key. Bump it whenever the renderer
+// or its runtime dependencies change, so stale generated artwork is not reused.
+const ARTWORK_VERSION = "founder-card-arc-aurora-v3-runtime-fonts";
 const MAX_EMBEDDED_IMAGE_BYTES = 5 * 1024 * 1024;
 const REMOTE_IMAGE_HOSTS = new Set([
   "abs.twimg.com",
@@ -228,17 +230,19 @@ export function buildFounderPassSvg(data: FounderPassArtworkData): string {
     <clipPath id="company-logo"><circle cx="780" cy="334" r="43"/></clipPath>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#00113e" flood-opacity="0.35"/></filter>
     <style>
-      text { font-family: Manrope, "Segoe UI", Arial, sans-serif; }
-      .eyebrow { fill: #d6e0ff; fill-opacity: .68; font-family: "JetBrains Mono", Consolas, monospace; font-size: 14px; font-weight: 700; letter-spacing: 3px; }
+      /* DejaVu is installed in Railway through railpack.json. It makes Sharp's
+         server renderer deterministic rather than relying on host fonts. */
+      text { font-family: "DejaVu Sans", Arial, sans-serif; }
+      .eyebrow { fill: #d6e0ff; fill-opacity: .68; font-family: "DejaVu Sans Mono", "DejaVu Sans", monospace; font-size: 14px; font-weight: 700; letter-spacing: 3px; }
       .founder-name { fill: white; font-size: 42px; font-weight: 700; letter-spacing: -1px; }
       .founder-title { fill: white; fill-opacity: .68; font-size: 19px; font-weight: 600; }
       .social { fill: white; fill-opacity: .64; font-size: 17px; font-weight: 600; }
       .company-name { fill: white; font-size: 28px; font-weight: 700; }
       .company-detail { fill: white; fill-opacity: .62; font-size: 16px; }
       .company-initials { fill: white; font-size: 24px; font-weight: 700; }
-      .field-label { fill: white; fill-opacity: .42; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
+      .field-label { fill: white; fill-opacity: .42; font-family: "DejaVu Sans Mono", "DejaVu Sans", monospace; font-size: 13px; font-weight: 700; letter-spacing: 2px; }
       .field-value { fill: white; fill-opacity: .92; font-size: 19px; font-weight: 700; }
-      .credential-value { fill: white; fill-opacity: .94; font-family: "JetBrains Mono", Consolas, monospace; font-size: 18px; font-weight: 700; }
+      .credential-value { fill: white; fill-opacity: .94; font-family: "DejaVu Sans Mono", "DejaVu Sans", monospace; font-size: 18px; font-weight: 700; }
     </style>
   </defs>
   <g filter="url(#shadow)">
@@ -256,7 +260,7 @@ export function buildFounderPassSvg(data: FounderPassArtworkData): string {
 
   <g aria-label="Arc Pass logo">${arcPassLogo}</g>
 
-  <text x="1140" y="66" text-anchor="end" fill="${tierText}" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="4">FOUNDER PASS</text>
+  <text x="1140" y="66" text-anchor="end" fill="${tierText}" font-family="DejaVu Sans Mono, DejaVu Sans, monospace" font-size="15" font-weight="700" letter-spacing="4">FOUNDER PASS</text>
   <g transform="translate(850 84)">
     <rect width="290" height="54" rx="27" fill="${tierFill}" fill-opacity="0.72" stroke="${border}" stroke-opacity="0.75"/>
     ${tierEmblem}
@@ -296,8 +300,8 @@ export function buildFounderPassSvg(data: FounderPassArtworkData): string {
     <circle cx="32" cy="36" r="12" fill="#63d9a0" fill-opacity="0.12"/>
     <text x="58" y="34" fill="white" fill-opacity="0.94" font-size="18" font-weight="700">Verified by Webcoin Labs</text>
     <text x="58" y="60" fill="white" fill-opacity="0.62" font-size="14">Identity and invitation confirmed</text>
-    <text x="1035" y="32" text-anchor="end" fill="white" fill-opacity="0.55" font-family="JetBrains Mono, Consolas, monospace" font-size="12" font-weight="700" letter-spacing="2">SOULBOUND</text>
-    <text x="1035" y="61" text-anchor="end" fill="white" fill-opacity="0.94" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="2">NON-TRANSFERABLE</text>
+    <text x="1035" y="32" text-anchor="end" fill="white" fill-opacity="0.55" font-family="DejaVu Sans Mono, DejaVu Sans, monospace" font-size="12" font-weight="700" letter-spacing="2">SOULBOUND</text>
+    <text x="1035" y="61" text-anchor="end" fill="white" fill-opacity="0.94" font-family="DejaVu Sans Mono, DejaVu Sans, monospace" font-size="15" font-weight="700" letter-spacing="2">NON-TRANSFERABLE</text>
   </g>
 </svg>`;
 }

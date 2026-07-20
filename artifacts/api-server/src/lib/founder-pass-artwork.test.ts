@@ -50,6 +50,8 @@ test("server renderer builds the complete Premier Founder card", async () => {
   assert.match(svg, /NON-TRANSFERABLE/);
   assert.match(svg, /#123d9d/i);
   assert.match(svg, /#e6b7d2/i);
+  assert.match(svg, /DejaVu Sans/);
+  assert.match(svg, /DejaVu Sans Mono/);
 });
 
 test("server renderer outputs NFT-ready WebP artwork", async () => {

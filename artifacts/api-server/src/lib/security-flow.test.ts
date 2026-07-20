@@ -101,6 +101,16 @@ test("Founder NFT metadata resolves to permanent generated R2 artwork", async ()
   assert.match(artwork, /ISSUE DATE/);
   assert.match(artwork, /Verified by Webcoin Labs/);
   assert.match(artwork, /NON-TRANSFERABLE/);
+  assert.match(artwork, /founder-card-arc-aurora-v3-runtime-fonts/);
+  assert.match(sharing, /dynamicArtworkCacheControl = "no-store, max-age=0"/);
+});
+
+test("Railway installs runtime fonts for generated Founder Pass artwork", async () => {
+  const railpack = await readFile(path.join(workspace, "railpack.json"), "utf8");
+  const configuration = JSON.parse(railpack) as { deploy?: { aptPackages?: string[]; variables?: Record<string, string> } };
+
+  assert.deepEqual(configuration.deploy?.aptPackages, ["fontconfig", "fonts-dejavu-core"]);
+  assert.equal(configuration.deploy?.variables?.LANG, "en_US.UTF-8");
 });
 
 test("Premier Founder keeps its gold identity over an Arc blue, lavender, and pink background", async () => {

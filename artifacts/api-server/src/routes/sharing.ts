@@ -9,6 +9,9 @@ import { createPkcePair, signOAuthState } from "../lib/oauth/provider";
 import { buildXAuthorizeUrl, isXOAuthConfigured } from "../lib/oauth/x";
 import { ensureFounderPassArtwork, type FounderPassArtworkData } from "../lib/founder-pass-artwork";
 
+// The final R2 artwork is immutable, but metadata and redirects are generated
+// dynamically and must never retain an older deployment's image URL.
+const dynamicArtworkCacheControl = "no-store, max-age=0";
 const router: IRouter = Router();
 const directShareUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 const DIRECT_SHARE_TTL_MS = 10 * 60 * 1000;
@@ -175,7 +178,7 @@ router.get("/metadata/:type/:id", async (req, res): Promise<void> => {
     : `${base}/api/share/${type}/${id}/image`;
   res
     .type("json")
-    .set("Cache-Control", "public, max-age=300")
+    .set("Cache-Control", dynamicArtworkCacheControl)
     .json({
       ...record.metadata,
       image: artworkUrl,
@@ -190,7 +193,7 @@ router.get("/share/:type/:id/image", async (req, res): Promise<void> => {
   if (!record) { res.sendStatus(404); return; }
   if (record.artwork) {
     const artworkUrl = await ensureFounderPassArtwork(record.artwork, configuration.appUrl);
-    res.set("Cache-Control", "public, max-age=300").redirect(302, artworkUrl);
+    res.set("Cache-Control", dynamicArtworkCacheControl).redirect(302, artworkUrl);
     return;
   }
   const title = escapeHtml(record.title);
@@ -209,7 +212,7 @@ router.get("/share/:type/:id", async (req, res): Promise<void> => {
   const image = record.artwork ? await ensureFounderPassArtwork(record.artwork, base) : `${canonical}/image`;
   const target = `${base}/pass/${type}/${id}`;
   const title = `${record.holder} · ${record.title}`;
-  res.type("html").set("Cache-Control", "public, max-age=300").send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><meta property="og:type" content="website"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(record.detail)}"><meta property="og:url" content="${escapeHtml(canonical)}"><meta property="og:image" content="${escapeHtml(image)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:image" content="${escapeHtml(image)}"><meta http-equiv="refresh" content="0;url=${escapeHtml(target)}"></head><body><p><a href="${escapeHtml(target)}">View this Arc Pass</a></p></body></html>`);
+  res.type("html").set("Cache-Control", dynamicArtworkCacheControl).send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><meta property="og:type" content="website"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(record.detail)}"><meta property="og:url" content="${escapeHtml(canonical)}"><meta property="og:image" content="${escapeHtml(image)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:image" content="${escapeHtml(image)}"><meta http-equiv="refresh" content="0;url=${escapeHtml(target)}"></head><body><p><a href="${escapeHtml(target)}">View this Arc Pass</a></p></body></html>`);
 });
 
 export default router;
