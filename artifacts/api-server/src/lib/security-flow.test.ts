@@ -33,7 +33,10 @@ test("claimed and minted credentials both retain the X share fallback", async ()
   assert.match(sharing, /pass\.claimStatus === "locked"/);
   assert.match(exportImage, /x\.com\/intent\/post/);
   assert.match(exportImage, /I claimed my verified Arc/);
-  assert.match(exportImage, /I minted my Arc/);
+  assert.match(exportImage, /minted my Arc/);
+  assert.match(exportImage, /Founders can check their eligibility/);
+  assert.match(exportImage, /Builders can check their verified activity/);
+  assert.match(exportImage, /https:\/\/arc\.webcoinlabs\.com/);
   assert.match(exportImage, /downloadBlob/);
   assert.equal((exportImage.match(/toBlob\(params\.node/g) ?? []).length, 1, "a failed card export must not be retried before opening X");
   assert.match(exportImage, /navigateSharePopup\(popup, intentUrl\)/);
@@ -46,7 +49,25 @@ test("claimed Founder details lead into Builder verification with live availabil
   assert.match(passDetail, /useGetBuilderSupply/);
   assert.match(passDetail, /Claim your exclusive Builder Pass/);
   assert.match(passDetail, /builderSupply\.remainingClaims/);
-  assert.match(passDetail, /href="\/claim\/builder"/);
+  assert.match(passDetail, /https:\/\/arc\.webcoinlabs\.com/);
+  assert.match(passDetail, /SupplyIndicator/);
+  assert.match(passDetail, /canShare/);
+  assert.doesNotMatch(passDetail, /href="\/claim\/builder"/);
+});
+
+test("post-claim sharing is owner-controlled and dismissible", async () => {
+  const reminder = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/share-reminder.tsx"), "utf8");
+  const detail = await readFile(path.join(workspace, "artifacts/arc-pass/src/pages/pass-detail.tsx"), "utf8");
+  const sharing = await readFile(path.join(workspace, "artifacts/api-server/src/routes/sharing.ts"), "utf8");
+  const passes = await readFile(path.join(workspace, "artifacts/api-server/src/routes/passes.ts"), "utf8");
+  const builderCard = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/builder-pass-card.tsx"), "utf8");
+
+  assert.match(reminder, /Already shared/);
+  assert.match(reminder, /share-reminder-dismissed/);
+  assert.match(detail, /useListMyPasses/);
+  assert.match(sharing, /req\.query\.download/);
+  assert.match(passes, /res\.json\(\{ url: `\/api\/share\/founder/);
+  assert.match(builderCard, /\/logo\/Arc_network-A\.svg/);
 });
 
 test("Builder tier reveal is keyed to the analysed pass and trusts only the server tier", async () => {
@@ -125,7 +146,7 @@ test("Founder NFT metadata resolves to permanent generated R2 artwork", async ()
   assert.match(artwork, /ISSUE DATE/);
   assert.match(artwork, /Verified by Webcoin Labs/);
   assert.match(artwork, /NON-TRANSFERABLE/);
-  assert.match(artwork, /founder-card-arc-aurora-v3-runtime-fonts/);
+  assert.match(artwork, /founder-card-arc-aurora-v4-runtime-fonts/);
   assert.match(sharing, /dynamicArtworkCacheControl = "no-store, max-age=0"/);
 });
 

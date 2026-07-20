@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FounderRequestDialog } from "@/components/founder-request-dialog";
 import { IdentityVerificationGate } from "@/components/identity-verification-gate";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { ShareReminder } from "@/components/share-reminder";
 import { pendingIdentityMatches, readPendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
 export default function ClaimFounderPage() {
@@ -45,7 +46,7 @@ export default function ClaimFounderPage() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/passes/me"] });
 
   const handleDownload = () => {
-    if (cardRef.current) void downloadNodeAsPng(cardRef.current, "arc-pass-founder.png");
+    if (cardRef.current) void downloadNodeAsPng(cardRef.current, "arc-pass-founder.png", `/api/share/founder/${passes?.founder?.id ?? 0}/image?download=1`);
   };
 
   if (userLoading || (!!user && (passesLoading || profileLoading))) {
@@ -97,8 +98,8 @@ export default function ClaimFounderPage() {
     setConfettiBurst((value) => value + 1);
   };
 
-  const handleShare = () => {
-    if (cardRef.current) void shareNodeOnX({ node: cardRef.current, passType: "founder", passId: founderPass.id, minted: founderPass.claimStatus === "minted", returnTo: "/claim/founder" });
+  const handleShare = async () => {
+    if (cardRef.current) await shareNodeOnX({ node: cardRef.current, passType: "founder", passId: founderPass.id, minted: founderPass.claimStatus === "minted", returnTo: "/claim/founder" });
   };
 
   const revealPass = () => {
@@ -195,6 +196,13 @@ export default function ClaimFounderPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ShareReminder
+        passType="founder"
+        passId={founderPass.id}
+        claimed={founderPass.claimStatus === "minted" || (founderPass.claimStatus === "claimed" && revealState === "revealed")}
+        onShare={handleShare}
+      />
 
       <MintModal open={mintOpen} onOpenChange={setMintOpen} network="arc" onMint={handleMint} isPending={mintPass.isPending} />
     </div>

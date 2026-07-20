@@ -8,6 +8,7 @@ import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { createPkcePair, signOAuthState } from "../lib/oauth/provider";
 import { buildXAuthorizeUrl, isXOAuthConfigured } from "../lib/oauth/x";
 import { ensureFounderPassArtwork, type FounderPassArtworkData } from "../lib/founder-pass-artwork";
+import { readStoredImage } from "../lib/uploads";
 
 // The final R2 artwork is immutable, but metadata and redirects are generated
 // dynamically and must never retain an older deployment's image URL.
@@ -16,6 +17,26 @@ const router: IRouter = Router();
 const directShareUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 const DIRECT_SHARE_TTL_MS = 10 * 60 * 1000;
 const X_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+async function fetchArtworkForDownload(artworkUrl: string): Promise<{ body: Buffer; contentType: string } | null> {
+  let parsed: URL;
+  try { parsed = new URL(artworkUrl, configuration.appUrl); } catch { return null; }
+
+  if (parsed.pathname.startsWith("/uploads/")) {
+    const body = await readStoredImage(parsed.pathname);
+    return body ? { body, contentType: "image/webp" } : null;
+  }
+
+  try {
+    const response = await fetch(parsed, { redirect: "error", signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return null;
+    const body = Buffer.from(await response.arrayBuffer());
+    const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "image/webp";
+    return { body, contentType };
+  } catch {
+    return null;
+  }
+}
 
 const acceptDirectShareImage: RequestHandler = (req, res, next) => {
   directShareUpload.single("image")(req, res, (error: unknown) => {
@@ -85,7 +106,9 @@ router.post("/share/x/direct", requireAuth, acceptDirectShareImage, async (req, 
   const returnTo = returnToInput.startsWith("/") && !returnToInput.startsWith("//") ? returnToInput : "/dashboard";
   const shareUrl = `${configuration.appUrl.replace(/\/$/, "")}/api/share/${passType}/${passId}`;
   const credentialName = passType === "founder" ? "Founder" : "Builder";
-  const postText = `${actualMinted ? `I minted my Arc ${credentialName} Pass onchain.` : `I claimed my verified Arc ${credentialName} Pass.`}\n${shareUrl}`;
+  const postText = passType === "founder"
+    ? `${actualMinted ? "Just minted my Arc Founder Pass onchain." : "I claimed my verified Arc Founder Pass."}\n\nBuilt for verified founders building across the Arc ecosystem, powered by @webcoinlabs.\n\nFounders can check their eligibility: ${shareUrl} or apply at: ${configuration.appUrl}`
+    : `${actualMinted ? "Just minted my Arc Builder Pass onchain." : "I claimed my verified Arc Builder Pass."}\n\nBuilt by verified builders contributing across the Arc ecosystem, powered by @webcoinlabs.\n\nBuilders can check their verified activity: ${shareUrl} or apply at: ${configuration.appUrl}`;
   const draftId = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + DIRECT_SHARE_TTL_MS);
   await db.transaction(async (tx) => {
@@ -193,6 +216,16 @@ router.get("/share/:type/:id/image", async (req, res): Promise<void> => {
   if (!record) { res.sendStatus(404); return; }
   if (record.artwork) {
     const artworkUrl = await ensureFounderPassArtwork(record.artwork, configuration.appUrl);
+    if (req.query.download === "1") {
+      const image = await fetchArtworkForDownload(artworkUrl);
+      if (!image) { res.status(502).json({ error: "Pass artwork is temporarily unavailable. Please try again." }); return; }
+      res
+        .set("Cache-Control", "no-store, max-age=0")
+        .set("Content-Disposition", `attachment; filename="arc-pass-${type}-${id}.webp"`)
+        .type(image.contentType)
+        .send(image.body);
+      return;
+    }
     res.set("Cache-Control", dynamicArtworkCacheControl).redirect(302, artworkUrl);
     return;
   }

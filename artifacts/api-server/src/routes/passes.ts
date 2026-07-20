@@ -138,7 +138,7 @@ router.get("/passes/founder/:id/download-url", async (req, res): Promise<void> =
     return;
   }
 
-  res.status(404).json({ error: "No server-rendered asset available yet — use Download Pass on the pass page to export an image client-side." });
+  res.json({ url: `/api/share/founder/${params.data.id}/image?download=1` });
 });
 
 router.post("/passes/founder/claim", requireAuth, async (req, res): Promise<void> => {

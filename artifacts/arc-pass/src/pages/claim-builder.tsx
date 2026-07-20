@@ -33,6 +33,7 @@ import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { formatDate } from "@/lib/format";
 import { IdentityVerificationGate } from "@/components/identity-verification-gate";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { ShareReminder } from "@/components/share-reminder";
 import { identityOAuthHref, pendingIdentityMatches, readPendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
 const STEP_LABELS = ["Verify identity", "Connect GitHub", "Verify wallets", "Analyse activity", "Review pass", "Record onchain"];
@@ -176,16 +177,22 @@ export default function ClaimBuilderPage() {
     setConfettiBurst((value) => value + 1);
   };
 
-  const handleShare = async () => {
+  const sharePass = async () => {
     if (!builderPass || !cardRef.current || isSharing) return;
     setIsSharing(true);
     try {
       const mode = await shareNodeOnX({ node: cardRef.current, passType: "builder", passId: builderPass.id, minted: builderPass.claimStatus === "minted", returnTo: "/claim/builder" });
       if (mode === "fallback") toast.info("X opened with your verified pass link. Attach the downloaded pass image if your browser saved one.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The X share flow could not be opened.");
     } finally {
       setIsSharing(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await sharePass();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The X share flow could not be opened.");
     }
   };
 
@@ -413,6 +420,15 @@ export default function ClaimBuilderPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {builderPass && (
+        <ShareReminder
+          passType="builder"
+          passId={builderPass.id}
+          claimed={builderPass.claimStatus === "minted" || (builderPass.claimStatus === "claimed" && revealState === "revealed")}
+          onShare={sharePass}
+        />
+      )}
 
       <section className="mt-14 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-evidence-title">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

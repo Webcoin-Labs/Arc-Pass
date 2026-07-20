@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useRoute, Link } from "wouter";
 import { Download, ExternalLink, ArrowLeft, ArrowRight, Hash, Globe, Wallet, Calendar, Share2, Sparkles } from "lucide-react";
-import { useGetFounderPass, useGetBuilderPass, useGetBuilderSupply, getGetFounderPassQueryKey, getGetBuilderPassQueryKey } from "@workspace/api-client-react";
+import { useGetFounderPass, useGetBuilderPass, useGetBuilderSupply, useGetMe, useListMyPasses, getGetFounderPassQueryKey, getGetBuilderPassQueryKey, getGetMeQueryKey, getListMyPassesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import { PassStatusBadge } from "@/components/pass-status-badge";
 import { TierHistory } from "@/components/tier-history";
 import { EmptyState } from "@/components/empty-state";
 import { NetworkMark } from "@/components/network-mark";
+import { SupplyIndicator } from "@/components/supply-indicator";
 import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
 import { formatPassNumber, formatNetworkLabel, formatDate, abbreviateAddress, explorerTxUrl } from "@/lib/format";
 import { founderOverallStatusMeta, builderOverallStatusMeta } from "@/lib/pass-status";
@@ -24,11 +25,14 @@ export default function PassDetailPage() {
   const founderQuery = useGetFounderPass(passId, { query: { enabled: type === "founder" && !!passId, queryKey: getGetFounderPassQueryKey(passId) } });
   const builderQuery = useGetBuilderPass(passId, { query: { enabled: type === "builder" && !!passId, queryKey: getGetBuilderPassQueryKey(passId) } });
   const { data: builderSupply } = useGetBuilderSupply();
+  const { data: user } = useGetMe({ query: { retry: false, queryKey: getGetMeQueryKey() } });
+  const { data: myPasses } = useListMyPasses({ query: { enabled: !!user, retry: false, queryKey: getListMyPassesQueryKey() } });
 
   const isLoading = type === "founder" ? founderQuery.isLoading : builderQuery.isLoading;
   const error = type === "founder" ? founderQuery.error : builderQuery.error;
   const founderPass = founderQuery.data;
   const builderPass = builderQuery.data;
+  const canShare = !!user && (type === "founder" ? myPasses?.founder?.id === passId : myPasses?.builder?.id === passId);
 
   if (isLoading) {
     return (
@@ -66,7 +70,7 @@ export default function PassDetailPage() {
 
           {(founderPass?.claimStatus === "claimed" || founderPass?.claimStatus === "minted" || builderPass?.claimStatus === "claimed" || builderPass?.claimStatus === "minted") && (
             <div className="mt-6 grid grid-cols-2 gap-3">
-              <Button variant="secondary" className="flex-1" onClick={() => cardRef.current && downloadNodeAsPng(cardRef.current, downloadFilename)}>
+              <Button variant="secondary" className="flex-1" onClick={() => cardRef.current && void downloadNodeAsPng(cardRef.current, downloadFilename, type === "founder" ? `/api/share/founder/${passId}/image?download=1` : undefined)}>
                 <Download className="mr-2 h-4 w-4" /> Download
               </Button>
               {(() => {
@@ -80,29 +84,30 @@ export default function PassDetailPage() {
                   </Button>
                 ) : null;
               })()}
-              {(founderPass ?? builderPass)?.claimStatus === "minted" ? (
+              {canShare && (founderPass ?? builderPass)?.claimStatus === "minted" ? (
                 <Button variant="outline" className="col-span-2" onClick={() => cardRef.current && void shareNodeOnX({ node: cardRef.current, passType: type, passId, minted: true, returnTo: `/pass/${type}/${passId}` })}>
                   <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share public pass on X
                 </Button>
-              ) : (
+              ) : canShare ? (
                 <Button className="col-span-2" asChild>
                   <Link href={`/claim/${type}`}>
                     <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" /> Mint Onchain to share on X
                   </Link>
                 </Button>
-              )}
+              ) : null}
               {type === "founder" && founderPass && (
                 <div className="col-span-2 mt-1 rounded-2xl border border-primary/20 bg-primary/[0.05] p-3">
                   <Button className="h-12 w-full" asChild>
-                    <Link href="/claim/builder">
+                    <a href="https://arc.webcoinlabs.com">
                       <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" /> Claim your exclusive Builder Pass <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                    </Link>
+                    </a>
                   </Button>
                   <p className="mt-2 text-center text-xs text-muted-foreground">
                     {builderSupply
                       ? `${builderSupply.remainingClaims.toLocaleString()} of ${builderSupply.phaseClaimLimit.toLocaleString()} Wave 1 onchain mint slots remain.`
                       : "Checking the remaining Wave 1 allocation…"}
                   </p>
+                  {builderSupply && <SupplyIndicator totalMinted={builderSupply.totalMinted} phaseClaimLimit={builderSupply.phaseClaimLimit} className="mt-3" />}
                 </div>
               )}
             </div>
@@ -149,7 +154,7 @@ export default function PassDetailPage() {
             </Card>
           </div>
 
-          {type === "founder" && founderPass && (founderPass.companyName || founderPass.founderStatement) && (
+          {type === "founder" && founderPass && (founderPass.companyDescription || founderPass.founderStatement || founderPass.companyWebsite) && (
             <div className="space-y-3 border-t pt-6">
               <h3 className="text-lg font-semibold">About</h3>
               {founderPass.companyDescription && <p className="text-sm text-muted-foreground">{founderPass.companyDescription}</p>}

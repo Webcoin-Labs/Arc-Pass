@@ -1,12 +1,21 @@
 import { toBlob, toPng } from "html-to-image";
 
-/** Exports a rendered DOM node (a pass card) to a downloaded PNG, entirely client-side. */
-export async function downloadNodeAsPng(node: HTMLElement, filename: string): Promise<void> {
-  const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true });
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = dataUrl;
-  link.click();
+/** Exports a rendered DOM node to a downloaded image, with an optional server artwork fallback. */
+export async function downloadNodeAsPng(node: HTMLElement, filename: string, fallbackUrl?: string): Promise<void> {
+  try {
+    const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true });
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = dataUrl;
+    link.click();
+    return;
+  } catch (error) {
+    if (!fallbackUrl) throw error;
+    const response = await fetch(fallbackUrl, { credentials: "include" });
+    if (!response.ok) throw error;
+    const blob = await response.blob();
+    downloadBlob(blob, filename.replace(/\.png$/i, ".webp"));
+  }
 }
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -34,10 +43,13 @@ function navigateSharePopup(popup: Window | null, url: string): void {
 export async function shareNodeOnX(params: { node: HTMLElement; passType: "founder" | "builder"; passId: number; minted: boolean; returnTo?: string }): Promise<"direct" | "fallback"> {
   const popup = window.open("about:blank", "_blank");
   if (popup) popup.opener = null;
-  const credential = params.passType === "founder" ? "Founder" : "Builder";
-  const text = params.minted ? `I minted my Arc ${credential} Pass onchain.` : `I claimed my verified Arc ${credential} Pass.`;
-  const shareUrl = `${window.location.origin}/api/share/${params.passType}/${params.passId}`;
-  const intentUrl = `https://x.com/intent/post?${new URLSearchParams({ text, url: shareUrl }).toString()}`;
+  const publicBase = window.location.hostname === "arc.webcoinlabs.com" ? window.location.origin : "https://arc.webcoinlabs.com";
+  const shareUrl = `${publicBase}/api/share/${params.passType}/${params.passId}`;
+  const applyUrl = publicBase;
+  const text = params.passType === "founder"
+    ? `${params.minted ? "Just minted my Arc Founder Pass onchain." : "I claimed my verified Arc Founder Pass."}\n\nBuilt for verified founders building across the Arc ecosystem, powered by @webcoinlabs.\n\nFounders can check their eligibility: ${shareUrl} or apply at: ${applyUrl}`
+    : `${params.minted ? "Just minted my Arc Builder Pass onchain." : "I claimed my verified Arc Builder Pass."}\n\nBuilt by verified builders contributing across the Arc ecosystem, powered by @webcoinlabs.\n\nBuilders can check their verified activity: ${shareUrl} or apply at: ${applyUrl}`;
+  const intentUrl = `https://x.com/intent/post?${new URLSearchParams({ text }).toString()}`;
   const filename = `arc-pass-${params.passType}.png`;
   let blob: Blob | null = null;
 

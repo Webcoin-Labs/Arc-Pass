@@ -14,7 +14,7 @@ const ARTWORK_WIDTH = 1200;
 const ARTWORK_HEIGHT = 845;
 // This value is part of the permanent R2 key. Bump it whenever the renderer
 // or its runtime dependencies change, so stale generated artwork is not reused.
-const ARTWORK_VERSION = "founder-card-arc-aurora-v3-runtime-fonts";
+const ARTWORK_VERSION = "founder-card-arc-aurora-v4-runtime-fonts";
 const MAX_EMBEDDED_IMAGE_BYTES = 5 * 1024 * 1024;
 const REMOTE_IMAGE_HOSTS = new Set([
   "abs.twimg.com",

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Activity, Code2, Gauge, Github, Lock, MessageCircle, ShieldCheck, TrendingUp, Trophy, UserRound } from "lucide-react";
+import { Activity, Code2, Gauge, Github, Lock, ShieldCheck, TrendingUp, Trophy, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TierEmblem } from "@/components/tier-badge";
 import { PassNetworkIdentity } from "@/components/pass-network-identity";
@@ -247,7 +247,7 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
         <div className={cn("mt-1.5 min-w-0 rounded-xl border px-2.5 py-1.5 sm:px-3", communityTone)}>
           <div className="flex min-w-0 items-center justify-between gap-2">
             <span className="inline-flex min-w-0 items-center gap-1.5 text-[9px] font-semibold tracking-[0.04em]">
-              <MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />
+              <img src="/logo/Arc_network-A.svg" alt="Arc" className="size-3.5 shrink-0 object-contain" />
               <span className="truncate">{communityStatus}</span>
             </span>
             {data.discordCommunityJoinedAt && <span className="shrink-0 text-[9px] text-white/55">Since {formatDate(data.discordCommunityJoinedAt)}</span>}
