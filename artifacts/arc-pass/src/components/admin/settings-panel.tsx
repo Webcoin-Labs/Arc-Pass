@@ -10,6 +10,7 @@ const INTEGRATIONS = [
   { name: "Discord guild membership", vars: "ARC_DISCORD_GUILD_ID", fallback: "Optional supporting signal only; shows member status and join date." },
   { name: "Production media storage", vars: "CLOUDFLARE_R2_ENDPOINT, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, CLOUDFLARE_R2_BUCKET, CLOUDFLARE_R2_PUBLIC_URL", fallback: "Required in production because local Railway disk is ephemeral." },
   { name: "Signed authorizations", vars: "MINT_SIGNING_KEY, OAUTH_STATE_SIGNING_KEY", fallback: "Uses an ephemeral key in dev; set a persistent key in production." },
+  { name: "Resend (Founder Pass emails)", vars: "RESEND_API_KEY", fallback: "Optional. Without it, both emails are silently skipped; the request/invite action itself always succeeds." },
 ];
 
 export function SettingsPanel() {

@@ -148,8 +148,16 @@ export async function generateSupportReply(message: string): Promise<string> {
     });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: message }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
+      // Generous headroom above the ~180-word target: newer Gemini models
+      // spend part of maxOutputTokens on internal reasoning before the
+      // visible answer, so a tight budget can truncate mid-sentence with no
+      // error — especially for naturally list-formatted answers.
+      generationConfig: { temperature: 0.2, maxOutputTokens: 1_024 },
     });
+    const finishReason = result.response.candidates?.[0]?.finishReason;
+    if (finishReason === "MAX_TOKENS") {
+      logger.warn({ finishReason }, "Support assistant response was truncated by the output token limit");
+    }
     const answer = result.response.text().trim();
     if (!answer) throw new Error("Gemini returned an empty support response");
 

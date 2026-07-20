@@ -1850,6 +1850,11 @@ components:
           type: string
         companyIndustry:
           type: string
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+          description: Optional. If provided, a congratulatory Founder Pass email is sent on creation.
+          maxLength: 254
         adminNotes:
           type: string
 
@@ -2204,12 +2209,17 @@ components:
 
     FounderApplicationRequest:
       type: object
-      required: [xUsername, description]
+      required: [xUsername, email, description]
       properties:
         xUsername:
           type: string
           description: X username. A leading @ is accepted and removed.
           maxLength: 32
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+          description: Contact email. Used to send a confirmation and, if approved, next steps.
+          maxLength: 254
         description:
           type: string
           description: Why the applicant believes they qualify. Maximum 500 words.
@@ -2256,6 +2266,7 @@ components:
       properties:
         id: { type: integer }
         xUsername: { type: string }
+        requestEmail: { type: ["string", "null"] }
         description: { type: string }
         status: { type: string }
         submittedAt: { type: string, format: date-time }

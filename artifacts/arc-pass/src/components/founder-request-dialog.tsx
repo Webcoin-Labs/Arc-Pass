@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const MAX_WORDS = 500;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizeHandle(value: string): string {
   return value.replace(/^\s*@+/, "").replace(/\s+/g, "");
@@ -27,11 +28,13 @@ export function FounderRequestDialog({
   defaultXUsername?: string;
 }) {
   const [xUsername, setXUsername] = useState(defaultXUsername);
+  const [email, setEmail] = useState("");
   const [description, setDescription] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const createApplication = useCreateFounderApplication();
   const words = useMemo(() => wordCount(description), [description]);
   const isDescriptionValid = words > 0 && words <= MAX_WORDS;
+  const isEmailValid = EMAIL_PATTERN.test(email.trim());
 
   useEffect(() => {
     if (!open) return;
@@ -47,9 +50,9 @@ export function FounderRequestDialog({
   };
 
   const submit = () => {
-    if (!isDescriptionValid || !xUsername.trim()) return;
+    if (!isDescriptionValid || !xUsername.trim() || !isEmailValid) return;
     createApplication.mutate(
-      { data: { xUsername: normalizeHandle(xUsername), description: description.trim() } },
+      { data: { xUsername: normalizeHandle(xUsername), email: email.trim(), description: description.trim() } },
       { onSuccess: () => setSubmitted(true) },
     );
   };
@@ -98,6 +101,22 @@ export function FounderRequestDialog({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="founder-request-email" className="text-sm font-semibold text-white">Email</Label>
+              <Input
+                id="founder-request-email"
+                type="email"
+                autoComplete="email"
+                maxLength={254}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@company.com"
+                className="h-14 rounded-2xl border-white/10 bg-black/20 px-4 text-base text-white placeholder:text-white/35 focus-visible:border-[#258fe3] focus-visible:ring-2 focus-visible:ring-[#258fe3]/65"
+                required
+              />
+              <p className="text-xs text-white/42">We'll confirm your request here and follow up if you're selected. A company or business email is preferred.</p>
+            </div>
+
+            <div className="space-y-2">
               <div className="flex items-baseline justify-between gap-3">
                 <Label htmlFor="founder-request-description" className="text-sm font-semibold text-white">Why should we consider you?</Label>
                 <span className={words > MAX_WORDS ? "text-xs font-medium text-red-300" : "text-xs text-white/42"}>{words} / {MAX_WORDS} words</span>
@@ -116,7 +135,7 @@ export function FounderRequestDialog({
 
             {createApplication.isError && <p role="alert" className="rounded-xl border border-red-400/25 bg-red-500/10 px-3.5 py-3 text-sm leading-5 text-red-200">{createApplication.error instanceof Error ? createApplication.error.message.replace(/^HTTP \d+ [^:]+:\s*/, "") : "We could not submit your request. Please try again."}</p>}
 
-            <Button type="submit" className="h-12 w-full rounded-2xl bg-[#178ce5] text-base font-semibold text-white hover:bg-[#0d7ed0] disabled:bg-[#178ce5]/40" disabled={createApplication.isPending || !xUsername.trim() || !isDescriptionValid}>
+            <Button type="submit" className="h-12 w-full rounded-2xl bg-[#178ce5] text-base font-semibold text-white hover:bg-[#0d7ed0] disabled:bg-[#178ce5]/40" disabled={createApplication.isPending || !xUsername.trim() || !isEmailValid || !isDescriptionValid}>
               {createApplication.isPending ? <><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> Sending request…</> : "Send request"}
             </Button>
           </form>

@@ -26,5 +26,11 @@ export interface AdminFounderInviteInput {
   companyName: string;
   companyLogoUrl?: string;
   companyIndustry?: string;
+  /**
+     * Optional. If provided, a congratulatory Founder Pass email is sent on creation.
+     * @maxLength 254
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email?: string;
   adminNotes?: string;
 }

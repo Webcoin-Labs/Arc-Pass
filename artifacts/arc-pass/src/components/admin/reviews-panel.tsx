@@ -49,6 +49,7 @@ export function ReviewsPanel() {
                   <div>
                     <p className="font-mono text-sm font-semibold">@{application.xUsername}</p>
                     <p className="mt-1 text-xs text-muted-foreground">Requested {formatDate(application.submittedAt)}</p>
+                    {application.requestEmail && <p className="mt-1 text-xs text-muted-foreground">{application.requestEmail}</p>}
                   </div>
                   <Button size="sm" variant="outline" className="gap-2" onClick={() => void navigator.clipboard?.writeText(application.xUsername).then(() => toast.success("X username copied"), () => toast.error("Couldn't copy username"))}>
                     <Clipboard className="size-3.5" aria-hidden="true" /> Copy handle

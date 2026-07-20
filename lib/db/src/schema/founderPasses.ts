@@ -17,6 +17,7 @@ export const founderPassesTable = pgTable("founder_passes", {
   inviteHandle: text("invite_handle"),
   invitePlatform: text("invite_platform"), // 'x' | 'discord'
   inviteDiscriminator: text("invite_discriminator"),
+  inviteEmail: text("invite_email"),
   invitedAt: timestamp("invited_at", { withTimezone: true }),
   invitedByUserId: integer("invited_by_user_id").references(() => usersTable.id),
 

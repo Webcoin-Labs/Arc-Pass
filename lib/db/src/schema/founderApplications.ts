@@ -9,6 +9,7 @@ export const founderApplicationsTable = pgTable("founder_applications", {
   fullName: text("full_name"),
   requestXUsername: text("request_x_username").unique(),
   requestIpHash: text("request_ip_hash"),
+  requestEmail: text("request_email"),
   workEmail: text("work_email"),
   personalEmail: text("personal_email"),
   xUsername: text("x_username"),

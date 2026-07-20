@@ -85,12 +85,17 @@ export const PreviewEligibilityResponse = zod.object({
  */
 export const createFounderApplicationBodyXUsernameMax = 32;
 
+export const createFounderApplicationBodyEmailMax = 254;
+
+
+export const createFounderApplicationBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 export const createFounderApplicationBodyDescriptionMax = 6000;
 
 
 
 export const CreateFounderApplicationBody = zod.object({
   "xUsername": zod.string().max(createFounderApplicationBodyXUsernameMax).describe('X username. A leading @ is accepted and removed.'),
+  "email": zod.string().max(createFounderApplicationBodyEmailMax).regex(createFounderApplicationBodyEmailRegExp).describe('Contact email. Used to send a confirmation and, if approved, next steps.'),
   "description": zod.string().max(createFounderApplicationBodyDescriptionMax).describe('Why the applicant believes they qualify. Maximum 500 words.')
 })
 
@@ -1172,6 +1177,7 @@ export const AdminListFounderApplicationsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
   "xUsername": zod.string(),
+  "requestEmail": zod.string().nullish(),
   "description": zod.string(),
   "status": zod.string(),
   "submittedAt": zod.coerce.date()
@@ -1278,6 +1284,10 @@ export const AdminListFounderPassesResponse = zod.object({
 export const adminCreateFounderInviteBodyInviteDiscriminatorRegExp = new RegExp('^\\d{4}$');
 export const adminCreateFounderInviteBodyCompanyNameMax = 120;
 
+export const adminCreateFounderInviteBodyEmailMax = 254;
+
+
+export const adminCreateFounderInviteBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 
 
 export const AdminCreateFounderInviteBody = zod.object({
@@ -1290,6 +1300,7 @@ export const AdminCreateFounderInviteBody = zod.object({
   "companyName": zod.string().min(1).max(adminCreateFounderInviteBodyCompanyNameMax),
   "companyLogoUrl": zod.string().optional(),
   "companyIndustry": zod.string().optional(),
+  "email": zod.string().max(adminCreateFounderInviteBodyEmailMax).regex(adminCreateFounderInviteBodyEmailRegExp).optional().describe('Optional. If provided, a congratulatory Founder Pass email is sent on creation.'),
   "adminNotes": zod.string().optional()
 })
 

@@ -499,7 +499,7 @@ export default function ClaimBuilderPage() {
       {builderPass && builderPass.claimStatus !== "locked" && supply && (
         <section className="mt-5 w-full max-w-5xl rounded-2xl border bg-card p-4" aria-label="Wave 1 onchain mint allocation">
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><strong>Wave 1 onchain mints: {supply.totalMinted.toLocaleString()} / {supply.phaseClaimLimit.toLocaleString()}</strong><span className="text-muted-foreground">{supply.remainingClaims.toLocaleString()} mint slots remain</span></div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (supply.totalMinted / supply.phaseClaimLimit) * 100)}%` }} /></div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${supply.totalMinted > 0 ? Math.max(Math.min(100, (supply.totalMinted / supply.phaseClaimLimit) * 100), 1) : 0}%` }} /></div>
         </section>
       )}
 

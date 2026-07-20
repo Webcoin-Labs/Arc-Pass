@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, or } from "drizzle-orm";
 import { db, founderApplicationsTable } from "@workspace/db";
 import {
   FOUNDER_REQUEST_IP_LIMIT,
@@ -8,6 +8,7 @@ import {
   fingerprintRequesterIp,
   validateFounderRequest,
 } from "../lib/founder-request";
+import { sendApplicationReceivedEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -24,7 +25,7 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 router.post("/founder-applications", async (req, res): Promise<void> => {
-  let request: { xUsername: string; description: string };
+  let request: { xUsername: string; email: string; description: string };
   try {
     request = validateFounderRequest(req.body);
   } catch (error) {
@@ -49,25 +50,45 @@ router.post("/founder-applications", async (req, res): Promise<void> => {
     return;
   }
 
+  const [existing] = await db
+    .select({ requestXUsername: founderApplicationsTable.requestXUsername, requestEmail: founderApplicationsTable.requestEmail })
+    .from(founderApplicationsTable)
+    .where(or(
+      eq(founderApplicationsTable.requestXUsername, request.xUsername),
+      eq(founderApplicationsTable.requestEmail, request.email),
+    ));
+
+  if (existing) {
+    const matchedEmail = existing.requestEmail === request.email;
+    res.status(409).json({
+      error: matchedEmail
+        ? "You've already submitted a Founder Pass request with this email. We'll be in touch within 48 hours if you're selected."
+        : "You've already submitted a Founder Pass request from this X account. We'll be in touch within 48 hours if you're selected.",
+    });
+    return;
+  }
+
   try {
     const inserted = await db.insert(founderApplicationsTable).values({
       source: "arc_pass",
       requestXUsername: request.xUsername,
       requestIpHash: ipFingerprint,
+      requestEmail: request.email,
       xUsername: request.xUsername,
       description: request.description,
       status: "under_review",
     }).onConflictDoNothing().returning({ id: founderApplicationsTable.id });
 
     if (inserted.length === 0) {
-      res.status(409).json({ error: "A Founder Pass request for this X account already exists." });
+      res.status(409).json({ error: "You've already submitted a Founder Pass request. We'll be in touch within 48 hours if you're selected." });
       return;
     }
 
+    await sendApplicationReceivedEmail({ to: request.email, xUsername: request.xUsername, description: request.description });
     res.status(201).json({ id: inserted[0].id, status: "under_review" });
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      res.status(409).json({ error: "A Founder Pass request for this X account already exists." });
+      res.status(409).json({ error: "You've already submitted a Founder Pass request. We'll be in touch within 48 hours if you're selected." });
       return;
     }
     throw error;

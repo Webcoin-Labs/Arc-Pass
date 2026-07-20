@@ -141,4 +141,5 @@ export const configuration = {
   // custom provider may still require EXPLORER_API_KEY at request time.
   activityProviderConfigured: true,
   cloudflareR2Configured: ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"].every(configured),
+  emailConfigured: configured("RESEND_API_KEY"),
 };

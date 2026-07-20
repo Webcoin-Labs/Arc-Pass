@@ -13,6 +13,12 @@ export interface FounderApplicationRequest {
      */
   xUsername: string;
   /**
+     * Contact email. Used to send a confirmation and, if approved, next steps.
+     * @maxLength 254
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email: string;
+  /**
      * Why the applicant believes they qualify. Maximum 500 words.
      * @maxLength 6000
      */

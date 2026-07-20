@@ -41,6 +41,7 @@ export function FounderPassesPanel() {
     founderTierId: undefined as number | undefined,
     companyName: "",
     companyLogoUrl: null as string | null,
+    email: "",
   });
 
   const handleCreate = () => {
@@ -55,13 +56,14 @@ export function FounderPassesPanel() {
           founderTierId: inviteForm.founderTierId,
           companyName: inviteForm.companyName.trim(),
           companyLogoUrl: inviteForm.companyLogoUrl ?? undefined,
+          email: inviteForm.email.trim() || undefined,
         },
       },
       {
         onSuccess: () => {
           toast.success("Invitation created");
           setCreateOpen(false);
-          setInviteForm({ invitePlatform: "x", inviteHandle: "", inviteDiscriminator: "", variant: "normal", founderTierId: undefined, companyName: "", companyLogoUrl: null });
+          setInviteForm({ invitePlatform: "x", inviteHandle: "", inviteDiscriminator: "", variant: "normal", founderTierId: undefined, companyName: "", companyLogoUrl: null, email: "" });
           setLogoUploading(false);
           invalidate();
         },
@@ -233,6 +235,11 @@ export function FounderPassesPanel() {
                 name={inviteForm.companyName}
               />
               <p className="text-xs text-muted-foreground">Optional. Add a square logo with a transparent background for the cleanest pass artwork.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="founder-invite-email">Email (optional)</Label>
+              <Input id="founder-invite-email" type="email" maxLength={254} value={inviteForm.email} onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} placeholder="founder@company.com" />
+              <p className="text-xs text-muted-foreground">Optional. If provided, we'll send a congratulations email when this invitation is created.</p>
             </div>
             <Button type="submit" className="w-full" disabled={!inviteForm.inviteHandle.trim() || !inviteForm.companyName.trim() || logoUploading || createInvite.isPending}>
               {logoUploading ? "Uploading logo…" : createInvite.isPending ? "Creating…" : "Create Invitation"}

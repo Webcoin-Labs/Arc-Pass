@@ -421,6 +421,12 @@ export interface AdminFounderInviteInput {
   companyName: string;
   companyLogoUrl?: string;
   companyIndustry?: string;
+  /**
+     * Optional. If provided, a congratulatory Founder Pass email is sent on creation.
+     * @maxLength 254
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email?: string;
   adminNotes?: string;
 }
 
@@ -693,6 +699,12 @@ export interface FounderApplicationRequest {
      */
   xUsername: string;
   /**
+     * Contact email. Used to send a confirmation and, if approved, next steps.
+     * @maxLength 254
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email: string;
+  /**
      * Why the applicant believes they qualify. Maximum 500 words.
      * @maxLength 6000
      */
@@ -741,6 +753,8 @@ export interface SupportChatLimitResponse {
 export interface AdminFounderApplication {
   id: number;
   xUsername: string;
+  /** @nullable */
+  requestEmail?: string | null;
   description: string;
   status: string;
   submittedAt: string;

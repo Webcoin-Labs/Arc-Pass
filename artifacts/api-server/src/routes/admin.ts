@@ -38,6 +38,7 @@ import { normalizeXHandle, parseDiscordIdentity } from "../lib/identity";
 import { auditAdmin, type AdminRequest } from "../lib/admin-auth";
 import { serializeFounderPass, serializeFounderTier, serializeBuilderTier, buildBuilderPassDTO, builderPassClaimed, builderPassMinted } from "../lib/serializers";
 import { imageUpload, persistUploadedImage } from "../lib/uploads";
+import { sendFounderApprovedEmail } from "../lib/email";
 import { REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
 import { chainAdapter } from "../lib/chain-adapter";
@@ -140,6 +141,7 @@ router.get("/admin/founder-applications", async (_req, res): Promise<void> => {
       id: founderApplicationsTable.id,
       xUsername: founderApplicationsTable.xUsername,
       requestXUsername: founderApplicationsTable.requestXUsername,
+      requestEmail: founderApplicationsTable.requestEmail,
       description: founderApplicationsTable.description,
       status: founderApplicationsTable.status,
       submittedAt: founderApplicationsTable.submittedAt,
@@ -153,6 +155,7 @@ router.get("/admin/founder-applications", async (_req, res): Promise<void> => {
     items: applications.map((application) => ({
       id: application.id,
       xUsername: application.requestXUsername || application.xUsername || "unknown",
+      requestEmail: application.requestEmail ?? null,
       description: application.description || "No description provided.",
       status: application.status,
       submittedAt: application.submittedAt,
@@ -269,6 +272,7 @@ router.post("/admin/founder-passes", requireAdmin, async (req, res): Promise<voi
       companyName,
       companyIndustry: parsed.data.companyIndustry,
       companyLogoUrl: parsed.data.companyLogoUrl,
+      inviteEmail: parsed.data.email,
       adminNotes: parsed.data.adminNotes,
       eligibilityStatus: "eligible",
       claimStatus: "locked",
@@ -289,6 +293,13 @@ router.post("/admin/founder-passes", requireAdmin, async (req, res): Promise<voi
         eq(founderApplicationsTable.requestXUsername, normalizedHandle),
         eq(founderApplicationsTable.status, "under_review"),
       ));
+  }
+
+  // Fires whenever the admin supplies an email, regardless of platform or
+  // whether it matches a pending application — covers both approving a
+  // public request and inviting someone directly.
+  if (parsed.data.email) {
+    await sendFounderApprovedEmail({ to: parsed.data.email, name: matchedUser?.displayName ?? normalizedHandle, companyName });
   }
 
   const tierMap = await founderTierMap();

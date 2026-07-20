@@ -497,7 +497,8 @@ function BenefitsJourney() {
 function HeroCredential({ claimed, onRequestFounderPass }: { claimed: number; onRequestFounderPass: () => void }) {
   const reduceMotion = useReducedMotion();
   const safeClaimed = Math.min(Math.max(claimed, 0), BUILDER_PHASE_ONE_SUPPLY);
-  const progress = (safeClaimed / BUILDER_PHASE_ONE_SUPPLY) * 100;
+  const rawProgress = (safeClaimed / BUILDER_PHASE_ONE_SUPPLY) * 100;
+  const progress = safeClaimed > 0 ? Math.max(rawProgress, 1) : 0;
 
   return (
     <motion.div

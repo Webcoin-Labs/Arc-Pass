@@ -9,6 +9,8 @@
 export interface AdminFounderApplication {
   id: number;
   xUsername: string;
+  /** @nullable */
+  requestEmail?: string | null;
   description: string;
   status: string;
   submittedAt: Date;
