@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shell } from '@/components/shell';
@@ -86,6 +88,8 @@ function App() {
           <Router />
         </WouterRouter>
         <Toaster />
+        <Analytics />
+        <SpeedInsights />
       </QueryClientProvider>
     </ThemeProvider>
   );

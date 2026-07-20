@@ -79,6 +79,8 @@
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "2.2.11",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "react-easy-crop": "^6.2.2",
     "wagmi": "2.19.5"
   }

@@ -113,6 +113,20 @@ test("Railway installs runtime fonts for generated Founder Pass artwork", async 
   assert.equal(configuration.deploy?.variables?.LANG, "en_US.UTF-8");
 });
 
+test("Vercel analytics and Speed Insights are mounted once at the React app root", async () => {
+  const app = await readFile(path.join(workspace, "artifacts/arc-pass/src/App.tsx"), "utf8");
+  const manifest = JSON.parse(await readFile(path.join(workspace, "artifacts/arc-pass/package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+
+  assert.match(app, /import \{ Analytics \} from '@vercel\/analytics\/react'/);
+  assert.match(app, /import \{ SpeedInsights \} from '@vercel\/speed-insights\/react'/);
+  assert.match(app, /<Analytics \/>/);
+  assert.match(app, /<SpeedInsights \/>/);
+  assert.ok(manifest.dependencies?.["@vercel/analytics"]);
+  assert.ok(manifest.dependencies?.["@vercel/speed-insights"]);
+});
+
 test("Premier Founder keeps its gold identity over an Arc blue, lavender, and pink background", async () => {
   const css = await readFile(path.join(workspace, "artifacts/arc-pass/src/index.css"), "utf8");
   const badge = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/founder-pass-variant-badge.tsx"), "utf8");
