@@ -59,20 +59,34 @@ export function ShareReminder({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-primary sm:mx-0">
+      <AlertDialogContent className="max-w-[380px] gap-0 border-white/10 bg-[#111318] p-7 text-left sm:rounded-2xl">
+        <AlertDialogHeader className="space-y-0 text-left">
+          <div className="grid size-11 place-items-center rounded-xl border border-[#f26625]/30 bg-[#f26625]/10 text-[#f26625]">
             <Share2 className="size-5" aria-hidden="true" />
           </div>
-          <AlertDialogTitle>Share your {credential} Pass</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className="mt-5 text-xl font-bold leading-tight tracking-tight text-white">
+            Share your {credential} Pass
+          </AlertDialogTitle>
+          <AlertDialogDescription className="mt-2 text-sm leading-6 text-white/55">
             Your verified Arc credential is ready. Share the public pass link on X so others can verify it.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Not now</AlertDialogCancel>
-          <AlertDialogAction onClick={() => void handleShare()}>Share on X</AlertDialogAction>
-          <AlertDialogAction className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={dismissForever}>Already shared</AlertDialogAction>
+        <AlertDialogFooter className="mt-6 flex-col items-stretch gap-4 space-x-0 sm:flex-col sm:items-stretch sm:space-x-0">
+          <AlertDialogAction
+            onClick={() => void handleShare()}
+            className="h-11 w-full rounded-lg bg-[#f26625] text-sm font-semibold text-white shadow-none hover:bg-[#d9591c]"
+          >
+            Share on X
+          </AlertDialogAction>
+          <div className="flex items-center justify-center gap-4 text-xs">
+            <AlertDialogCancel className="mt-0 h-auto w-auto border-0 bg-transparent px-1 py-2 font-medium text-white/45 shadow-none hover:bg-transparent hover:text-white/80">
+              Not now
+            </AlertDialogCancel>
+            <span aria-hidden="true" className="text-white/20">·</span>
+            <AlertDialogAction onClick={dismissForever} className="h-auto w-auto border-0 bg-transparent px-1 py-2 font-medium text-white/45 shadow-none hover:bg-transparent hover:text-white/80">
+              Already shared
+            </AlertDialogAction>
+          </div>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

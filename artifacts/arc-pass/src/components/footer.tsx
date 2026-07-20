@@ -8,16 +8,16 @@ const buildLinks = ["Founder tools", "Builder proof", "Pitch deck review", "Toke
 
 const exploreLinks = [
   { label: "Documentation", href: "/docs" },
-  { label: "Founder Pass", href: "/claim/founder" },
-  { label: "Builder Pass", href: "/claim/builder" },
-  { label: "Credits", href: "/docs#credits" },
-  { label: "Brand Assets", href: "https://webcoinlabs.com" },
+  { label: "Founder Pass", href: "/" },
+  { label: "Builder Pass", href: "/" },
+  { label: "Credits", href: "https://www.webcoinlabs.com/docs/platform/credits" },
+  { label: "Brand Assets", href: "https://www.webcoinlabs.com/docs/brand-assets" },
 ];
 
 const connectLinks = [
-  { label: "Telegram", href: "https://t.me/webcoinlabs" },
+  { label: "Telegram", href: "https://t.me/thewebcoinlabs" },
   { label: "X", href: "https://x.com/webcoinlabs" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/company/webcoinlabs/" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/webcoin-capital" },
 ];
 
 function FooterHeading({ children }: { children: React.ReactNode }) {
@@ -30,7 +30,7 @@ function ExternalFooterLink({ href, children }: { href: string; children: React.
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 text-sm text-white/60 transition-colors duration-150 hover:text-white sm:justify-start"
+      className="inline-flex items-center justify-center gap-1 py-1 text-sm text-white/60 transition-colors duration-150 hover:text-white sm:justify-start"
     >
       {children}
       <ExternalLink className="size-3 opacity-0 transition-opacity duration-150 group-hover:opacity-60" aria-hidden="true" />
@@ -91,13 +91,13 @@ export function Footer() {
 
             <nav aria-label="Explore links">
               <FooterHeading>Explore</FooterHeading>
-              <ul className="mt-3 space-y-2.5">
+              <ul className="mt-3 space-y-1.5">
                 {exploreLinks.map((item) => (
                   <li key={item.label} className="group">
                     {item.href.startsWith("http") ? (
                       <ExternalFooterLink href={item.href}>{item.label}</ExternalFooterLink>
                     ) : (
-                      <Link href={item.href} className="inline-flex min-h-11 items-center text-sm text-white/60 transition-colors duration-150 hover:text-white">
+                      <Link href={item.href} className="inline-flex items-center py-1 text-sm text-white/60 transition-colors duration-150 hover:text-white">
                         {item.label}
                       </Link>
                     )}
@@ -108,7 +108,7 @@ export function Footer() {
 
             <nav aria-label="Connect links" className="col-span-2 sm:col-span-1">
               <FooterHeading>Connect</FooterHeading>
-              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2.5 sm:block sm:space-y-2.5">
+              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 sm:block sm:space-y-1.5">
                 {connectLinks.map((item) => (
                   <li key={item.label} className="group">
                     <ExternalFooterLink href={item.href}>{item.label}</ExternalFooterLink>
