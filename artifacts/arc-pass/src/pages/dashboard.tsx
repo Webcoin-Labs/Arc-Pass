@@ -279,7 +279,7 @@ export default function DashboardPage() {
                     <BuilderPassCard
                       ref={builderCardRef}
                       data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username }}
-                      className="max-w-[560px]"
+                      className="max-w-[680px]"
                     />
                     <BuilderPassRank data={builderPass} />
                   </div>

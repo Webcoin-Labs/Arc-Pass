@@ -29,11 +29,35 @@ test("OAuth state is signed, expires, and is consumed once", async () => {
 test("claimed and minted credentials both retain the X share fallback", async () => {
   const sharing = await readFile(path.join(workspace, "artifacts/api-server/src/routes/sharing.ts"), "utf8");
   const exportImage = await readFile(path.join(workspace, "artifacts/arc-pass/src/lib/export-image.ts"), "utf8");
+  const app = await readFile(path.join(workspace, "artifacts/arc-pass/src/App.tsx"), "utf8");
   assert.match(sharing, /pass\.claimStatus === "locked"/);
   assert.match(exportImage, /x\.com\/intent\/post/);
   assert.match(exportImage, /I claimed my verified Arc/);
   assert.match(exportImage, /I minted my Arc/);
   assert.match(exportImage, /downloadBlob/);
+  assert.equal((exportImage.match(/toBlob\(params\.node/g) ?? []).length, 1, "a failed card export must not be retried before opening X");
+  assert.match(exportImage, /navigateSharePopup\(popup, intentUrl\)/);
+  assert.match(app, /searchParams\.get\('shareError'\)/);
+  assert.match(app, /searchParams\.get\('shareSuccess'\)/);
+});
+
+test("claimed Founder details lead into Builder verification with live availability", async () => {
+  const passDetail = await readFile(path.join(workspace, "artifacts/arc-pass/src/pages/pass-detail.tsx"), "utf8");
+  assert.match(passDetail, /useGetBuilderSupply/);
+  assert.match(passDetail, /Claim your exclusive Builder Pass/);
+  assert.match(passDetail, /builderSupply\.remainingClaims/);
+  assert.match(passDetail, /href="\/claim\/builder"/);
+});
+
+test("Builder tier reveal is keyed to the analysed pass and trusts only the server tier", async () => {
+  const claimPage = await readFile(path.join(workspace, "artifacts/arc-pass/src/pages/claim-builder.tsx"), "utf8");
+  const reveal = await readFile(path.join(workspace, "artifacts/arc-pass/src/components/tier-reveal-ceremony.tsx"), "utf8");
+  assert.match(claimPage, /setTierRevealPassId\(result\.builderPass\.id\)/);
+  assert.match(claimPage, /tierRevealPassId === builderPass\.id/);
+  assert.match(claimPage, /awardedTierName=\{builderPass\.currentTier\?\.name \?\? null\}/);
+  assert.match(reveal, /tiers\.findIndex\(\(tier\) => tier\.name\.toLowerCase\(\) === awardedTierName\?\.toLowerCase\(\)\)/);
+  assert.match(reveal, /Arc Pass will not invent one/);
+  assert.doesNotMatch(reveal, /Math\.random/);
 });
 
 test("Railway liveness never waits for Neon readiness", async () => {

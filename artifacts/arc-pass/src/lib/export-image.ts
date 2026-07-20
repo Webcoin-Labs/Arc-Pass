@@ -18,6 +18,14 @@ function downloadBlob(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(href), 1_000);
 }
 
+function navigateSharePopup(popup: Window | null, url: string): void {
+  if (popup && !popup.closed) {
+    popup.location.replace(url);
+    return;
+  }
+  window.location.assign(url);
+}
+
 /**
  * Attempts explicit X media authorization with a rendered pass image. If the
  * X app lacks posting permission (or the provider is unavailable), the image
@@ -36,6 +44,15 @@ export async function shareNodeOnX(params: { node: HTMLElement; passType: "found
   try {
     blob = await toBlob(params.node, { pixelRatio: 2, cacheBust: true });
     if (!blob) throw new Error("Pass image export failed");
+  } catch {
+    // External profile images can make a browser reject DOM-to-image export.
+    // The X intent must still open; never retry the same failed export while a
+    // user-visible popup is left parked on about:blank.
+    navigateSharePopup(popup, intentUrl);
+    return "fallback";
+  }
+
+  try {
     const form = new FormData();
     form.set("image", blob, filename);
     form.set("passType", params.passType);
@@ -46,14 +63,12 @@ export async function shareNodeOnX(params: { node: HTMLElement; passType: "found
     if (!response.ok) throw new Error("Direct X posting is unavailable");
     const payload = await response.json() as { authorizationUrl?: string };
     if (!payload.authorizationUrl) throw new Error("X authorization URL missing");
-    if (popup) popup.location.href = payload.authorizationUrl;
+    if (popup && !popup.closed) popup.location.replace(payload.authorizationUrl);
     else window.location.assign(payload.authorizationUrl);
     return "direct";
   } catch {
-    blob ??= await toBlob(params.node, { pixelRatio: 2, cacheBust: true });
-    if (blob) downloadBlob(blob, filename);
-    if (popup) popup.location.href = intentUrl;
-    else window.open(intentUrl, "_blank", "noopener,noreferrer");
+    downloadBlob(blob, filename);
+    navigateSharePopup(popup, intentUrl);
     return "fallback";
   }
 }

@@ -24,6 +24,7 @@ import { BuilderPassCard, BuilderPassRank } from "@/components/builder-pass-card
 import { WalletManager } from "@/components/wallet-manager";
 import { VerificationStepper } from "@/components/verification-stepper";
 import { AnalysisProgress } from "@/components/analysis-progress";
+import { TierRevealCeremony } from "@/components/tier-reveal-ceremony";
 import { MintModal, type MintParams } from "@/components/mint-modal";
 import { MintSuccess } from "@/components/mint-success";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,6 +67,8 @@ export default function ClaimBuilderPage() {
   const mintPass = useMintBuilderPass();
 
   const [mintOpen, setMintOpen] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [tierRevealPassId, setTierRevealPassId] = useState<number | null>(null);
   const [revealState, setRevealState] = useState<"idle" | "ready" | "revealing" | "revealed">("idle");
   const [confettiBurst, setConfettiBurst] = useState(0);
   const [identityAcknowledged, setIdentityAcknowledged] = useState(() => {
@@ -94,7 +97,7 @@ export default function ClaimBuilderPage() {
     return (
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-6 px-3 py-8 sm:p-6">
         <Skeleton className="h-11 w-full" />
-        <Skeleton className="h-[360px] w-full max-w-[520px] rounded-[22px] sm:aspect-[1.58/1] sm:h-auto sm:rounded-[28px]" />
+        <Skeleton className="h-[430px] w-full max-w-[720px] rounded-[22px] sm:h-[400px] sm:rounded-[28px]" />
       </div>
     );
   }
@@ -132,7 +135,7 @@ export default function ClaimBuilderPage() {
       : "Membership confirmed during verification";
 
   // Wrapped stats ship ahead of the regenerated API client types.
-  const wrappedStats = (builderPass ?? {}) as { usdcSpent?: string | null; eurcSpent?: string | null; firstTransactionAt?: string | null };
+  const wrappedStats = (builderPass ?? {}) as { firstTransactionAt?: string | null };
 
   const developmentTestIdentity = profile?.isDevelopmentTestIdentity === true;
   // Both providers connected (or GitHub already linked from an earlier visit)
@@ -147,7 +150,10 @@ export default function ClaimBuilderPage() {
 
   const handleVerify = () => {
     verifyBuilder.mutate(undefined, {
-      onSuccess: invalidateAll,
+      onSuccess: (result) => {
+        setTierRevealPassId(result.builderPass.id);
+        invalidateAll();
+      },
       onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Verification failed"),
     });
   };
@@ -170,8 +176,17 @@ export default function ClaimBuilderPage() {
     setConfettiBurst((value) => value + 1);
   };
 
-  const handleShare = () => {
-    if (builderPass && cardRef.current) void shareNodeOnX({ node: cardRef.current, passType: "builder", passId: builderPass.id, minted: builderPass.claimStatus === "minted", returnTo: "/claim/builder" });
+  const handleShare = async () => {
+    if (!builderPass || !cardRef.current || isSharing) return;
+    setIsSharing(true);
+    try {
+      const mode = await shareNodeOnX({ node: cardRef.current, passType: "builder", passId: builderPass.id, minted: builderPass.claimStatus === "minted", returnTo: "/claim/builder" });
+      if (mode === "fallback") toast.info("X opened with your verified pass link. Attach the downloaded pass image if your browser saved one.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The X share flow could not be opened.");
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const revealPass = () => {
@@ -180,16 +195,28 @@ export default function ClaimBuilderPage() {
   };
 
   const skipReveal = () => setRevealState("revealed");
+  const showTierCeremony = step === 5 && !!builderPass && tierRevealPassId === builderPass.id;
+  const displayedStep = showTierCeremony ? 4 : Math.min(step, 6);
 
   return (
     <div className="flex flex-1 flex-col items-center px-3 py-10 sm:px-6 sm:py-12">
       <ConfettiBurst burst={confettiBurst} reduceMotion={reduceMotion} />
 
-      <div className="mb-10 w-full max-w-md">
-        <VerificationStepper steps={STEP_LABELS} currentStep={Math.min(step, 6)} />
+      {builderPass && (
+        <ArcWrapped
+          firstTransactionAt={wrappedStats.firstTransactionAt ?? null}
+          qualifyingTransactions={builderPass.qualifyingTransactionCount ?? null}
+          activityScore={builderPass.activityScore ?? null}
+          tierName={builderPass.currentTier?.name ?? null}
+          reduceMotion={reduceMotion}
+        />
+      )}
+
+      <div className={builderPass ? "mb-10 mt-8 w-full max-w-5xl" : "mb-10 w-full max-w-5xl"}>
+        <VerificationStepper steps={STEP_LABELS} currentStep={displayedStep} />
       </div>
 
-      <div className="w-full max-w-3xl">
+      <div className="w-full max-w-6xl">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div key="identity" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} className="mx-auto max-w-lg">
@@ -261,13 +288,29 @@ export default function ClaimBuilderPage() {
             </motion.div>
           )}
 
-          {step === 5 && !verifyBuilder.isPending && builderPass && (
-            <motion.div key="s5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 md:flex-row md:items-start">
-              <div className="w-full max-w-[520px] md:max-w-[420px]">
+          {showTierCeremony && builderPass && (
+            <TierRevealCeremony
+              passId={builderPass.id}
+              tiers={BUILDER_TIER_GUIDE}
+              awardedTierName={builderPass.currentTier?.name ?? null}
+              activityScore={builderPass.activityScore ?? null}
+              qualifyingTransactions={builderPass.qualifyingTransactionCount ?? null}
+              githubContributions={profile?.connections.github.contributionCount ?? null}
+              reduceMotion={reduceMotion}
+              onContinue={() => {
+                setTierRevealPassId(null);
+                setConfettiBurst((value) => value + 1);
+              }}
+            />
+          )}
+
+          {step === 5 && !verifyBuilder.isPending && builderPass && !showTierCeremony && (
+            <motion.div key="s5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 lg:flex-row lg:items-start">
+              <div className="w-full max-w-[720px]">
                 <BuilderPassCard
                   ref={cardRef}
                   data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username, discordDiscriminator: profile?.connections.discord.discriminator }}
-                  className="max-w-[520px] md:max-w-[420px]"
+                  className="max-w-[720px]"
                 />
                 <BuilderPassRank data={builderPass} />
               </div>
@@ -303,7 +346,7 @@ export default function ClaimBuilderPage() {
           {step === 6 && builderPass && builderPass.claimStatus !== "minted" && (
             <motion.div key="s6" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 text-center">
               <motion.div
-                className="w-full max-w-[520px]"
+                className="w-full max-w-[720px]"
                 animate={revealState === "revealing" && !reduceMotion ? { scale: [0.985, 1.025, 1], rotateY: [0, -5, 0], filter: ["brightness(.65)", "brightness(1.25)", "brightness(1)"] } : undefined}
                 transition={{ duration: 0.9, ease: "easeOut" }}
               >
@@ -311,7 +354,7 @@ export default function ClaimBuilderPage() {
                   ref={cardRef}
                   data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username, discordDiscriminator: profile?.connections.discord.discriminator }}
                   concealed={revealState === "ready" || revealState === "revealing"}
-                  className="max-w-[520px]"
+                  className="max-w-[720px]"
                 />
                 <BuilderPassRank data={builderPass} concealed={revealState === "ready" || revealState === "revealing"} />
               </motion.div>
@@ -325,8 +368,9 @@ export default function ClaimBuilderPage() {
                 <Button variant="outline" size="lg" className="h-12 w-full max-w-xs" onClick={skipReveal}><FastForward className="mr-2 h-4 w-4" /> Skip reveal</Button>
               ) : (
                 <div className="w-full max-w-xl space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-3">
                     <Button variant="outline" size="lg" className="h-12" onClick={handleDownload}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                    <Button variant="outline" size="lg" className="h-12" disabled={isSharing} onClick={() => void handleShare()}><SiX className="mr-2 h-4 w-4" /> {isSharing ? "Opening X…" : "Share on X"}</Button>
                     <Button size="lg" className="h-12" disabled={supply?.remainingClaims === 0} onClick={() => setMintOpen(true)}>
                       {supply?.remainingClaims === 0 ? "Wave 1 full" : "Mint Onchain"} <ExternalLink className="ml-2 h-4 w-4" />
                     </Button>
@@ -340,12 +384,12 @@ export default function ClaimBuilderPage() {
           )}
 
           {builderPass?.claimStatus === "minted" && (
-            <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-10 md:flex-row md:items-start">
-              <div className="w-full max-w-[520px] md:max-w-[420px]">
+            <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-10 lg:flex-row lg:items-start">
+              <div className="w-full max-w-[720px]">
                 <BuilderPassCard
                   ref={cardRef}
                   data={{ ...builderPass, discordAvatarUrl: profile?.avatarUrl, discordUsername: profile?.connections.discord.username, discordDiscriminator: profile?.connections.discord.discriminator }}
-                  className="max-w-[520px] md:max-w-[420px]"
+                  className="max-w-[720px]"
                 />
                 <BuilderPassRank data={builderPass} />
               </div>
@@ -369,13 +413,6 @@ export default function ClaimBuilderPage() {
           )}
         </AnimatePresence>
       </div>
-
-      <ArcWrapped
-        usdcSpent={wrappedStats.usdcSpent ?? null}
-        eurcSpent={wrappedStats.eurcSpent ?? null}
-        firstTransactionAt={wrappedStats.firstTransactionAt ?? null}
-        reduceMotion={reduceMotion}
-      />
 
       <section className="mt-14 w-full max-w-5xl rounded-3xl border bg-card p-4 shadow-sm sm:p-6" aria-labelledby="builder-evidence-title">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -492,38 +529,34 @@ function IdentityProviderCard({
 
 const WRAPPED_NUMERAL_GRADIENT = "bg-gradient-to-br from-[#ffe3b3] via-[#ff9e64] to-[#ffb8e0] bg-clip-text text-transparent";
 
-function formatTokenAmount(value: string): string {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value;
-}
-
 function ArcWrapped({
-  usdcSpent,
-  eurcSpent,
   firstTransactionAt,
+  qualifyingTransactions,
+  activityScore,
+  tierName,
   reduceMotion,
 }: {
-  usdcSpent: string | null;
-  eurcSpent: string | null;
   firstTransactionAt: string | null;
+  qualifyingTransactions: number | null;
+  activityScore: number | null;
+  tierName: string | null;
   reduceMotion: boolean | null;
 }) {
   const stats: Array<{ label: string; value: string; sub: string }> = [
-    ...(usdcSpent !== null ? [{ label: "USDC spent", value: `$${formatTokenAmount(usdcSpent)}`, sub: "Across your verified wallets on Arc" }] : []),
-    ...(eurcSpent !== null ? [{ label: "EURC spent", value: `€${formatTokenAmount(eurcSpent)}`, sub: "Across your verified wallets on Arc" }] : []),
-    ...(firstTransactionAt !== null ? [{ label: "First Arc transaction", value: new Date(firstTransactionAt).getFullYear().toString(), sub: `You started ${formatDate(firstTransactionAt)}` }] : []),
+    { label: "First Arc transaction", value: firstTransactionAt ? new Date(firstTransactionAt).getFullYear().toString() : "—", sub: firstTransactionAt ? `You started ${formatDate(firstTransactionAt)}` : "No dated transaction recorded yet" },
+    { label: "Qualifying transactions", value: qualifyingTransactions?.toLocaleString() ?? "—", sub: "Verified across your Arc wallets" },
+    { label: "Activity score", value: activityScore === null ? "—" : `${activityScore}/100`, sub: "Frequency, active days and recency" },
+    { label: "Builder tier", value: tierName ?? "Pending", sub: "Your current verified tier" },
   ];
 
-  if (stats.length === 0) return null;
-
   return (
-    <section className="mt-10 w-full max-w-5xl overflow-hidden rounded-2xl border border-[#4a3f8f]/40 bg-[linear-gradient(150deg,#221a4f,#0d0b26_70%)] p-4 text-white sm:p-5" aria-labelledby="arc-wrapped-title">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="shrink-0 sm:w-40">
+    <section className="w-full max-w-6xl overflow-hidden rounded-2xl border border-[#4a3f8f]/50 bg-[radial-gradient(circle_at_78%_-20%,rgba(87,69,187,.42),transparent_38%),linear-gradient(150deg,#221a4f,#0d0b26_70%)] p-4 text-white shadow-[0_18px_55px_rgba(10,7,35,.24)] sm:p-5" aria-labelledby="arc-wrapped-title">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="shrink-0 lg:w-44">
           <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-[#ffb98a]">Your Arc activity</p>
           <h2 id="arc-wrapped-title" className="mt-1 text-xl font-extrabold uppercase leading-tight">Wrapped</h2>
         </div>
-        <div className="grid flex-1 gap-3 sm:grid-cols-3">
+        <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat, index) => (
             <motion.article
               key={stat.label}
@@ -531,10 +564,10 @@ function ArcWrapped({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: reduceMotion ? 0 : 0.3, delay: reduceMotion ? 0 : index * 0.06 }}
-              className="rounded-xl border border-white/[0.09] bg-white/[0.04] px-3.5 py-3"
+              className="min-w-0 rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3"
             >
               <p className="font-mono text-[8px] font-semibold uppercase tracking-[0.14em] text-white/50">{stat.label}</p>
-              <p className={`mt-1 text-2xl font-extrabold leading-none sm:text-3xl ${WRAPPED_NUMERAL_GRADIENT}`}>{stat.value}</p>
+              <p className={`mt-1 truncate text-2xl font-extrabold leading-none sm:text-3xl ${WRAPPED_NUMERAL_GRADIENT}`}>{stat.value}</p>
               <p className="mt-1 text-[10px] leading-4 text-white/45">{stat.sub}</p>
             </motion.article>
           ))}

@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useRoute, Link } from "wouter";
-import { Download, ExternalLink, ArrowLeft, Hash, Globe, Wallet, Calendar, Share2 } from "lucide-react";
-import { useGetFounderPass, useGetBuilderPass, getGetFounderPassQueryKey, getGetBuilderPassQueryKey } from "@workspace/api-client-react";
+import { Download, ExternalLink, ArrowLeft, ArrowRight, Hash, Globe, Wallet, Calendar, Share2, Sparkles } from "lucide-react";
+import { useGetFounderPass, useGetBuilderPass, useGetBuilderSupply, getGetFounderPassQueryKey, getGetBuilderPassQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +23,7 @@ export default function PassDetailPage() {
 
   const founderQuery = useGetFounderPass(passId, { query: { enabled: type === "founder" && !!passId, queryKey: getGetFounderPassQueryKey(passId) } });
   const builderQuery = useGetBuilderPass(passId, { query: { enabled: type === "builder" && !!passId, queryKey: getGetBuilderPassQueryKey(passId) } });
+  const { data: builderSupply } = useGetBuilderSupply();
 
   const isLoading = type === "founder" ? founderQuery.isLoading : builderQuery.isLoading;
   const error = type === "founder" ? founderQuery.error : builderQuery.error;
@@ -48,13 +49,13 @@ export default function PassDetailPage() {
   const downloadFilename = `arc-pass-${type}.png`;
 
   return (
-    <div className="mx-auto w-full max-w-6xl p-4 pb-24 pt-10 sm:p-6 sm:pt-12">
+    <div className="mx-auto w-full max-w-7xl p-4 pb-24 pt-10 sm:p-6 sm:pt-12">
       <Button variant="ghost" onClick={() => window.history.back()} className="-ml-4 mb-8 text-muted-foreground">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back
       </Button>
 
       <div className="flex flex-col items-start gap-12 lg:flex-row">
-        <div className="mx-auto w-full max-w-xl lg:sticky lg:top-24 lg:mx-0">
+        <div className="mx-auto w-full max-w-[720px] lg:sticky lg:top-24 lg:mx-0">
           {type === "founder" && founderPass && <FounderPassCard ref={cardRef} data={founderPass} className="w-full" />}
           {type === "builder" && builderPass && (
             <>
@@ -89,6 +90,20 @@ export default function PassDetailPage() {
                     <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" /> Mint Onchain to share on X
                   </Link>
                 </Button>
+              )}
+              {type === "founder" && founderPass && (
+                <div className="col-span-2 mt-1 rounded-2xl border border-primary/20 bg-primary/[0.05] p-3">
+                  <Button className="h-12 w-full" asChild>
+                    <Link href="/claim/builder">
+                      <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" /> Claim your exclusive Builder Pass <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    {builderSupply
+                      ? `${builderSupply.remainingClaims.toLocaleString()} of ${builderSupply.phaseClaimLimit.toLocaleString()} Wave 1 onchain mint slots remain.`
+                      : "Checking the remaining Wave 1 allocation…"}
+                  </p>
+                </div>
               )}
             </div>
           )}

@@ -65,21 +65,21 @@ interface BuilderTierTheme {
 }
 
 const BUILDER_TIER_THEMES: Record<BuilderTierKey, BuilderTierTheme> = {
-  bronze: { accent: "#9b704f", accentStrong: "#d5b08f", cardFrom: "#28231f", cardTo: "#171616", border: "rgba(155,112,79,.48)", sheen: "rgba(155,112,79,.08)", panel: "rgba(108,75,51,.16)", emblemUrl: "/tiers/bronze.png" },
-  silver: { accent: "#8995a1", accentStrong: "#d0d7de", cardFrom: "#24282c", cardTo: "#161719", border: "rgba(137,149,161,.46)", sheen: "rgba(160,172,184,.07)", panel: "rgba(105,115,125,.15)", emblemUrl: "/tiers/silver.png" },
-  gold: { accent: "#ad873e", accentStrong: "#d8bf7a", cardFrom: "#2b271d", cardTo: "#181714", border: "rgba(173,135,62,.52)", sheen: "rgba(187,151,76,.09)", panel: "rgba(119,91,39,.16)", emblemUrl: "/tiers/gold.png" },
-  platinum: { accent: "#6d8989", accentStrong: "#bed0ce", cardFrom: "#202929", cardTo: "#151919", border: "rgba(109,137,137,.5)", sheen: "rgba(126,153,151,.08)", panel: "rgba(63,93,92,.16)", emblemUrl: "/tiers/platinum.png" },
-  diamond: { accent: "#74819d", accentStrong: "#c5cddd", cardFrom: "#222733", cardTo: "#15171c", border: "rgba(116,129,157,.52)", sheen: "rgba(126,140,169,.08)", panel: "rgba(68,79,103,.16)", emblemUrl: "/tiers/diamond.png" },
+  bronze: { accent: "#d18a56", accentStrong: "#ffd0a9", cardFrom: "#5a3324", cardTo: "#241512", border: "rgba(209,138,86,.68)", sheen: "rgba(255,174,112,.22)", panel: "rgba(77,37,24,.44)", emblemUrl: "/tiers/bronze.png" },
+  silver: { accent: "#b6c5d8", accentStrong: "#f0f5fb", cardFrom: "#536273", cardTo: "#222b36", border: "rgba(182,197,216,.68)", sheen: "rgba(218,232,248,.24)", panel: "rgba(35,47,60,.42)", emblemUrl: "/tiers/silver.png" },
+  gold: { accent: "#f0bd4e", accentStrong: "#ffe2a1", cardFrom: "#624b1c", cardTo: "#291f0c", border: "rgba(240,189,78,.7)", sheen: "rgba(255,207,103,.24)", panel: "rgba(69,48,12,.46)", emblemUrl: "/tiers/gold.png" },
+  platinum: { accent: "#7de0dc", accentStrong: "#d1fffc", cardFrom: "#23615e", cardTo: "#112c2d", border: "rgba(125,224,220,.7)", sheen: "rgba(139,245,239,.22)", panel: "rgba(17,66,65,.43)", emblemUrl: "/tiers/platinum.png" },
+  diamond: { accent: "#9eb4ff", accentStrong: "#e1e8ff", cardFrom: "#3155a0", cardTo: "#14214a", border: "rgba(158,180,255,.72)", sheen: "rgba(155,187,255,.26)", panel: "rgba(23,48,103,.43)", emblemUrl: "/tiers/diamond.png" },
 };
 
 const DEFAULT_BUILDER_TIER_THEME: BuilderTierTheme = {
-  accent: "#778391",
-  accentStrong: "#d0d5db",
-  cardFrom: "#24282d",
-  cardTo: "#15171a",
-  border: "rgba(119,131,145,.46)",
-  sheen: "rgba(145,155,166,.07)",
-  panel: "rgba(84,94,106,.15)",
+  accent: "#b6c5d8",
+  accentStrong: "#f0f5fb",
+  cardFrom: "#536273",
+  cardTo: "#222b36",
+  border: "rgba(182,197,216,.68)",
+  sheen: "rgba(218,232,248,.24)",
+  panel: "rgba(35,47,60,.42)",
   emblemUrl: "/tiers/silver.png",
 };
 
@@ -126,7 +126,7 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
   const isMinted = data.claimStatus === "minted";
   const tierTheme = getBuilderTierTheme(data.currentTier);
   const tier = data.currentTier ? { ...data.currentTier, accentColor: tierTheme.accent, emblemUrl: data.currentTier.emblemUrl ?? tierTheme.emblemUrl } : null;
-  const communityStatus = data.discordCommunityMember === true ? "Discord community member" : data.discordCommunityMember === false ? "Not in Arc Discord" : "Discord membership not checked";
+  const communityStatus = data.discordCommunityMember === true ? "Arc Discord member" : data.discordCommunityMember === false ? "Arc Discord not joined yet" : "Arc Discord membership not checked";
   const communityTone = data.discordCommunityMember === true ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-200" : data.discordCommunityMember === false ? "border-white/10 bg-black/15 text-white/45" : "border-amber-200/20 bg-amber-200/10 text-amber-100/70";
 
   return (
@@ -135,27 +135,27 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
       whileHover={interactive && !prefersReducedMotion ? { y: -5, rotateX: 1.5, rotateY: -1.5 } : undefined}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
       className={cn(
-        "pass-material-builder group relative flex min-h-[420px] w-full min-w-0 max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-[18px] border shadow-[0_22px_54px_rgba(0,0,0,.4)] sm:max-w-[600px] sm:rounded-[22px] sm:shadow-[0_28px_70px_rgba(0,0,0,.42)]",
+        "pass-material-builder group relative flex min-h-[430px] w-full min-w-0 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[18px] border shadow-[0_22px_54px_rgba(0,0,0,.4)] sm:min-h-[400px] sm:max-w-[720px] sm:rounded-[22px] sm:shadow-[0_28px_70px_rgba(0,0,0,.42)]",
         dimmed && "grayscale-[35%] opacity-70",
         className,
       )}
       style={{
-        width: "min(100%, calc(100vw - 3rem))",
+        width: "min(100%, calc(100vw - 1.5rem))",
         ["--tier-accent" as string]: tierTheme.accent,
-        backgroundImage: `linear-gradient(145deg, ${tierTheme.cardFrom}, ${tierTheme.cardTo})`,
+        backgroundImage: `radial-gradient(circle at 82% 4%, ${tierTheme.sheen}, transparent 34%), linear-gradient(145deg, ${tierTheme.cardFrom}, ${tierTheme.cardTo})`,
         borderColor: tierTheme.border,
         boxShadow: "0 28px 70px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.035)",
       } as React.CSSProperties}
     >
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: `linear-gradient(180deg, ${tierTheme.sheen}, transparent 34%), linear-gradient(118deg, transparent 28%, rgba(255,255,255,.035) 50%, transparent 67%)` }}
+        style={{ background: `linear-gradient(180deg, ${tierTheme.sheen}, transparent 36%), linear-gradient(118deg, transparent 28%, rgba(255,255,255,.055) 50%, transparent 67%)` }}
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-50" style={{ background: `linear-gradient(to right, transparent, ${tierTheme.accentStrong}, transparent)` }} />
       <div className="pointer-events-none absolute -right-16 -top-20 size-52 rounded-full border border-white/[0.055]" />
       <div className="pointer-events-none absolute -right-8 -top-12 size-36 rounded-full border border-white/[0.04]" />
 
-      <div className="relative z-10 flex h-full flex-1 flex-col p-4">
+      <div className="relative z-10 flex h-full flex-1 flex-col p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <img src="/brand/arc-pass-logo.webp" alt="Arc Pass by Webcoin Labs" className="h-7 w-auto max-w-[138px] object-contain object-left sm:max-w-[160px]" />
           <div className="flex items-start gap-2">
@@ -169,19 +169,23 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
               {!dimmed && <span className="inline-flex items-center gap-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-white/55 sm:text-[9px]"><ShieldCheck className="size-3" style={{ color: tierTheme.accentStrong }} aria-hidden="true" /> Work verified</span>}
             </div>
             <div
-              className="grid h-9 min-w-12 grid-cols-[auto_1fr] items-end gap-x-1 rounded-lg border px-2 py-1 shadow-[inset_0_1px_rgba(255,255,255,.08)]"
-              style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 55%, transparent)`, backgroundColor: `color-mix(in srgb, ${tierTheme.accent} 19%, transparent)` }}
+              className="flex h-9 items-center gap-1.5"
               aria-label={typeof data.builderLevel === "number" ? `Level ${data.builderLevel}` : "Level pending"}
             >
-              <span className="pb-0.5 font-mono text-[6px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:text-[7px]">LVL</span>
-              <span className="text-lg font-semibold leading-none tabular-nums sm:text-xl" style={{ color: tierTheme.accentStrong }}>{data.builderLevel ?? "--"}</span>
+              <span
+                className="grid h-7 place-items-center rounded-md border px-2 font-mono text-[8px] font-bold uppercase tracking-[0.12em] shadow-[inset_0_1px_rgba(255,255,255,.08)]"
+                style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 62%, transparent)`, backgroundColor: `color-mix(in srgb, ${tierTheme.accent} 24%, rgba(3,7,18,.72))`, color: tierTheme.accentStrong }}
+              >
+                LVL
+              </span>
+              <span className="text-2xl font-bold leading-none tabular-nums sm:text-[28px]" style={{ color: tierTheme.accentStrong }}>{data.builderLevel ?? "--"}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-3 grid grid-cols-[minmax(0,1.08fr)_minmax(112px,.92fr)] items-center gap-3 sm:grid-cols-[1.2fr_.8fr] sm:gap-4">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/15 bg-white/[0.07] shadow-[inset_0_1px_rgba(255,255,255,.08)] sm:size-14 sm:rounded-2xl">
+            <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border border-white/20 bg-white/[0.07] shadow-[inset_0_1px_rgba(255,255,255,.1)] sm:size-14">
               {data.discordAvatarUrl ? <img src={data.discordAvatarUrl} alt="" className="size-full object-cover" /> : <UserRound className="size-6 text-white/45" aria-hidden="true" />}
             </div>
             <div className="min-w-0">
@@ -226,17 +230,7 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
           <div><p className="text-white/35">ONCHAIN</p><p className="mt-1 text-white/80">{isMinted ? "Recorded" : "Pending"}</p></div>
         </div>
 
-        <div className={cn("mt-2 min-w-0 rounded-xl border px-2.5 py-1.5 sm:px-3", communityTone)}>
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            <span className="inline-flex min-w-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.1em]">
-              <MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{communityStatus}</span>
-            </span>
-            {data.discordCommunityJoinedAt && <span className="shrink-0 text-[9px] text-white/55">Since {formatDate(data.discordCommunityJoinedAt)}</span>}
-          </div>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/15 px-3 py-1.5 sm:px-4 sm:py-2">
+        <div className="mt-auto flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/15 px-3 py-1.5 sm:px-4 sm:py-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="size-1.5 shrink-0 rounded-full bg-[#79a68d]" aria-hidden="true" />
             <div className="min-w-0">
@@ -247,6 +241,16 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
           <div className="shrink-0 text-right">
             <p className="font-mono text-[6px] uppercase tracking-[0.13em] text-white/32 sm:text-[7px]">Soulbound</p>
             <p className="mt-0.5 font-mono text-[7px] font-semibold uppercase tracking-[0.09em] text-white/72 sm:text-[9px]">Non-transferable</p>
+          </div>
+        </div>
+
+        <div className={cn("mt-1.5 min-w-0 rounded-xl border px-2.5 py-1.5 sm:px-3", communityTone)}>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-[9px] font-semibold tracking-[0.04em]">
+              <MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{communityStatus}</span>
+            </span>
+            {data.discordCommunityJoinedAt && <span className="shrink-0 text-[9px] text-white/55">Since {formatDate(data.discordCommunityJoinedAt)}</span>}
           </div>
         </div>
 

@@ -55,10 +55,26 @@ function OAuthErrorNotice() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const authError = url.searchParams.get('authError');
-    if (!authError) return;
-    toast.error(authErrorMessages[authError] ?? 'Authentication could not be completed. Please try again.');
-    url.searchParams.delete('authError');
-    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    const shareError = url.searchParams.get('shareError');
+    const shareSuccess = url.searchParams.get('shareSuccess');
+    let handled = false;
+
+    if (authError) {
+      toast.error(authErrorMessages[authError] ?? 'Authentication could not be completed. Please try again.');
+      url.searchParams.delete('authError');
+      handled = true;
+    }
+    if (shareError) {
+      toast.error('X could not publish the pass image. Nothing was posted; download the pass and attach it to the prefilled X post instead.');
+      url.searchParams.delete('shareError');
+      handled = true;
+    }
+    if (shareSuccess) {
+      toast.success('Your verified Arc Pass was shared on X.');
+      url.searchParams.delete('shareSuccess');
+      handled = true;
+    }
+    if (handled) window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }, []);
   return null;
 }
