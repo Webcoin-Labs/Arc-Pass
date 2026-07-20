@@ -13,20 +13,19 @@ export function EligibilityChecker({
   className,
   variant = "default",
 }: {
-  onSubmit: (params: { identifier: string; platform: EligibilityQueryPlatform; discriminator?: string }) => void;
+  onSubmit: (params: { identifier: string; platform: EligibilityQueryPlatform }) => void;
   isPending: boolean;
   className?: string;
   variant?: "default" | "immersive";
 }) {
   const [platform, setPlatform] = useState<EligibilityQueryPlatform>("x");
   const [identifier, setIdentifier] = useState("");
-  const [discriminator, setDiscriminator] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = identifier.trim().replace(/^@/, "");
     if (!trimmed) return;
-    onSubmit({ identifier: trimmed, platform, ...(platform === "discord" && discriminator.trim() ? { discriminator: discriminator.trim().replace(/^#+/, "") } : {}) });
+    onSubmit({ identifier: trimmed, platform });
   };
 
   const immersive = variant === "immersive";
@@ -71,26 +70,6 @@ export function EligibilityChecker({
           )}
           autoComplete="off"
         />
-        {platform === "discord" && (
-          <div className={cn(
-            "flex h-12 shrink-0 items-center rounded-2xl border px-3 sm:h-14 sm:w-[132px] sm:rounded-full",
-            immersive ? "border-white/10 bg-white/[0.04] text-white/45" : "border-black bg-white text-black/50",
-          )}>
-            {discriminator && <span aria-hidden="true">#</span>}
-            <label className="sr-only" htmlFor="eligibility-discriminator">Legacy Discord discriminator (optional)</label>
-            <input
-              id="eligibility-discriminator"
-              inputMode="numeric"
-              maxLength={4}
-              pattern="[0-9]{4}"
-              placeholder="Optional"
-              value={discriminator}
-              onChange={(event) => setDiscriminator(event.target.value.replace(/\D/g, "").slice(0, 4))}
-              className="min-w-0 flex-1 bg-transparent px-1.5 text-base text-inherit outline-none placeholder:text-inherit placeholder:opacity-55"
-              autoComplete="off"
-            />
-          </div>
-        )}
         <Button type="submit" size="lg" className={cn(
           "h-12 shrink-0 px-6",
           immersive ? "cursor-pointer rounded-2xl bg-[#4f63ff] text-white hover:bg-[#4055ef] sm:h-14 sm:rounded-full sm:px-9" : "rounded-none bg-black text-white hover:bg-black/80",
