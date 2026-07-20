@@ -49,7 +49,10 @@ export default defineConfig({
         'attached_assets',
       ),
     },
-    dedupe: ['react', 'react-dom'],
+    // Shared workspace API hooks must use the exact same React Query context
+    // as the app provider, even when backend-only packages use another React
+    // peer version during a clean production install.
+    dedupe: ['react', 'react-dom', '@tanstack/react-query'],
   },
   root: path.resolve(import.meta.dirname),
   build: {
