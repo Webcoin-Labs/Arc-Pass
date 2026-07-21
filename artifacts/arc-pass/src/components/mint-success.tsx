@@ -2,11 +2,12 @@ import { CheckCircle2, Download, ExternalLink, Share2 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { abbreviateAddress, formatDate, formatNetworkLabel, explorerTxUrl } from "@/lib/format";
+import { abbreviateAddress, formatDate, formatNetworkLabel, explorerTxUrl, explorerTokenUrl } from "@/lib/format";
 import { NetworkMark } from "@/components/network-mark";
 
 export function MintSuccess({
   tokenId,
+  contractAddress,
   destinationWallet,
   network,
   transactionHash,
@@ -17,6 +18,7 @@ export function MintSuccess({
   className,
 }: {
   tokenId?: string | null;
+  contractAddress?: string | null;
   destinationWallet?: string | null;
   network?: string | null;
   transactionHash?: string | null;
@@ -27,6 +29,7 @@ export function MintSuccess({
   className?: string;
 }) {
   const txUrl = explorerTxUrl(network, transactionHash);
+  const tokenUrl = explorerTokenUrl(network, contractAddress, tokenId);
   const reduceMotion = useReducedMotion();
   const celebrationKey = `arc-pass-mint-celebrated:${transactionHash ?? tokenId ?? "confirmed"}`;
   const [celebrate] = useState(() => {
@@ -92,12 +95,23 @@ export function MintSuccess({
           <Share2 className="mr-2 h-4 w-4" aria-hidden="true" /> Share on X
         </Button>
       )}
-      {txUrl && (
-        <Button variant="ghost" className="mt-2 w-full" asChild>
-          <a href={txUrl} target="_blank" rel="noreferrer">
-            <ExternalLink className="mr-2 h-4 w-4" /> View Onchain
-          </a>
-        </Button>
+      {(tokenUrl || txUrl) && (
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          {txUrl && (
+            <Button variant="ghost" className={tokenUrl ? "" : "col-span-2"} asChild>
+              <a href={txUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" /> See tx
+              </a>
+            </Button>
+          )}
+          {tokenUrl && (
+            <Button variant="ghost" className={txUrl ? "" : "col-span-2"} asChild>
+              <a href={tokenUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" /> View onchain NFT
+              </a>
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

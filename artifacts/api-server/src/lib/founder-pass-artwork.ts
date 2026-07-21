@@ -78,7 +78,7 @@ async function readPublicAsset(relativePath: string): Promise<Buffer> {
   throw new Error(`Required Founder artwork asset is missing: ${relativePath}`);
 }
 
-async function publicAssetDataUrl(relativePath: string, width: number): Promise<string> {
+export async function publicAssetDataUrl(relativePath: string, width: number): Promise<string> {
   const source = await readPublicAsset(relativePath);
   const png = await sharp(source, { density: 288, failOn: "error" })
     .resize({ width, fit: "inside", withoutEnlargement: false })
@@ -357,7 +357,7 @@ async function remoteImageBuffer(value: string): Promise<Buffer | null> {
   }
 }
 
-async function artworkImageDataUrl(value: string | null | undefined): Promise<string | null> {
+export async function artworkImageDataUrl(value: string | null | undefined): Promise<string | null> {
   if (!value) return null;
   const normalized = normalizeUploadedImageUrl(value);
   const source = normalized?.startsWith("/uploads/")
@@ -377,7 +377,7 @@ async function artworkImageDataUrl(value: string | null | undefined): Promise<st
   }
 }
 
-function absoluteArtworkUrl(value: string, appUrl: string): string {
+export function absoluteArtworkUrl(value: string, appUrl: string): string {
   if (/^https:\/\//i.test(value)) return value;
   return new URL(value, `${appUrl.replace(/\/+$/, "")}/`).toString();
 }

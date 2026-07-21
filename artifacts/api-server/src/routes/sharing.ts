@@ -8,7 +8,41 @@ import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { createPkcePair, signOAuthState } from "../lib/oauth/provider";
 import { buildXAuthorizeUrl, isXOAuthConfigured } from "../lib/oauth/x";
 import { ensureFounderPassArtwork, type FounderPassArtworkData } from "../lib/founder-pass-artwork";
+import { ensureBuilderPassArtwork, type BuilderPassArtworkData } from "../lib/builder-pass-artwork";
+import { buildBuilderPassDTO } from "../lib/serializers";
 import { readStoredImage } from "../lib/uploads";
+
+// The share/metadata endpoints render either credential, so the artwork
+// reference is tagged and resolved through the matching renderer.
+type ArtworkRef =
+  | { type: "founder"; data: FounderPassArtworkData }
+  | { type: "builder"; data: BuilderPassArtworkData };
+
+function resolveArtworkUrl(artwork: ArtworkRef, appUrl: string): Promise<string> {
+  return artwork.type === "founder"
+    ? ensureFounderPassArtwork(artwork.data, appUrl)
+    : ensureBuilderPassArtwork(artwork.data, appUrl);
+}
+
+function builderArtworkData(dto: Awaited<ReturnType<typeof buildBuilderPassDTO>>): BuilderPassArtworkData {
+  return {
+    id: dto.id,
+    displayName: dto.displayName,
+    discordUsername: dto.discordUsername,
+    discordAvatarUrl: dto.discordAvatarUrl,
+    builderRole: dto.builderRole,
+    tierName: dto.currentTier?.name ?? null,
+    builderLevel: dto.builderLevel,
+    validContractCount: dto.validContractCount,
+    githubContributionCount: dto.githubContributionCount,
+    activityScore: dto.activityScore,
+    qualifyingTransactionCount: dto.qualifyingTransactionCount,
+    passNumber: dto.passNumber,
+    network: dto.network,
+    initiallyIssuedAt: dto.initiallyIssuedAt,
+    claimStatus: dto.claimStatus,
+  };
+}
 
 // The final R2 artwork is immutable, but metadata and redirects are generated
 // dynamically and must never retain an older deployment's image URL.
@@ -130,7 +164,7 @@ async function shareRecord(type: string, id: number) {
       title: "Founder Pass",
       holder: pass.displayName || "Verified founder",
       detail: pass.claimStatus === "minted" ? "Minted on Arc · Webcoin Labs" : "Claimed to Arc Pass inventory · Webcoin Labs",
-      artwork: founderArtworkData(pass, tier?.name ?? null),
+      artwork: { type: "founder", data: founderArtworkData(pass, tier?.name ?? null) } as ArtworkRef,
     };
   }
   if (type === "builder") {
@@ -138,7 +172,13 @@ async function shareRecord(type: string, id: number) {
     if (!pass || pass.claimStatus === "locked") return null;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pass.userId));
     const [tier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
-    return { title: "Onchain Builder Pass", holder: user?.displayName || "Verified builder", detail: pass.claimStatus === "minted" ? `${tier?.name || "Verified"} tier · minted on Arc` : `${tier?.name || "Verified"} tier · claimed to inventory`, artwork: null };
+    const dto = await buildBuilderPassDTO(pass, false);
+    return {
+      title: "Onchain Builder Pass",
+      holder: user?.displayName || "Verified builder",
+      detail: pass.claimStatus === "minted" ? `${tier?.name || "Verified"} tier · minted on Arc` : `${tier?.name || "Verified"} tier · claimed to inventory`,
+      artwork: { type: "builder", data: builderArtworkData(dto) } as ArtworkRef,
+    };
   }
   return null;
 }
@@ -160,7 +200,7 @@ async function metadataRecord(type: string, id: number) {
           { trait_type: "Transferable", value: "No" },
         ],
       },
-      artwork: founderArtworkData(pass, tier?.name ?? null),
+      artwork: { type: "founder", data: founderArtworkData(pass, tier?.name ?? null) } as ArtworkRef,
     };
   }
 
@@ -169,6 +209,7 @@ async function metadataRecord(type: string, id: number) {
     if (!pass || pass.claimStatus !== "minted") return null;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pass.userId));
     const [tier] = pass.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, pass.currentTierId)) : [null];
+    const dto = await buildBuilderPassDTO(pass, false);
     return {
       metadata: {
         name: `${user?.displayName || "Verified builder"} · Arc Onchain Builder Pass`,
@@ -180,7 +221,7 @@ async function metadataRecord(type: string, id: number) {
           { trait_type: "Transferable", value: "No" },
         ],
       },
-      artwork: null,
+      artwork: { type: "builder", data: builderArtworkData(dto) } as ArtworkRef,
     };
   }
 
@@ -197,7 +238,7 @@ router.get("/metadata/:type/:id", async (req, res): Promise<void> => {
 
   const base = configuration.appUrl.replace(/\/$/, "");
   const artworkUrl = record.artwork
-    ? await ensureFounderPassArtwork(record.artwork, base)
+    ? await resolveArtworkUrl(record.artwork, base)
     : `${base}/api/share/${type}/${id}/image`;
   res
     .type("json")
@@ -215,7 +256,7 @@ router.get("/share/:type/:id/image", async (req, res): Promise<void> => {
   const record = Number.isSafeInteger(id) ? await shareRecord(type, id) : null;
   if (!record) { res.sendStatus(404); return; }
   if (record.artwork) {
-    const artworkUrl = await ensureFounderPassArtwork(record.artwork, configuration.appUrl);
+    const artworkUrl = await resolveArtworkUrl(record.artwork, configuration.appUrl);
     if (req.query.download === "1") {
       const image = await fetchArtworkForDownload(artworkUrl);
       if (!image) { res.status(502).json({ error: "Pass artwork is temporarily unavailable. Please try again." }); return; }
@@ -242,7 +283,7 @@ router.get("/share/:type/:id", async (req, res): Promise<void> => {
   if (!record) { res.sendStatus(404); return; }
   const base = configuration.appUrl.replace(/\/$/, "");
   const canonical = `${base}/api/share/${type}/${id}`;
-  const image = record.artwork ? await ensureFounderPassArtwork(record.artwork, base) : `${canonical}/image`;
+  const image = record.artwork ? await resolveArtworkUrl(record.artwork, base) : `${canonical}/image`;
   const target = `${base}/pass/${type}/${id}`;
   const title = `${record.holder} · ${record.title}`;
   res.type("html").set("Cache-Control", dynamicArtworkCacheControl).send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><meta property="og:type" content="website"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(record.detail)}"><meta property="og:url" content="${escapeHtml(canonical)}"><meta property="og:image" content="${escapeHtml(image)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:image" content="${escapeHtml(image)}"><meta http-equiv="refresh" content="0;url=${escapeHtml(target)}"></head><body><p><a href="${escapeHtml(target)}">View this Arc Pass</a></p></body></html>`);

@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { NetworkMark } from "@/components/network-mark";
 import { SupplyIndicator } from "@/components/supply-indicator";
 import { downloadNodeAsPng, shareNodeOnX } from "@/lib/export-image";
-import { formatPassNumber, formatNetworkLabel, formatDate, abbreviateAddress, explorerTxUrl } from "@/lib/format";
+import { formatPassNumber, formatNetworkLabel, formatDate, abbreviateAddress, explorerTxUrl, explorerTokenUrl } from "@/lib/format";
 import { founderOverallStatusMeta, builderOverallStatusMeta } from "@/lib/pass-status";
 
 export default function PassDetailPage() {
@@ -77,9 +77,20 @@ export default function PassDetailPage() {
                 const pass = founderPass ?? builderPass!;
                 const txUrl = explorerTxUrl(pass.network, pass.transactionHash);
                 return txUrl ? (
-                  <Button className="flex-1" asChild>
+                  <Button variant="secondary" className="flex-1" asChild>
                     <a href={txUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink className="mr-2 h-4 w-4" /> Onchain
+                      <ExternalLink className="mr-2 h-4 w-4" /> See tx
+                    </a>
+                  </Button>
+                ) : null;
+              })()}
+              {(() => {
+                const pass = founderPass ?? builderPass!;
+                const tokenUrl = explorerTokenUrl(pass.network, pass.contractAddress, pass.tokenId);
+                return tokenUrl ? (
+                  <Button className="col-span-2" asChild>
+                    <a href={tokenUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" /> View onchain NFT
                     </a>
                   </Button>
                 ) : null;

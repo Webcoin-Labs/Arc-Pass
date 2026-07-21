@@ -138,6 +138,7 @@ export default function ClaimFounderPage() {
             <div className="w-full max-w-sm flex-1 space-y-3">
               <MintSuccess
                 tokenId={founderPass.tokenId}
+                contractAddress={founderPass.contractAddress}
                 destinationWallet={founderPass.destinationWallet}
                 network={founderPass.network}
                 transactionHash={founderPass.transactionHash}

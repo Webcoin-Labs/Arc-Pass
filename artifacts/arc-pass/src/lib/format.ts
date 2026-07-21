@@ -27,3 +27,13 @@ export function explorerTxUrl(network: string | null | undefined, txHash: string
   if (network === "base") return `https://basescan.org/tx/${txHash}`;
   return `https://testnet.arcscan.app/tx/${txHash}`;
 }
+
+export function explorerTokenUrl(
+  network: string | null | undefined,
+  contractAddress: string | null | undefined,
+  tokenId: string | null | undefined,
+): string | null {
+  if (!contractAddress || !tokenId) return null;
+  if (network === "base") return `https://basescan.org/nft/${contractAddress}/${tokenId}`;
+  return `https://testnet.arcscan.app/token/${contractAddress}/instance/${tokenId}`;
+}

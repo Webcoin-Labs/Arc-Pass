@@ -403,6 +403,7 @@ export default function ClaimBuilderPage() {
               <div className="w-full max-w-sm flex-1 space-y-3">
                 <MintSuccess
                   tokenId={builderPass.tokenId}
+                  contractAddress={builderPass.contractAddress}
                   destinationWallet={builderPass.destinationWallet}
                   network={builderPass.network}
                   transactionHash={builderPass.transactionHash}
