@@ -38,6 +38,10 @@ function oauthErrorUrl(returnTo: string, error: string): string {
   return frontendUrl(appendReturnToQuery(returnTo, "authError", error));
 }
 
+function oauthSuccessUrl(returnTo: string, provider: Provider): string {
+  return frontendUrl(appendReturnToQuery(returnTo, "authSuccess", provider));
+}
+
 type Provider = "x" | "discord" | "github";
 
 function discordMembershipPatch(membership: ArcGuildMembershipSnapshot | undefined) {
@@ -190,7 +194,7 @@ async function mockOAuth(provider: Provider, req: import("express").Request, res
     return;
   }
 
-  res.redirect(frontendUrl(safeReturnTo(req)));
+  res.redirect(oauthSuccessUrl(safeReturnTo(req), provider));
 }
 
 // ---- X ----
@@ -224,7 +228,7 @@ router.get("/auth/dev-test/:provider", async (req, res): Promise<void> => {
       res,
     });
     if (!result.ok) throw new Error(result.error);
-    res.redirect(frontendUrl(safeReturnTo(req)));
+    res.redirect(oauthSuccessUrl(safeReturnTo(req), provider));
   } catch (err) {
     req.log.error({ err, provider }, "Development test sign-in failed");
     res.redirect(frontendUrl("/?authError=test_identity"));
@@ -303,7 +307,7 @@ router.get("/auth/x/callback", async (req, res): Promise<void> => {
       res.redirect(oauthErrorUrl(oauthState.returnTo, result.error));
       return;
     }
-    res.redirect(frontendUrl(oauthState.returnTo));
+    res.redirect(oauthSuccessUrl(oauthState.returnTo, "x"));
   } catch (err) {
     req.log.error({ err }, "X OAuth callback error");
     if (shareDraftId) await db.delete(xShareDraftsTable).where(eq(xShareDraftsTable.id, shareDraftId)).catch(() => undefined);
@@ -374,7 +378,7 @@ router.get("/auth/discord/callback", async (req, res): Promise<void> => {
       res.redirect(oauthErrorUrl(oauthState.returnTo, result.error));
       return;
     }
-    res.redirect(frontendUrl(oauthState.returnTo));
+    res.redirect(oauthSuccessUrl(oauthState.returnTo, "discord"));
   } catch (err) {
     req.log.error({ err }, "Discord OAuth callback error");
     res.redirect(callbackReturnTo ? oauthErrorUrl(callbackReturnTo, "discord") : frontendUrl("/?authError=discord"));
@@ -440,7 +444,7 @@ router.get("/auth/github/callback", async (req, res): Promise<void> => {
       res.redirect(oauthErrorUrl(oauthState.returnTo, result.error));
       return;
     }
-    res.redirect(frontendUrl(oauthState.returnTo));
+    res.redirect(oauthSuccessUrl(oauthState.returnTo, "github"));
   } catch (err) {
     req.log.error({ err }, "GitHub OAuth callback error");
     const errorCode = getGithubOAuthErrorCode(err) ?? "github";
