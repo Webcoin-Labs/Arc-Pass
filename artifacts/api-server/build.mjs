@@ -31,6 +31,17 @@ async function buildAll() {
     external: [
       "*.node",
       "sharp",
+      // React + the email toolchain resolve at runtime from node_modules
+      // rather than bundling. jsx:automatic injects `react/jsx-runtime` for the
+      // bundled email templates, while @react-email/render and resend pull a
+      // web of optional deps (prettier, html-to-text, html5parser, postal-mime,
+      // standardwebhooks…) that esbuild cannot resolve but node loads fine.
+      "react",
+      "react/*",
+      "react-dom",
+      "react-dom/*",
+      "@react-email/*",
+      "resend",
       "better-sqlite3",
       "sqlite3",
       "canvas",
