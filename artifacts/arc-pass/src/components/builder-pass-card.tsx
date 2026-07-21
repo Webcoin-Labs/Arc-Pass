@@ -19,6 +19,8 @@ export interface BuilderPassCardData {
   githubContributionWindowStartedAt?: string | null;
   githubContributionsUpdatedAt?: string | null;
   verifiedWalletCount?: number;
+  arcActivityAvailable?: boolean | null;
+  arcActivityPartial?: boolean | null;
   qualifyingTransactionCount?: number | null;
   validContractCount?: number | null;
   builderLevel?: number | null;
@@ -201,7 +203,7 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
               <div><p className="text-xs font-semibold sm:text-sm" style={{ color: tierTheme.accentStrong }}>{data.currentTier?.name || "Tier pending"}</p><p className="mt-0.5 text-[9px] text-white/45 sm:text-[10px]">Verified contribution</p></div>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[7px] text-white/55 sm:gap-x-2 sm:text-[8px]">
-              <span className="inline-flex items-center gap-1"><Activity className="size-3" aria-hidden="true" />{typeof data.qualifyingTransactionCount === "number" ? `${data.qualifyingTransactionCount} tx` : "Activity pending"}</span>
+              <span className="inline-flex items-center gap-1"><Activity className="size-3" aria-hidden="true" />{data.arcActivityAvailable === false ? "Arc activity unavailable" : typeof data.qualifyingTransactionCount === "number" ? `${data.qualifyingTransactionCount} tx${data.arcActivityPartial ? " captured" : ""}` : "Activity pending"}</span>
             </div>
           </div>
         </div>
@@ -209,7 +211,7 @@ export const BuilderPassCard = React.forwardRef<HTMLDivElement, BuilderPassCardP
         <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:gap-2">
           <div className="rounded-xl border border-white/10 bg-black/15 px-2.5 py-2" style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 22%, transparent)` }}>
             <p className="flex items-center gap-1 text-[7px] font-semibold uppercase tracking-[0.1em] text-white/40 sm:text-[8px]"><Code2 className="size-3" aria-hidden="true" /> Contracts deployed</p>
-            <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">{data.validContractCount ?? "Not checked"}</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">{data.arcActivityAvailable === false ? "Unavailable" : data.validContractCount ?? "Not checked"}</p>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/15 px-2.5 py-2" style={{ borderColor: `color-mix(in srgb, ${tierTheme.accent} 22%, transparent)` }}>
             <p className="flex items-center gap-1 text-[7px] font-semibold uppercase tracking-[0.1em] text-white/40 sm:text-[8px]"><Github className="size-3" aria-hidden="true" /> GitHub contributions</p>

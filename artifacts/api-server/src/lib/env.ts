@@ -97,6 +97,17 @@ export function validateEnvironment(): void {
       console.warn("Custom activity provider URL is invalid and will be unavailable.");
     }
   }
+  if (configured("ENVIO_HYPERSYNC_URL")) {
+    try {
+      if (new URL(process.env.ENVIO_HYPERSYNC_URL!).protocol !== "https:") throw new Error("ENVIO_HYPERSYNC_URL must use HTTPS");
+    } catch (error) {
+      if (isProduction) {
+        if (error instanceof Error && error.message === "ENVIO_HYPERSYNC_URL must use HTTPS") throw error;
+        throw new Error("ENVIO_HYPERSYNC_URL must be a valid HTTPS URL in production");
+      }
+      console.warn("ENVIO_HYPERSYNC_URL is invalid and the Envio fallback will be unavailable.");
+    }
+  }
   warnIncompleteGroup("Cloudflare R2", ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"]);
   if (isProduction) {
     for (const name of ["DATABASE_URL", "SESSION_SECRET", "APP_URL", "OAUTH_STATE_SIGNING_KEY", "MINT_SIGNING_KEY"]) {
@@ -140,6 +151,7 @@ export const configuration = {
   // Builder activity defaults to the public Arcscan Blockscout endpoint. A
   // custom provider may still require EXPLORER_API_KEY at request time.
   activityProviderConfigured: true,
+  envioHyperSyncConfigured: configured("ENVIO_HYPERSYNC_API_TOKEN"),
   cloudflareR2Configured: ["CLOUDFLARE_R2_ENDPOINT", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET", "CLOUDFLARE_R2_PUBLIC_URL"].every(configured),
   emailConfigured: configured("RESEND_API_KEY"),
 };

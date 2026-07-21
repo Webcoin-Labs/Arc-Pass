@@ -21,7 +21,7 @@ import {
 } from "@workspace/api-zod";
 import { getGithubEligibilityFailure, requireAuth, type AuthedRequest } from "../lib/auth";
 import { serializeFounderPass, serializeBuilderTier, buildBuilderPassDTO, getBuilderSupply } from "../lib/serializers";
-import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type Network } from "../lib/chain-adapter";
+import { chainAdapter, checksumAddress, computeIdentityHash, VerificationUnavailableError, type ChainActivityResult, type Network } from "../lib/chain-adapter";
 import { getActiveBuilderTiers, calculateBuilderTier, isUpgrade, REVERIFICATION_COOLDOWN_DAYS } from "../lib/tier-config";
 import { configuration } from "../lib/env";
 import { isDevelopmentTestUser } from "../lib/dev-test-identities";
@@ -321,19 +321,52 @@ router.get("/passes/builder/:id/download-url", async (req, res): Promise<void> =
   res.status(404).json({ error: "No server-rendered asset available yet — use Download Pass on the pass page to export an image client-side." });
 });
 
+const ARC_ACTIVITY_UNAVAILABLE_RISK_FLAG = "arc_activity_unavailable";
+const ARC_ACTIVITY_PARTIAL_RISK_FLAG = "arc_activity_partial";
+
+function unavailableArcActivity(): ChainActivityResult {
+  return {
+    qualifyingTransactionCount: 0,
+    validContractCount: 0,
+    // This value is never presented as an indexed block. The accompanying
+    // risk flag makes the unavailable state explicit in every DTO and UI.
+    lastReviewedBlock: "unavailable",
+    transactionsLast30Days: 0,
+    activeDaysLast30Days: 0,
+  };
+}
+
 async function runBuilderAnalysis(userId: number) {
   const user = (await db.select().from(usersTable).where(eq(usersTable.id, userId)))[0];
   const wallets = await db.select().from(walletsTable).where(and(eq(walletsTable.userId, userId), isNotNull(walletsTable.ownershipVerifiedAt)));
   const walletAddresses = wallets.map((w) => w.address);
 
-  const activity = await chainAdapter.getBuilderOnchainActivity(walletAddresses);
+  let activity: ChainActivityResult;
+  let arcActivityAvailable = true;
+  try {
+    activity = await chainAdapter.getBuilderOnchainActivity(walletAddresses);
+  } catch (error) {
+    if (!(error instanceof VerificationUnavailableError)) throw error;
+    // Arcscan is an independent supporting signal. Never manufacture a
+    // successful zero-activity result, but let authenticated GitHub evidence
+    // continue through the tier policy while the indexer recovers.
+    activity = unavailableArcActivity();
+    arcActivityAvailable = false;
+  }
+  const arcActivityPartial = arcActivityAvailable && activity.activityCoverage === "partial";
   const githubAge = accountAgeDays(user?.githubAccountCreatedAt);
   const qualitative = {
     githubSummary: user?.githubContributionCount == null || githubAge === null
       ? null
       : `${user.githubContributionCount} GitHub contributions in the verified 180-day window; account age ${githubAge} days.`,
-    ecosystemSummary: `${activity.qualifyingTransactionCount} qualifying transactions and ${activity.validContractCount} valid contract deployments were verified.`,
-    riskFlags: [] as string[],
+    ecosystemSummary: !arcActivityAvailable
+      ? "Arc activity could not be verified because the Arcscan indexer is temporarily unavailable. The tier was evaluated from verified GitHub signals only."
+      : arcActivityPartial
+        ? `${activity.qualifyingTransactionCount} qualifying transactions and ${activity.validContractCount} valid contract deployments were captured before the activity provider stopped paginating. The tier uses this captured Arc activity and verified GitHub signals.`
+        : `${activity.qualifyingTransactionCount} qualifying transactions and ${activity.validContractCount} valid contract deployments were verified.`,
+    riskFlags: !arcActivityAvailable
+      ? [ARC_ACTIVITY_UNAVAILABLE_RISK_FLAG]
+      : arcActivityPartial ? [ARC_ACTIVITY_PARTIAL_RISK_FLAG] : [] as string[],
   };
 
   const tiers = await getActiveBuilderTiers();
@@ -343,7 +376,7 @@ async function runBuilderAnalysis(userId: number) {
     githubAccountCreatedAt: user?.githubAccountCreatedAt,
   });
 
-  return { activity, qualitative, tier, wallets };
+  return { activity, arcActivityAvailable, arcActivityPartial, qualitative, tier, wallets };
 }
 
 router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<void> => {
@@ -367,12 +400,7 @@ router.post("/passes/builder/verify", requireAuth, async (req, res): Promise<voi
     return;
   }
 
-  let analysis: Awaited<ReturnType<typeof runBuilderAnalysis>>;
-  try { analysis = await runBuilderAnalysis(user.id); }
-  catch (error) {
-    if (error instanceof VerificationUnavailableError) { res.status(503).json({ error: error.message, code: "verification_unavailable" }); return; }
-    throw error;
-  }
+  const analysis = await runBuilderAnalysis(user.id);
   const { activity, qualitative, tier, wallets } = analysis;
   const eligibilityStatus = tier ? "eligible" : "ineligible";
 
@@ -440,12 +468,7 @@ router.post("/passes/builder/reverify", requireAuth, async (req, res): Promise<v
     return;
   }
 
-  let analysis: Awaited<ReturnType<typeof runBuilderAnalysis>>;
-  try { analysis = await runBuilderAnalysis(user.id); }
-  catch (error) {
-    if (error instanceof VerificationUnavailableError) { res.status(503).json({ error: error.message, code: "verification_unavailable" }); return; }
-    throw error;
-  }
+  const analysis = await runBuilderAnalysis(user.id);
   const { activity, qualitative, tier: candidateTier, wallets } = analysis;
   const [currentTier] = existing.currentTierId ? await db.select().from(builderTiersTable).where(eq(builderTiersTable.id, existing.currentTierId)) : [null];
 

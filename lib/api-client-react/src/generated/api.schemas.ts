@@ -543,6 +543,16 @@ export interface BuilderPass {
   /** @nullable */
   githubContributionsUpdatedAt?: string | null;
   verifiedWalletCount?: number;
+  /**
+     * Whether Arc onchain activity was successfully indexed for the latest verification. A false value never represents verified zero activity.
+     * @nullable
+     */
+  arcActivityAvailable?: boolean | null;
+  /**
+     * Whether only safely captured Arc activity was available because a provider stopped before the full history completed. Counts remain lower bounds and are never fabricated.
+     * @nullable
+     */
+  arcActivityPartial?: boolean | null;
   /** @nullable */
   qualifyingTransactionCount?: number | null;
   /** @nullable */

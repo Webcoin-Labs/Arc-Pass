@@ -7,7 +7,7 @@ const ARTWORK_WIDTH = 1200;
 const ARTWORK_HEIGHT = 845;
 // Part of the permanent R2 key. Bump whenever the renderer or its runtime
 // dependencies change, so stale generated artwork is never reused.
-const ARTWORK_VERSION = "builder-card-arc-tier-v1";
+const ARTWORK_VERSION = "builder-card-arc-tier-v2";
 
 export interface BuilderPassArtworkData {
   id: number;
@@ -24,6 +24,8 @@ export interface BuilderPassArtworkData {
   validContractCount?: number | null;
   githubContributionCount?: number | null;
   activityScore?: number | null;
+  arcActivityAvailable?: boolean | null;
+  arcActivityPartial?: boolean | null;
   qualifyingTransactionCount?: number | null;
   passNumber?: number | null;
   network?: string | null;
@@ -222,7 +224,7 @@ export function buildBuilderPassSvg(data: BuilderPassArtworkData): string {
       <rect width="66" height="34" rx="8" fill="#04070f" fill-opacity="0.7" stroke="${accent}" stroke-opacity="0.6"/>
       <text x="12" y="23" fill="${accentStrong}" font-family="DejaVu Sans Mono, DejaVu Sans, monospace" font-size="12" font-weight="700">LVL</text>
       <text x="82" y="26" fill="${accentStrong}" font-size="28" font-weight="700">${escapeXml(level)}</text>
-      <text x="${level.length > 2 ? 150 : 132}" y="26" fill="white" fill-opacity="0.55" font-size="16">${escapeXml(typeof data.qualifyingTransactionCount === "number" ? `· ${data.qualifyingTransactionCount} tx` : "")}</text>
+      <text x="${level.length > 2 ? 150 : 132}" y="26" fill="white" fill-opacity="0.55" font-size="16">${escapeXml(data.arcActivityAvailable === false ? "· Arc activity unavailable" : typeof data.qualifyingTransactionCount === "number" ? `· ${data.qualifyingTransactionCount} tx${data.arcActivityPartial ? " captured" : ""}` : "")}</text>
     </g>
   </g>
 
@@ -231,7 +233,7 @@ export function buildBuilderPassSvg(data: BuilderPassArtworkData): string {
     <rect x="367" y="0" width="346" height="120" rx="22" fill="#04070f" fill-opacity="0.36" stroke="${accent}" stroke-opacity="0.28"/>
     <rect x="734" y="0" width="346" height="120" rx="22" fill="#04070f" fill-opacity="0.36" stroke="${accent}" stroke-opacity="0.28"/>
     <text x="30" y="46" class="stat-label">CONTRACTS DEPLOYED</text>
-    <text x="30" y="92" class="stat-value">${escapeXml(statNumber(data.validContractCount))}</text>
+    <text x="30" y="92" class="stat-value">${escapeXml(data.arcActivityAvailable === false ? "Unavailable" : statNumber(data.validContractCount))}</text>
     <text x="397" y="46" class="stat-label">GITHUB CONTRIBUTIONS</text>
     <text x="397" y="92" class="stat-value">${escapeXml(statNumber(data.githubContributionCount))}</text>
     <text x="764" y="46" class="stat-label">ACTIVITY SCORE</text>
@@ -291,6 +293,8 @@ function artworkObjectKey(data: BuilderPassArtworkData): string {
     validContractCount: data.validContractCount ?? null,
     githubContributionCount: data.githubContributionCount ?? null,
     activityScore: data.activityScore ?? null,
+    arcActivityAvailable: data.arcActivityAvailable ?? null,
+    arcActivityPartial: data.arcActivityPartial ?? null,
     qualifyingTransactionCount: data.qualifyingTransactionCount ?? null,
     passNumber: data.passNumber ?? null,
     network: data.network ?? null,

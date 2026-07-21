@@ -118,6 +118,12 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     analysisTimestamp: latestSnapshot?.analysisTimestamp,
     rankTotal: configuration.builderPhaseClaimLimit,
   });
+  const arcActivityAvailable = latestSnapshot
+    ? !latestSnapshot.internalRiskFlags?.includes("arc_activity_unavailable")
+    : null;
+  const arcActivityPartial = latestSnapshot
+    ? latestSnapshot.internalRiskFlags?.includes("arc_activity_partial") ?? false
+    : null;
 
   const base = {
     id: pass.id,
@@ -136,6 +142,8 @@ export async function buildBuilderPassDTO(pass: BuilderPass, includeAdminFields:
     githubContributionWindowStartedAt: user?.githubContributionWindowStartedAt ?? null,
     githubContributionsUpdatedAt: user?.githubContributionsUpdatedAt ?? null,
     verifiedWalletCount: wallets.length,
+    arcActivityAvailable,
+    arcActivityPartial,
     qualifyingTransactionCount: latestSnapshot?.qualifyingTransactionCount ?? null,
     validContractCount: latestSnapshot?.validContractCount ?? null,
     builderLevel: activity.level,

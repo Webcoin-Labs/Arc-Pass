@@ -23,6 +23,11 @@ import {
   type BlockscoutPageParams,
   type BlockscoutTransaction,
 } from "./blockscout-activity";
+import {
+  DEFAULT_ENVIO_HYPERSYNC_URL,
+  buildEnvioHyperSyncQuery,
+  parseEnvioHyperSyncPage,
+} from "./envio-hypersync-activity";
 
 export type Network = "arc" | "base";
 
@@ -37,6 +42,10 @@ export interface ChainActivityResult {
   qualifyingTransactionCount: number;
   validContractCount: number;
   lastReviewedBlock: string;
+  /** Full history was indexed, or only safely captured rows were available. */
+  activityCoverage?: "complete" | "partial";
+  /** Never exposed to a browser; retained to improve safe provider logs. */
+  activityProvider?: "arcscan" | "envio";
   // Optional "wrapped" display stats. Providers that cannot report them omit
   // them; the app then hides the wrapped panel instead of guessing.
   usdcSpent?: string;
@@ -70,6 +79,12 @@ export class MintingUnavailableError extends Error {
 const DEFAULT_EXPLORER_API_URL = "https://testnet.arcscan.app";
 const ACTIVITY_REQUEST_TIMEOUT_MS = 15_000;
 const MAX_BLOCKSCOUT_PAGES = 100;
+const MAX_ENVIO_HYPERSYNC_PAGES = 100;
+
+interface ActivityProviderResult {
+  activity: ChainActivityResult;
+  complete: boolean;
+}
 
 /** Validates and returns the EIP-55 checksummed form of an address, or throws. */
 export function checksumAddress(address: string): string {
@@ -289,52 +304,86 @@ function optionalNonNegativeInteger(value: unknown): number | undefined {
 async function getProviderActivity(walletAddresses: string[]): Promise<ChainActivityResult> {
   const explorerUrl = process.env.EXPLORER_API_URL?.trim() || DEFAULT_EXPLORER_API_URL;
   const explorerKey = process.env.EXPLORER_API_KEY?.trim();
+  const envioToken = process.env.ENVIO_HYPERSYNC_API_TOKEN?.trim();
+  const envioUrl = process.env.ENVIO_HYPERSYNC_URL?.trim() || DEFAULT_ENVIO_HYPERSYNC_URL;
+  let partialPrimary: ActivityProviderResult | null = null;
 
   try {
     if (isBlockscoutExplorerUrl(explorerUrl)) {
-      return await getBlockscoutActivity(explorerUrl, explorerKey, walletAddresses);
+      const result = await getBlockscoutActivity(explorerUrl, explorerKey, walletAddresses);
+      if (result.complete) return result.activity;
+      partialPrimary = result;
+    } else {
+      // Preserve support for an explicitly configured custom provider. Its
+      // response contract predates the Arcscan Blockscout integration.
+      if (!explorerKey) throw new VerificationUnavailableError();
+      const response = await fetch(explorerUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${explorerKey}` },
+        body: JSON.stringify({ addresses: walletAddresses }),
+        signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
+      });
+      if (!response.ok) throw new Error(`Activity provider returned ${response.status}`);
+      const payload = await response.json() as Partial<ChainActivityResult>;
+      const { qualifyingTransactionCount, validContractCount, lastReviewedBlock } = payload;
+      if (typeof qualifyingTransactionCount !== "number" || !Number.isSafeInteger(qualifyingTransactionCount) || typeof validContractCount !== "number" || !Number.isSafeInteger(validContractCount) || typeof lastReviewedBlock !== "string") {
+        throw new Error("Activity provider returned an invalid response");
+      }
+      const usdcSpent = optionalDecimalAmount(payload.usdcSpent);
+      const eurcSpent = optionalDecimalAmount(payload.eurcSpent);
+      const firstTransactionAt = optionalIsoDate(payload.firstTransactionAt);
+      const lastTransactionAt = optionalIsoDate(payload.lastTransactionAt);
+      const transactionsLast30Days = optionalNonNegativeInteger(payload.transactionsLast30Days);
+      const activeDaysLast30Days = optionalNonNegativeInteger(payload.activeDaysLast30Days);
+      return {
+        qualifyingTransactionCount,
+        validContractCount,
+        lastReviewedBlock,
+        activityCoverage: "complete",
+        ...(usdcSpent !== undefined ? { usdcSpent } : {}),
+        ...(eurcSpent !== undefined ? { eurcSpent } : {}),
+        ...(firstTransactionAt !== undefined ? { firstTransactionAt } : {}),
+        ...(lastTransactionAt !== undefined ? { lastTransactionAt } : {}),
+        ...(transactionsLast30Days !== undefined ? { transactionsLast30Days } : {}),
+        ...(activeDaysLast30Days !== undefined ? { activeDaysLast30Days } : {}),
+      };
     }
-
-    // Preserve support for an explicitly configured custom provider. Its
-    // response contract predates the Arcscan Blockscout integration.
-    if (!explorerKey) throw new VerificationUnavailableError();
-    const response = await fetch(explorerUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${explorerKey}` },
-      body: JSON.stringify({ addresses: walletAddresses }),
-      signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
-    });
-    if (!response.ok) throw new Error(`Activity provider returned ${response.status}`);
-    const payload = await response.json() as Partial<ChainActivityResult>;
-    const { qualifyingTransactionCount, validContractCount, lastReviewedBlock } = payload;
-    if (typeof qualifyingTransactionCount !== "number" || !Number.isSafeInteger(qualifyingTransactionCount) || typeof validContractCount !== "number" || !Number.isSafeInteger(validContractCount) || typeof lastReviewedBlock !== "string") {
-      throw new Error("Activity provider returned an invalid response");
-    }
-    const usdcSpent = optionalDecimalAmount(payload.usdcSpent);
-    const eurcSpent = optionalDecimalAmount(payload.eurcSpent);
-    const firstTransactionAt = optionalIsoDate(payload.firstTransactionAt);
-    const lastTransactionAt = optionalIsoDate(payload.lastTransactionAt);
-    const transactionsLast30Days = optionalNonNegativeInteger(payload.transactionsLast30Days);
-    const activeDaysLast30Days = optionalNonNegativeInteger(payload.activeDaysLast30Days);
-    return {
-      qualifyingTransactionCount,
-      validContractCount,
-      lastReviewedBlock,
-      ...(usdcSpent !== undefined ? { usdcSpent } : {}),
-      ...(eurcSpent !== undefined ? { eurcSpent } : {}),
-      ...(firstTransactionAt !== undefined ? { firstTransactionAt } : {}),
-      ...(lastTransactionAt !== undefined ? { lastTransactionAt } : {}),
-      ...(transactionsLast30Days !== undefined ? { transactionsLast30Days } : {}),
-      ...(activeDaysLast30Days !== undefined ? { activeDaysLast30Days } : {}),
-    };
   } catch (error) {
-    if (error instanceof VerificationUnavailableError) throw error;
     logger.warn(
-      { provider: isBlockscoutExplorerUrl(explorerUrl) ? "blockscout" : "custom", errorName: error instanceof Error ? error.name : "unknown" },
+      {
+        provider: isBlockscoutExplorerUrl(explorerUrl) ? "blockscout" : "custom",
+        errorName: error instanceof Error ? error.name : "unknown",
+        // The message contains only our own normalized HTTP/parse errors and
+        // never provider responses, request URLs, addresses, or API keys.
+        errorMessage: error instanceof Error ? error.message.slice(0, 160) : "unknown",
+      },
       "Builder activity verification provider unavailable",
     );
-    throw new VerificationUnavailableError();
   }
+
+  if (envioToken) {
+    try {
+      const fallback = await getEnvioHyperSyncActivity(envioUrl, envioToken, walletAddresses);
+      if (fallback.complete || !partialPrimary) return fallback.activity;
+      // Both providers made partial progress. Keep the largest safely
+      // captured set; it is a lower bound, never an invented total.
+      return fallback.activity.qualifyingTransactionCount >= partialPrimary.activity.qualifyingTransactionCount
+        ? fallback.activity
+        : partialPrimary.activity;
+    } catch (error) {
+      logger.warn(
+        {
+          provider: "envio_hypersync",
+          errorName: error instanceof Error ? error.name : "unknown",
+          errorMessage: error instanceof Error ? error.message.slice(0, 160) : "unknown",
+        },
+        "Builder activity fallback provider unavailable",
+      );
+    }
+  }
+
+  if (partialPrimary) return partialPrimary.activity;
+  throw new VerificationUnavailableError();
 }
 
 function parseBlockscoutPage(payload: unknown): { items: BlockscoutTransaction[]; nextPageParams?: BlockscoutPageParams } {
@@ -357,30 +406,49 @@ function parseBlockscoutPage(payload: unknown): { items: BlockscoutTransaction[]
   return { items: page.items as BlockscoutTransaction[], nextPageParams };
 }
 
-async function fetchBlockscoutWalletTransactions(
+function blockscoutProApiKey(explorerUrl: string, explorerKey: string | undefined): string | undefined {
+  if (!explorerKey) return undefined;
+  try {
+    // A Pro key is only valid for the universal API host. Do not place it in
+    // Arcscan's public URLs, where it cannot resolve an upstream 500 and may
+    // be retained in external request logs.
+    return new URL(explorerUrl).hostname.toLowerCase() === "api.blockscout.com" ? explorerKey : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function fetchBlockscoutWalletTransactions(
   explorerUrl: string,
   explorerKey: string | undefined,
   walletAddress: string,
-): Promise<BlockscoutTransaction[]> {
+): Promise<{ transactions: BlockscoutTransaction[]; complete: boolean }> {
   const transactions: BlockscoutTransaction[] = [];
   let pageParams: BlockscoutPageParams | undefined;
 
   for (let page = 0; page < MAX_BLOCKSCOUT_PAGES; page += 1) {
-    const response = await fetch(buildBlockscoutTransactionsUrl(explorerUrl, walletAddress, pageParams, undefined, process.env.ARC_CHAIN_ID?.trim() || "5042002"), {
-      headers: {
-        accept: "application/json",
-        ...(explorerKey ? { authorization: `Bearer ${explorerKey}` } : {}),
-      },
-      signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
-    });
-    if (!response.ok) throw new Error(`Blockscout returned ${response.status}`);
+    try {
+      const response = await fetch(buildBlockscoutTransactionsUrl(explorerUrl, walletAddress, pageParams, blockscoutProApiKey(explorerUrl, explorerKey), process.env.ARC_CHAIN_ID?.trim() || "5042002"), {
+        headers: {
+          accept: "application/json",
+        },
+        signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
+      });
+      if (!response.ok) throw new Error(`Blockscout returned ${response.status}`);
 
-    const parsed = parseBlockscoutPage(await response.json());
-    transactions.push(...parsed.items);
-    if (!parsed.nextPageParams) return transactions;
-    pageParams = parsed.nextPageParams;
+      const parsed = parseBlockscoutPage(await response.json());
+      transactions.push(...parsed.items);
+      if (!parsed.nextPageParams) return { transactions, complete: true };
+      pageParams = parsed.nextPageParams;
+    } catch (error) {
+      // A later Arcscan page can fail for busy addresses. Preserve the rows
+      // received before that point rather than replacing them with a fake zero.
+      if (transactions.length > 0) return { transactions, complete: false };
+      throw error;
+    }
   }
 
+  if (transactions.length > 0) return { transactions, complete: false };
   throw new Error("Blockscout pagination limit reached");
 }
 
@@ -388,12 +456,87 @@ async function getBlockscoutActivity(
   explorerUrl: string,
   explorerKey: string | undefined,
   walletAddresses: string[],
-): Promise<ChainActivityResult> {
-  const transactionPages = await Promise.all(
+): Promise<ActivityProviderResult> {
+  const results = await Promise.allSettled(
     walletAddresses.map((walletAddress) => fetchBlockscoutWalletTransactions(explorerUrl, explorerKey, walletAddress)),
   );
-  const summary = summarizeBlockscoutTransactions(transactionPages.flat(), walletAddresses);
-  return summary;
+  const successful = results.filter((result): result is PromiseFulfilledResult<{ transactions: BlockscoutTransaction[]; complete: boolean }> => result.status === "fulfilled");
+  const transactions = successful.flatMap((result) => result.value.transactions);
+  const complete = successful.length === results.length && successful.every((result) => result.value.complete);
+
+  // If no provider page was received at all, this is a genuine unavailability
+  // and the secondary provider gets a chance to take over.
+  if (transactions.length === 0 && !complete) {
+    const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    throw failure?.reason instanceof Error ? failure.reason : new Error("Blockscout returned no usable transaction pages");
+  }
+
+  const summary = summarizeBlockscoutTransactions(transactions, walletAddresses);
+  return {
+    complete,
+    activity: {
+      ...summary,
+      activityCoverage: complete ? "complete" : "partial",
+      activityProvider: "arcscan",
+    },
+  };
+}
+
+async function getEnvioHyperSyncActivity(
+  endpoint: string,
+  apiToken: string,
+  walletAddresses: string[],
+): Promise<ActivityProviderResult> {
+  const normalizedEndpoint = new URL(endpoint);
+  if (normalizedEndpoint.protocol !== "https:") throw new Error("Envio HyperSync endpoint must use HTTPS");
+  const queryEndpoint = new URL("query", normalizedEndpoint.href.endsWith("/") ? normalizedEndpoint.href : `${normalizedEndpoint.href}/`);
+  const transactions: BlockscoutTransaction[] = [];
+  let fromBlock = 0;
+  let archiveHeight: number | null = null;
+
+  for (let page = 0; page < MAX_ENVIO_HYPERSYNC_PAGES; page += 1) {
+    try {
+      const response = await fetch(queryEndpoint, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          authorization: `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify(buildEnvioHyperSyncQuery(walletAddresses, fromBlock)),
+        signal: AbortSignal.timeout(ACTIVITY_REQUEST_TIMEOUT_MS),
+      });
+      if (!response.ok) throw new Error(`Envio HyperSync returned ${response.status}`);
+      const parsed = parseEnvioHyperSyncPage(await response.json());
+      archiveHeight = parsed.archiveHeight;
+      transactions.push(...parsed.transactions);
+      if (parsed.nextBlock >= parsed.archiveHeight) {
+        const summary = summarizeBlockscoutTransactions(transactions, walletAddresses);
+        return {
+          complete: true,
+          activity: { ...summary, activityCoverage: "complete", activityProvider: "envio" },
+        };
+      }
+      if (parsed.nextBlock <= fromBlock) throw new Error("Envio HyperSync pagination did not advance");
+      fromBlock = parsed.nextBlock;
+    } catch (error) {
+      if (transactions.length === 0) throw error;
+      const summary = summarizeBlockscoutTransactions(transactions, walletAddresses);
+      return {
+        complete: false,
+        activity: { ...summary, activityCoverage: "partial", activityProvider: "envio" },
+      };
+    }
+  }
+
+  if (transactions.length > 0) {
+    const summary = summarizeBlockscoutTransactions(transactions, walletAddresses);
+    return {
+      complete: false,
+      activity: { ...summary, activityCoverage: "partial", activityProvider: "envio" },
+    };
+  }
+  throw new Error(`Envio HyperSync pagination limit reached${archiveHeight === null ? " before a usable response" : ""}`);
 }
 
 function buildViemChainAdapter(): ChainAdapter | null {

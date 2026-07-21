@@ -48,7 +48,7 @@ export default function DocsPage() {
           <Github className="size-6 text-primary" aria-hidden="true" />
           <h2 className="mt-5 text-2xl font-semibold">Builder eligibility</h2>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">Requires GitHub ownership verification with a fresh 180-day contribution snapshot and at least one ownership-verified wallet. A tier can be earned through qualifying Arc activity or through GitHub contribution volume combined with account age. Discord membership is a supporting signal, not a substitute.</p>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">If GitHub or the Arc activity provider is unavailable, verification pauses. Arc Pass never guesses transactions, deployments, eligibility, or tier.</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">If GitHub is unavailable, Builder verification pauses. If Arc activity is temporarily unavailable but GitHub is verified, Arc Pass can still evaluate the tier from GitHub contribution volume and account age. It never guesses Arc transactions or deployments.</p>
         </section>
 
         <section id="discord" className="scroll-mt-24 rounded-3xl border bg-card p-6 sm:p-8">
@@ -114,7 +114,7 @@ export default function DocsPage() {
             <li><strong className="text-foreground">OAuth returns an error:</strong> confirm the provider callback exactly matches the production Arc Pass callback URL, then retry in the same browser.</li>
             <li><strong className="text-foreground">GitHub says reconnect:</strong> the authenticated 180-day contribution snapshot is missing or stale. Reconnect GitHub; a manually entered username cannot satisfy the rule.</li>
             <li><strong className="text-foreground">Wallet is connected but unverified:</strong> request a new server nonce and sign the ownership message. Connecting alone never proves ownership.</li>
-            <li><strong className="text-foreground">Verification unavailable:</strong> the Arc RPC/indexer or GitHub provider could not be checked. Retry later; Arc Pass does not substitute mock activity, fake zeroes, or a guessed tier.</li>
+            <li><strong className="text-foreground">Verification unavailable:</strong> an Arc indexer issue is displayed separately from a verified zero. When GitHub is available, its verified contribution and account-age signals can still determine a Builder tier; Arc Pass never substitutes mock or fake Arc activity.</li>
             <li><strong className="text-foreground">Discord membership unknown:</strong> provider permissions could not confirm membership, join date, or roles. This supporting signal remains unknown and does not become a pass or fail by itself.</li>
             <li><strong className="text-foreground">Direct X posting unavailable:</strong> download the generated card, open the prefilled X post, and attach the image manually.</li>
             <li><strong className="text-foreground">Pass missing from a wallet:</strong> wait for the explorer to index the transaction, confirm the destination wallet and network, then refresh metadata in the wallet.</li>

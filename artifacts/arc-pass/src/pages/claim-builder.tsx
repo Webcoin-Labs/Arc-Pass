@@ -124,6 +124,8 @@ export default function ClaimBuilderPage() {
     ? Math.max(0, Math.floor((Date.now() - new Date(github.accountCreatedAt).getTime()) / 86_400_000))
     : null;
   const qualifyingTransactions = builderPass?.qualifyingTransactionCount ?? null;
+  const arcActivityUnavailable = builderPass?.arcActivityAvailable === false;
+  const arcActivityPartial = builderPass?.arcActivityPartial === true;
   const currentTierIndex = BUILDER_TIER_GUIDE.findIndex((tier) => tier.name === builderPass?.currentTier?.name);
   const nextTier = currentTierIndex >= 0 ? (BUILDER_TIER_GUIDE[currentTierIndex + 1] ?? null) : BUILDER_TIER_GUIDE[0];
 
@@ -211,10 +213,12 @@ export default function ClaimBuilderPage() {
 
       {builderPass && (
         <ArcWrapped
-          firstTransactionAt={wrappedStats.firstTransactionAt ?? null}
-          qualifyingTransactions={builderPass.qualifyingTransactionCount ?? null}
+          firstTransactionAt={arcActivityUnavailable ? null : wrappedStats.firstTransactionAt ?? null}
+          qualifyingTransactions={arcActivityUnavailable ? null : builderPass.qualifyingTransactionCount ?? null}
           activityScore={builderPass.activityScore ?? null}
           tierName={builderPass.currentTier?.name ?? null}
+          arcActivityAvailable={!arcActivityUnavailable}
+          arcActivityPartial={arcActivityPartial}
           reduceMotion={reduceMotion}
         />
       )}
@@ -301,7 +305,7 @@ export default function ClaimBuilderPage() {
               tiers={BUILDER_TIER_GUIDE}
               awardedTierName={builderPass.currentTier?.name ?? null}
               activityScore={builderPass.activityScore ?? null}
-              qualifyingTransactions={builderPass.qualifyingTransactionCount ?? null}
+              qualifyingTransactions={arcActivityUnavailable ? null : builderPass.qualifyingTransactionCount ?? null}
               githubContributions={profile?.connections.github.contributionCount ?? null}
               reduceMotion={reduceMotion}
               onContinue={() => {
@@ -471,7 +475,13 @@ export default function ClaimBuilderPage() {
             detail={github?.contributionWindowStartedAt ? `Window: ${formatDate(github.contributionWindowStartedAt)} to today` : "Previous 180 days"}
           />
           <EvidenceCard icon={WalletCards} title="Wallet ownership" value={wallets.length > 0 ? `${wallets.length} ownership-verified wallet${wallets.length === 1 ? "" : "s"}` : "Wallet ownership not verified"} state={wallets.length > 0 ? "pass" : "action"} detail="A connection alone is not ownership proof" />
-          <EvidenceCard icon={ShieldAlert} title="Arc activity" value={typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} qualifying transactions` : "Verification not completed"} state={typeof qualifyingTransactions === "number" ? (qualifyingTransactions >= 2 ? "pass" : "fail") : "unavailable"} detail={typeof builderPass?.validContractCount === "number" ? `${builderPass.validContractCount.toLocaleString()} verified contract deployments` : "Real RPC/indexer data required"} />
+          <EvidenceCard
+            icon={ShieldAlert}
+            title="Arc activity"
+            value={arcActivityUnavailable ? "Verification temporarily unavailable" : typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} qualifying transactions` : "Verification not completed"}
+            state={arcActivityUnavailable ? "unavailable" : typeof qualifyingTransactions === "number" ? (qualifyingTransactions >= 2 ? "pass" : "fail") : "unavailable"}
+            detail={arcActivityUnavailable ? "Arcscan returned an upstream error. Your tier was evaluated from verified GitHub signals only." : typeof builderPass?.validContractCount === "number" ? `${builderPass.validContractCount.toLocaleString()} verified contract deployments` : "Real Arc indexer data is required"}
+          />
         </div>
         {builderPass && <p className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs text-muted-foreground"><RotateCcw className="size-3.5" aria-hidden="true" /> Re-verification {builderPass.nextVerificationAt ? `available ${formatDate(builderPass.nextVerificationAt)}` : "available after the initial verification"}</p>}
       </section>
@@ -491,7 +501,7 @@ export default function ClaimBuilderPage() {
           ))}
         </div>
         <div className="mt-6 grid gap-3 rounded-2xl border bg-background/55 p-4 sm:grid-cols-3">
-          <div><p className="text-xs text-muted-foreground">Verified signals</p><p className="mt-1 text-lg font-semibold">{typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} Arc · ${(github?.contributionCount ?? 0).toLocaleString()} GitHub` : "Activity not verified"}</p></div>
+          <div><p className="text-xs text-muted-foreground">Verified signals</p><p className="mt-1 text-lg font-semibold">{arcActivityUnavailable ? `Arc unavailable · ${(github?.contributionCount ?? 0).toLocaleString()} GitHub` : typeof qualifyingTransactions === "number" ? `${qualifyingTransactions.toLocaleString()} Arc · ${(github?.contributionCount ?? 0).toLocaleString()} GitHub` : "Activity not verified"}</p></div>
           <div><p className="text-xs text-muted-foreground">Current tier</p><p className="mt-1 text-lg font-semibold">{builderPass?.currentTier?.name ?? "Not assigned"}</p></div>
           <div><p className="text-xs text-muted-foreground">Next tier</p><p className="mt-1 text-sm font-semibold leading-6">{nextTier ? `${nextTier.name}: ${nextTier.arcThreshold.toLocaleString()}+ Arc tx OR ${nextTier.githubThreshold.toLocaleString()}+ GitHub / ${nextTier.githubAge}` : builderPass?.currentTier?.name === "Diamond" ? "Highest tier reached" : "Verify activity to calculate"}</p></div>
         </div>
@@ -551,17 +561,21 @@ function ArcWrapped({
   qualifyingTransactions,
   activityScore,
   tierName,
+  arcActivityAvailable,
+  arcActivityPartial,
   reduceMotion,
 }: {
   firstTransactionAt: string | null;
   qualifyingTransactions: number | null;
   activityScore: number | null;
   tierName: string | null;
+  arcActivityAvailable: boolean;
+  arcActivityPartial: boolean;
   reduceMotion: boolean | null;
 }) {
   const stats: Array<{ label: string; value: string; sub: string }> = [
-    { label: "First Arc transaction", value: firstTransactionAt ? new Date(firstTransactionAt).getFullYear().toString() : "—", sub: firstTransactionAt ? `You started ${formatDate(firstTransactionAt)}` : "No dated transaction recorded yet" },
-    { label: "Qualifying transactions", value: qualifyingTransactions?.toLocaleString() ?? "—", sub: "Verified across your Arc wallets" },
+    { label: "First Arc transaction", value: firstTransactionAt ? new Date(firstTransactionAt).getFullYear().toString() : "—", sub: firstTransactionAt ? `You started ${formatDate(firstTransactionAt)}` : arcActivityAvailable ? "No dated transaction recorded yet" : "Arcscan is temporarily unavailable" },
+    { label: "Qualifying transactions", value: qualifyingTransactions?.toLocaleString() ?? "—", sub: !arcActivityAvailable ? "Not estimated while Arcscan is unavailable" : arcActivityPartial ? "Captured before pagination stopped" : "Verified across your Arc wallets" },
     { label: "Activity score", value: activityScore === null ? "—" : `${activityScore}/100`, sub: "Frequency, active days and recency" },
     { label: "Builder tier", value: tierName ?? "Pending", sub: "Your current verified tier" },
   ];

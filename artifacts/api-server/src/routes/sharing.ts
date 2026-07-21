@@ -36,6 +36,8 @@ function builderArtworkData(dto: Awaited<ReturnType<typeof buildBuilderPassDTO>>
     validContractCount: dto.validContractCount,
     githubContributionCount: dto.githubContributionCount,
     activityScore: dto.activityScore,
+    arcActivityAvailable: dto.arcActivityAvailable,
+    arcActivityPartial: dto.arcActivityPartial,
     qualifyingTransactionCount: dto.qualifyingTransactionCount,
     passNumber: dto.passNumber,
     network: dto.network,
