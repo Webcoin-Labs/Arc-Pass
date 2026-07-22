@@ -27,7 +27,7 @@ const devEligibleXHandles = commaSeparatedValues("DEV_ELIGIBLE_X_HANDLES");
 const devEligibleDiscordHandles = commaSeparatedValues("DEV_ELIGIBLE_DISCORD_HANDLES");
 const devAdminBootstrapEmail = process.env.DEV_ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase() ?? "";
 const builderPhaseName = process.env.BUILDER_PHASE_NAME?.trim() || "Wave 1";
-const builderPhaseClaimLimit = Number(process.env.BUILDER_PHASE_CLAIM_LIMIT || "2499");
+const builderPhaseClaimLimit = Number(process.env.BUILDER_PHASE_CLAIM_LIMIT || "499");
 
 export function assertMockPolicy(nodeEnv: string | undefined, enabled: boolean): void {
   if (nodeEnv === "production" && enabled) throw new Error("ENABLE_DEV_MOCKS=true is forbidden in production");
