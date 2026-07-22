@@ -81,7 +81,9 @@ export function FounderTrustGauge({
   score,
   isPremium = false,
   className,
-  label = "Ecosystem score",
+  // Short by design: the badge caption is ~78px wide on the card, so the full
+  // "Ecosystem score" truncated to "ECOSYSTEM SCO…". "Eco score" fits.
+  label = "Eco score",
   showCaption = true,
   glow = null,
 }: FounderTrustGaugeProps) {
