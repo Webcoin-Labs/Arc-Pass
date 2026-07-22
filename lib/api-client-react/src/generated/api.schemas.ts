@@ -312,6 +312,13 @@ export interface FounderPass {
   id: number;
   variant: FounderPassVariant;
   founderTier?: FounderTier | null;
+  /**
+     * Founder Trust Score out of 100, assigned by an administrator. Null when unscored.
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  trustScore?: number | null;
   /** @nullable */
   displayName?: string | null;
   /** @nullable */
@@ -452,6 +459,13 @@ export interface AdminFounderPassUpdate {
   eligibilityStatus?: AdminFounderPassUpdateEligibilityStatus;
   variant?: AdminFounderPassUpdateVariant;
   founderTierId?: number;
+  /**
+     * Founder Trust Score out of 100. Send null to clear an assigned score.
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  trustScore?: number | null;
   founderTitle?: string;
   companyName?: string;
   companyIndustry?: string;

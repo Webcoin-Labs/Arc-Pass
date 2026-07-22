@@ -5,6 +5,7 @@ import { SiX } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { CompanyLogo } from "@/components/company-logo";
 import { FounderPassVariantBadge } from "@/components/founder-pass-variant-badge";
+import { FounderTrustGauge } from "@/components/founder-trust-gauge";
 import { PassNetworkIdentity } from "@/components/pass-network-identity";
 import { formatDate } from "@/lib/format";
 
@@ -20,6 +21,8 @@ export interface FounderPassCardData {
   companyIndustry?: string | null;
   companyLogoUrl?: string | null;
   founderTier?: { name: string; emblemUrl?: string | null; accentColor?: string | null } | null;
+  /** Manually assigned by an admin, 0-100. Omit or null to hide the gauge. */
+  trustScore?: number | null;
   passNumber?: number | null;
   network?: string | null;
   issuedAt?: string | null;
@@ -170,7 +173,16 @@ export const FounderPassCard = React.forwardRef<HTMLDivElement, FounderPassCardP
           </div>
         </div>
 
-        <footer className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#9ebaff]/32 bg-[#06194f]/68 px-3 py-2 shadow-[inset_0_1px_rgba(255,255,255,.09),0_10px_24px_rgba(0,10,52,.16)] backdrop-blur-md sm:mt-[2.8%] sm:px-4 sm:py-2.5">
+        <footer className="relative mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#9ebaff]/32 bg-[#06194f]/68 px-3 py-2 shadow-[inset_0_1px_rgba(255,255,255,.09),0_10px_24px_rgba(0,10,52,.16)] backdrop-blur-md sm:mt-[2.8%] sm:px-4 sm:py-2.5">
+          {/* Centred over the issuer strip, breaking above it. The strip keeps
+              its content at the two outer edges, so the middle is free. */}
+          {typeof data.trustScore === "number" && (
+            <FounderTrustGauge
+              score={data.trustScore}
+              isPremium={isPremium}
+              className="absolute bottom-[-10px] left-1/2 z-20 w-[78px] -translate-x-1/2 sm:bottom-[-14px] sm:w-[98px]"
+            />
+          )}
           <div className="flex min-w-0 items-center gap-2">
             <span className="size-1.5 shrink-0 rounded-full bg-[#63d9a0] shadow-[0_0_0_3px_rgba(99,217,160,.11)]" aria-hidden="true" />
             <div className="min-w-0">

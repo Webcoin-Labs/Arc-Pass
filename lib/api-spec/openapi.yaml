@@ -1744,6 +1744,11 @@ components:
           oneOf:
             - $ref: "#/components/schemas/FounderTier"
             - type: "null"
+        trustScore:
+          description: Founder Trust Score out of 100, assigned by an administrator. Null when unscored.
+          type: ["integer", "null"]
+          minimum: 0
+          maximum: 100
         displayName:
           type: ["string", "null"]
         username:
@@ -1869,6 +1874,11 @@ components:
           enum: [normal, premium_black]
         founderTierId:
           type: integer
+        trustScore:
+          description: Founder Trust Score out of 100. Send null to clear an assigned score.
+          type: ["integer", "null"]
+          minimum: 0
+          maximum: 100
         founderTitle:
           type: string
         companyName:

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FounderPassCard } from "@/components/founder-pass-card";
+import { trustScoreLabel } from "@/components/founder-trust-gauge";
 import { CompanyLogoUploader } from "@/components/company-logo-uploader";
 import { useAdminListFounderTiers, useAdminUpdateFounderPass, useAdminRevokeFounderPass, useAdminDeleteFounderPass } from "@workspace/api-client-react";
 import type { AdminFounderPass } from "@workspace/api-client-react";
@@ -22,6 +23,7 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
     eligibilityStatus: pass.eligibilityStatus,
     variant: pass.variant,
     founderTierId: pass.founderTier?.id,
+    trustScore: pass.trustScore ?? undefined,
     founderTitle: pass.founderTitle ?? "",
     companyName: pass.companyName ?? "",
     companyIndustry: pass.companyIndustry ?? "",
@@ -40,6 +42,7 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
       eligibilityStatus: pass.eligibilityStatus,
       variant: pass.variant,
       founderTierId: pass.founderTier?.id,
+      trustScore: pass.trustScore ?? undefined,
       founderTitle: pass.founderTitle ?? "",
       companyName: pass.companyName ?? "",
       companyIndustry: pass.companyIndustry ?? "",
@@ -65,6 +68,8 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
           eligibilityStatus: form.eligibilityStatus,
           variant: form.variant,
           founderTierId: form.founderTierId,
+          // Explicit null clears an assigned score; undefined would leave it.
+          trustScore: form.trustScore ?? null,
           founderTitle: form.founderTitle || undefined,
           companyName: form.companyName || undefined,
           companyIndustry: form.companyIndustry || undefined,
@@ -146,6 +151,32 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Founder ecosystem score</Label>
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              className="w-28"
+              placeholder="Unscored"
+              value={form.trustScore ?? ""}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  trustScore: e.target.value === "" ? undefined : Math.max(0, Math.min(100, Number(e.target.value))),
+                }))
+              }
+            />
+            <span className="text-sm text-muted-foreground">
+              {form.trustScore === undefined
+                ? "No score assigned — the gauge is hidden on the pass."
+                : `${trustScoreLabel(form.trustScore)} · shown out of 100 on the pass, and as a band on the NFT.`}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -258,6 +289,7 @@ export function FounderPassEditor({ pass, onSaved }: { pass: AdminFounderPass; o
             companyIndustry: form.companyIndustry || null,
             companyLogoUrl: form.companyLogoUrl,
             founderTier: selectedTier ?? null,
+            trustScore: form.trustScore ?? null,
             passNumber: form.passNumber ?? pass.passNumber,
             network: pass.network,
             issuedAt: pass.issuedAt,

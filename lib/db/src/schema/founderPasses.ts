@@ -24,6 +24,11 @@ export const founderPassesTable = pgTable("founder_passes", {
   variant: text("variant").notNull().default("normal"), // 'normal' | 'premium_black'
   founderTierId: integer("founder_tier_id").references(() => founderTiersTable.id),
 
+  // Founder Trust Score, 0-100. Assigned by an administrator — nothing derives
+  // or recomputes it. Null means no score has been assigned and the card omits
+  // the gauge entirely rather than showing a zero.
+  trustScore: integer("trust_score"),
+
   displayName: text("display_name"),
   username: text("username"),
   avatarUrl: text("avatar_url"),

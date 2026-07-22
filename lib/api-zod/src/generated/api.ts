@@ -133,6 +133,9 @@ export const CreateSupportChatReplyResponse = zod.object({
 /**
  * @summary Get the current user's Founder and Builder passes
  */
+export const listMyPassesResponseFounderOneTrustScoreMin = 0;
+export const listMyPassesResponseFounderOneTrustScoreMax = 100;
+
 export const listMyPassesResponseBuilderOneBuilderLevelMax = 100;
 
 export const listMyPassesResponseBuilderOneActivityScoreMin = 0;
@@ -155,6 +158,7 @@ export const ListMyPassesResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(listMyPassesResponseFounderOneTrustScoreMin).max(listMyPassesResponseFounderOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -252,6 +256,11 @@ export const GetFounderPassParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getFounderPassResponseTrustScoreMin = 0;
+export const getFounderPassResponseTrustScoreMax = 100;
+
+
+
 export const GetFounderPassResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -264,6 +273,7 @@ export const GetFounderPassResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(getFounderPassResponseTrustScoreMin).max(getFounderPassResponseTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -305,6 +315,11 @@ export const GetFounderPassDownloadUrlResponse = zod.object({
 /**
  * @summary Claim the current user's eligible Founder Pass
  */
+export const claimFounderPassResponseTrustScoreMin = 0;
+export const claimFounderPassResponseTrustScoreMax = 100;
+
+
+
 export const ClaimFounderPassResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -317,6 +332,7 @@ export const ClaimFounderPassResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(claimFounderPassResponseTrustScoreMin).max(claimFounderPassResponseTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -354,6 +370,11 @@ export const MintFounderPassBody = zod.object({
   "network": zod.enum(['arc']).default(mintFounderPassBodyNetworkDefault)
 })
 
+export const mintFounderPassResponseTrustScoreMin = 0;
+export const mintFounderPassResponseTrustScoreMax = 100;
+
+
+
 export const MintFounderPassResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -366,6 +387,7 @@ export const MintFounderPassResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(mintFounderPassResponseTrustScoreMin).max(mintFounderPassResponseTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -919,6 +941,9 @@ export const MintBuilderPassResponse = zod.object({
 /**
  * @summary Get dashboard summary stats for the current user
  */
+export const getDashboardStatsResponseFounderOneTrustScoreMin = 0;
+export const getDashboardStatsResponseFounderOneTrustScoreMax = 100;
+
 export const getDashboardStatsResponseBuilderOneBuilderLevelMax = 100;
 
 export const getDashboardStatsResponseBuilderOneActivityScoreMin = 0;
@@ -941,6 +966,7 @@ export const GetDashboardStatsResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(getDashboardStatsResponseFounderOneTrustScoreMin).max(getDashboardStatsResponseFounderOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -1242,6 +1268,11 @@ export const AdminListFounderPassesQueryParams = zod.object({
   "limit": zod.coerce.number().default(adminListFounderPassesQueryLimitDefault)
 })
 
+export const adminListFounderPassesResponseItemsItemOneTrustScoreMin = 0;
+export const adminListFounderPassesResponseItemsItemOneTrustScoreMax = 100;
+
+
+
 export const AdminListFounderPassesResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
@@ -1255,6 +1286,7 @@ export const AdminListFounderPassesResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(adminListFounderPassesResponseItemsItemOneTrustScoreMin).max(adminListFounderPassesResponseItemsItemOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -1320,6 +1352,11 @@ export const AdminCreateFounderInviteBody = zod.object({
   "adminNotes": zod.string().optional()
 })
 
+export const adminCreateFounderInviteResponseOneTrustScoreMin = 0;
+export const adminCreateFounderInviteResponseOneTrustScoreMax = 100;
+
+
+
 export const AdminCreateFounderInviteResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -1332,6 +1369,7 @@ export const AdminCreateFounderInviteResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(adminCreateFounderInviteResponseOneTrustScoreMin).max(adminCreateFounderInviteResponseOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -1374,6 +1412,11 @@ export const AdminGetFounderPassParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminGetFounderPassResponseOneTrustScoreMin = 0;
+export const adminGetFounderPassResponseOneTrustScoreMax = 100;
+
+
+
 export const AdminGetFounderPassResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -1386,6 +1429,7 @@ export const AdminGetFounderPassResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(adminGetFounderPassResponseOneTrustScoreMin).max(adminGetFounderPassResponseOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -1428,10 +1472,16 @@ export const AdminUpdateFounderPassParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminUpdateFounderPassBodyTrustScoreMin = 0;
+export const adminUpdateFounderPassBodyTrustScoreMax = 100;
+
+
+
 export const AdminUpdateFounderPassBody = zod.object({
   "eligibilityStatus": zod.enum(['eligible', 'invite_required', 'under_review', 'ineligible']).optional(),
   "variant": zod.enum(['normal', 'premium_black']).optional(),
   "founderTierId": zod.number().optional(),
+  "trustScore": zod.number().min(adminUpdateFounderPassBodyTrustScoreMin).max(adminUpdateFounderPassBodyTrustScoreMax).nullish().describe('Founder Trust Score out of 100. Send null to clear an assigned score.'),
   "founderTitle": zod.string().optional(),
   "companyName": zod.string().optional(),
   "companyIndustry": zod.string().optional(),
@@ -1445,6 +1495,11 @@ export const AdminUpdateFounderPassBody = zod.object({
   "adminNotes": zod.string().optional()
 })
 
+export const adminUpdateFounderPassResponseOneTrustScoreMin = 0;
+export const adminUpdateFounderPassResponseOneTrustScoreMax = 100;
+
+
+
 export const AdminUpdateFounderPassResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -1457,6 +1512,7 @@ export const AdminUpdateFounderPassResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(adminUpdateFounderPassResponseOneTrustScoreMin).max(adminUpdateFounderPassResponseOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -1509,6 +1565,11 @@ export const AdminRevokeFounderInviteParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminRevokeFounderInviteResponseOneTrustScoreMin = 0;
+export const adminRevokeFounderInviteResponseOneTrustScoreMax = 100;
+
+
+
 export const AdminRevokeFounderInviteResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -1521,6 +1582,7 @@ export const AdminRevokeFounderInviteResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(adminRevokeFounderInviteResponseOneTrustScoreMin).max(adminRevokeFounderInviteResponseOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
@@ -1567,6 +1629,11 @@ export const AdminRevokeFounderPassBody = zod.object({
   "reason": zod.string().optional()
 })
 
+export const adminRevokeFounderPassResponseOneTrustScoreMin = 0;
+export const adminRevokeFounderPassResponseOneTrustScoreMax = 100;
+
+
+
 export const AdminRevokeFounderPassResponse = zod.object({
   "id": zod.number(),
   "variant": zod.enum(['normal', 'premium_black']),
@@ -1579,6 +1646,7 @@ export const AdminRevokeFounderPassResponse = zod.object({
   "rank": zod.number(),
   "isActive": zod.boolean()
 }),zod.null()]).optional(),
+  "trustScore": zod.number().min(adminRevokeFounderPassResponseOneTrustScoreMin).max(adminRevokeFounderPassResponseOneTrustScoreMax).nullish().describe('Founder Trust Score out of 100, assigned by an administrator. Null when unscored.'),
   "displayName": zod.string().nullish(),
   "username": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),

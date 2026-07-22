@@ -42,6 +42,7 @@ export function serializeFounderPass(pass: FounderPass, tier: FounderTier | null
     id: pass.id,
     variant: pass.variant,
     founderTier: serializeFounderTier(tier),
+    trustScore: pass.trustScore,
     displayName: pass.displayName,
     username: pass.username,
     avatarUrl: pass.avatarUrl,

@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FounderRequestDialog } from "@/components/founder-request-dialog";
 import { IdentityVerificationGate } from "@/components/identity-verification-gate";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { TrustScoreRevealCeremony } from "@/components/trust-score-reveal";
 import { ShareReminder } from "@/components/share-reminder";
 import { pendingIdentityMatches, readPendingEligibilityIdentity } from "@/lib/pending-eligibility";
 
@@ -32,6 +33,9 @@ export default function ClaimFounderPage() {
   const [mintOpen, setMintOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [revealState, setRevealState] = useState<"idle" | "ready" | "revealing" | "revealed">("idle");
+  // Set on a fresh claim only, so revisiting an already-claimed pass does not
+  // replay the ceremony.
+  const [trustRevealPassId, setTrustRevealPassId] = useState<number | null>(null);
   const [confettiBurst, setConfettiBurst] = useState(0);
   const reduceMotion = useReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -82,7 +86,8 @@ export default function ClaimFounderPage() {
 
   const handleClaim = () => {
     claimPass.mutate(undefined, {
-      onSuccess: () => {
+      onSuccess: (claimed) => {
+        setTrustRevealPassId(claimed?.id ?? founderPass.id);
         setRevealState("ready");
         setConfettiBurst((value) => value + 1);
         void invalidate();
@@ -109,6 +114,9 @@ export default function ClaimFounderPage() {
 
   const skipReveal = () => setRevealState("revealed");
 
+  // The ceremony stands in for the card until the founder dismisses it.
+  const showTrustCeremony = trustRevealPassId === founderPass.id && founderPass.claimStatus !== "minted";
+
   const cardData = {
     variant: founderPass.variant,
     displayName: founderPass.displayName,
@@ -121,6 +129,7 @@ export default function ClaimFounderPage() {
     companyIndustry: founderPass.companyIndustry,
     companyLogoUrl: founderPass.companyLogoUrl,
     founderTier: founderPass.founderTier,
+    trustScore: founderPass.trustScore,
     passNumber: founderPass.passNumber,
     network: founderPass.network,
     issuedAt: founderPass.issuedAt,
@@ -132,7 +141,18 @@ export default function ClaimFounderPage() {
     <div className="flex flex-1 flex-col items-center justify-center px-3 py-10 sm:px-6 sm:py-14">
       <ConfettiBurst burst={confettiBurst} reduceMotion={reduceMotion} />
       <AnimatePresence mode="wait">
-        {founderPass.claimStatus === "minted" ? (
+        {showTrustCeremony ? (
+          <TrustScoreRevealCeremony
+            key="trust-reveal"
+            passId={founderPass.id}
+            trustScore={founderPass.trustScore ?? null}
+            variant={founderPass.variant}
+            founderTierName={founderPass.founderTier?.name ?? null}
+            passNumber={founderPass.passNumber ?? null}
+            reduceMotion={reduceMotion}
+            onContinue={() => setTrustRevealPassId(null)}
+          />
+        ) : founderPass.claimStatus === "minted" ? (
           <motion.div key="minted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-start">
             <FounderPassCard ref={cardRef} data={cardData} className="max-w-[620px]" />
             <div className="w-full max-w-sm flex-1 space-y-3">

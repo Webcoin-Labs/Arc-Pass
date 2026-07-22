@@ -185,6 +185,21 @@ async function shareRecord(type: string, id: number) {
   return null;
 }
 
+// Public NFT trait for the Founder Ecosystem Score. Thresholds MUST match the
+// gauge in the frontend (artifacts/arc-pass/src/components/founder-trust-gauge.tsx).
+// The trait exposes the band word, never the raw integer: an admin re-scoring a
+// founder within the same band produces no metadata change, and the score is
+// never rendered into the (permanent, cached) artwork — only into this JSON,
+// which is served no-store so it reflects edits immediately. The internal DB
+// field is still named `trustScore` for continuity.
+function ecosystemScoreBand(score: number): string {
+  if (score >= 80) return "Exceptional";
+  if (score >= 60) return "Established";
+  if (score >= 40) return "Neutral";
+  if (score >= 20) return "Developing";
+  return "Limited";
+}
+
 async function metadataRecord(type: string, id: number) {
   if (type === "founder") {
     const [pass] = await db.select().from(founderPassesTable).where(eq(founderPassesTable.id, id));
@@ -198,6 +213,7 @@ async function metadataRecord(type: string, id: number) {
           { trait_type: "Credential", value: "Founder Pass" },
           { trait_type: "Founder type", value: pass.variant === "premium_black" ? "Premier Founder" : "Emerging Founder" },
           ...(tier ? [{ trait_type: "Founder tier", value: tier.name }] : []),
+          ...(pass.trustScore !== null ? [{ trait_type: "Ecosystem Score", value: ecosystemScoreBand(pass.trustScore) }] : []),
           ...(pass.network ? [{ trait_type: "Network", value: pass.network }] : []),
           { trait_type: "Transferable", value: "No" },
         ],
